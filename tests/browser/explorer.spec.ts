@@ -1,5 +1,18 @@
 import { test, expect } from "@playwright/test";
 
+test("runs a separately registered library workspace without GPU assumptions", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "City Library", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Library circulation", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Calculate availability" }).click();
+  await expect(page.getByRole("status")).toContainText("1 available books");
+  await expect(page.getByRole("status")).toContainText("Alex Rivers");
+});
+
 test("queues a durable investigation and explicitly cancels it in operations", async ({
   page,
 }) => {

@@ -22,10 +22,10 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [x] Generic object/relationship CRUD, partial updates, cursor lists and bounded traversal.
 - [x] Domain-independent SDK and core; GPU schema, functions, actions and UI kept in the example extension.
 - [x] OpenAPI, distributable SDK/contracts, independent package consumer check.
-- [ ] Prove a new domain can be added using only schema/mappings/functions and UI extension registration, with no edits to core.
-- [ ] Add a documented extension-composition interface instead of hard-coded imports at the server composition root.
+- [x] Prove a second domain through its schema/function and registered library workspace, with no domain edits to core; see [extensions](extensions.md).
+- [x] Add a documented extension-composition interface instead of hard-coded GPU imports at the server composition root.
 - [ ] Decide package/API compatibility policy and publish installable SDK artifacts or a reproducible release.
-- [ ] Track richer types, cardinalities and schema migration needs separately from the demo.
+- [x] Track richer types, cardinalities and schema migration needs separately in the extension contract; these remain future capabilities.
 
 ### Source ingestion and provenance
 

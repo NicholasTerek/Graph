@@ -1,5 +1,4 @@
-import { githubRecoveryAction } from "../examples/semiconductor/actions/github.js";
-import { platformFunctions } from "../apps/api/src/extensions.js";
+import { exampleExtensions } from "../examples/server.js";
 import { FalkorDB } from "falkordb";
 import { readFile } from "node:fs/promises";
 import { GraphStore } from "@graph/core";
@@ -15,8 +14,7 @@ const store = new GraphStore(db, name);
 await store.initialize();
 const app = createApp(store, {
   serveWeb: true,
-  functions: platformFunctions,
-  actions: [githubRecoveryAction({})],
+  extensions: exampleExtensions(),
 });
 app.addHook("onClose", async () => {
   await store.nativeGraphs.collect(new Set());

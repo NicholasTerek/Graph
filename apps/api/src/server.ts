@@ -1,7 +1,6 @@
 import { CompatibleModelProvider } from "../../../packages/agent/src/index.js";
-import { githubRecoveryAction } from "../../../examples/semiconductor/actions/github.js";
 import { credentialSchema } from "./security.js";
-import { platformFunctions } from "./extensions.js";
+import { exampleExtensions } from "../../../examples/server.js";
 import { FalkorDB } from "falkordb";
 import { GraphStore, ScenarioService, connectionsSchema } from "@graph/core";
 import { createApp } from "./app.js";
@@ -24,7 +23,7 @@ const app = createApp(store, {
   logger: true,
   jobsEnabled: process.env.GRAPH_JOBS_ENABLED !== "false",
   serveWeb: true,
-  functions: platformFunctions,
+  extensions: exampleExtensions(process.env),
   sourceConnections: connectionsSchema.parse(
     JSON.parse(process.env.GRAPH_SOURCE_CONNECTIONS || "{}"),
   ),
@@ -36,12 +35,6 @@ const app = createApp(store, {
           apiKey: process.env.GRAPH_AGENT_API_KEY,
         })
       : undefined,
-  actions: [
-    githubRecoveryAction({
-      repository: process.env.GRAPH_ACTION_REPOSITORY,
-      token: process.env.GITHUB_TOKEN,
-    }),
-  ],
   security: {
     tokens: JSON.parse(process.env.GRAPH_API_TOKENS ?? "[]").map(
       (value: unknown) => credentialSchema.parse(value),

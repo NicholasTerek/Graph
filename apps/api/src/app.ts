@@ -39,12 +39,15 @@ import {
   type FunctionDefinition,
   type ActionDefinition,
   ActionService,
+  composeExtensions,
+  type PlatformExtension,
 } from "@graph/core";
 
 export function createApp(
   store: GraphStore,
   options: {
     jobsEnabled?: boolean;
+    extensions?: PlatformExtension[];
     logger?: boolean;
     serveWeb?: boolean;
     functions?: FunctionDefinition[];
@@ -55,6 +58,12 @@ export function createApp(
     sourceConnections?: import("@graph/core").SourceConnections;
   } = {},
 ) {
+  const composed = composeExtensions(options.extensions ?? []);
+  options = {
+    ...options,
+    functions: [...composed.functions, ...(options.functions ?? [])],
+    actions: [...composed.actions, ...(options.actions ?? [])],
+  };
   const app = Fastify({
     logger: options.logger ?? false,
     bodyLimit: 4 * 1024 * 1024,

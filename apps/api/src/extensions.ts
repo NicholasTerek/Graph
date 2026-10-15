@@ -1,2 +1,5 @@
-import { launchReadiness } from "../../../examples/semiconductor/functions/launch-readiness.js";
-export const platformFunctions = [launchReadiness];
+// Compatibility for embedded scripts; production composes the extension manifest.
+import { composeExtensions } from "@graph/core";
+import { exampleExtensions } from "../../../examples/server.js";
+export const platformFunctions =
+  composeExtensions(exampleExtensions()).functions;
