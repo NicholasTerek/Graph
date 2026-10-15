@@ -1,6 +1,6 @@
 # Concurrent SDK history checker
 
-`pnpm check:history` runs multiple SDK clients against one API process and writes a JSONL journal plus a JSON summary. Use a disposable database: the command leaves a uniquely named ontology and its history for inspection, but releases its snapshot lease and discards its scenario graphs. It does not contact external connectors or run a model.
+`pnpm check:history` runs concurrent SDK callers against one API process and writes a JSONL journal plus a JSON summary. Use a disposable database: the command leaves a uniquely named ontology and its history for inspection, but releases its snapshot lease and discards its scenario graphs. It does not contact external connectors or run a model.
 
 ```sh
 HISTORY_SEED=42 HISTORY_ROUNDS=12 HISTORY_WRITERS=4 \
@@ -9,7 +9,7 @@ HISTORY_SEED=42 HISTORY_ROUNDS=12 HISTORY_WRITERS=4 \
 
 `API_URL` and `GRAPH_API_TOKEN` select the server and its credential. Rounds are bounded to 500 and writers to 32. A seed controls delay choices and inputs; operating-system scheduling and database timing still determine the interleaving. Replaying a seed does not promise the exact same schedule. An unexpected error or failed invariant produces a nonzero exit code. Transport failures are reported as failures, not assumed successful or retried into apparent success.
 
-The workload mixes optimistic counter increments, unguarded **atomic batch** writes to a pair of objects, current revision reads, reads through a lease acquired before the concurrent work, isolated scenario edits and guarded promotions. A final uncontended promotion ensures the successful promotion path is exercised even when every racing promotion conflicts. The pair writer changes only the two pair objects; it never overwrites the counter. Scenario cleanup runs after the final observation.
+The callers share one SDK transport and principal; distinct role/token authorization is tested separately. The workload mixes optimistic counter increments, unguarded **atomic batch** writes to a pair of objects, current revision reads, reads through a lease acquired before the concurrent work, isolated scenario edits and guarded promotions. A final uncontended promotion ensures the successful promotion path is exercised even when every racing promotion conflicts. The pair writer changes only the two pair objects; it never overwrites the counter. Scenario cleanup runs after the final observation.
 
 Each journal entry records a client, operation ID, invocation/completion offsets from one monotonic clock, inputs, observed output/revision and success or error status. Expected 409 conflicts are counted separately. There are no bearer tokens in the journal. The test data is synthetic.
 

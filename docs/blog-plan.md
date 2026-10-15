@@ -23,7 +23,7 @@ FalkorDB uses GraphBLAS and sparse adjacency matrices internally ([upstream](htt
 
 ### Current blockers
 
-The present benchmark is a 1k-object chain, 25 sequential samples, no comparative baseline and no sustained load. It is a smoke baseline, not publication evidence. Native traversal exists, but functions and scenario reads materialize full graphs, aggregate values are calculated in TypeScript, and mutation planning loads the current graph. These costs can dominate FalkorDB query time. The post should identify and fix a measured bottleneck before claiming a performance contribution.
+The original smoke benchmark remains documented. A [new before/after aggregate study](performance-study.md) now includes repeated trials, raw latency samples, CPU/RSS, parameterized EXPLAIN/PROFILE, 250/1,000 objects and 1/8 concurrent callers. Aggregation now runs in native Cypher. This is a measured implementation improvement, but larger/topology-dependent dependency queries, fixed-duration and mixed workloads remain work. Functions and scenario reads still materialize full graphs; mutation planning still loads current state.
 
 ## Article 2: Letting agents disagree without overwriting reality
 
@@ -31,7 +31,7 @@ Working title: **One graph, two recovery plans: versioned scenarios on FalkorDB.
 
 Start two analysts from the same revision: one changes supplier lead time, another changes capacity or driver repair. The current implementation uses a shared native base plus independent GRAPH.COPY candidates. Show version-checked edits, calculations against each state, then explicit selected promotion. Include simultaneous edit rejection and a conflicting promotion example.
 
-Explain the current native-copy design with optimistic concurrency, candidate publication and one writer. Compare it with the former JSON overlay design and the proposed native revision/overlay visibility model before choosing the final article implementation. Native GRAPH.COPY is not zero-copy or MVCC. Future valid_from/valid_to filtering, consistent snapshot reads and watermark vacuum must be implemented/tested before being presented as completed work. See [status](status.md) and the [complete backlog](TODO.md).
+Explain the current native-copy design with optimistic concurrency, candidate publication and one writer. Compare it with the former JSON overlay design and the proposed native revision/overlay visibility model before choosing the final article implementation. Native GRAPH.COPY is not zero-copy or MVCC. Native valid_from/valid_to visibility, leased repeatable reads and reviewed bounded watermark vacuum are now implemented and tested. Cheap native overlay branches and full temporal backups are still incomplete. A [versioning draft](versioning-notes.md) describes the actual mechanisms and failure boundaries. See [status](status.md) and the [complete backlog](TODO.md).
 
 Measure first versus sibling branch creation, storage bytes versus full-clone baselines, increasing changed-record counts, branch evaluation, promotion latency and conflict behavior. Show how costs grow with base size and overlay size. Account for materialization and document rewriting, not just the small stored overlay. Do not promise constant-time branches or lock-free readers without implementing and measuring them.
 
@@ -39,7 +39,7 @@ End with choices we deliberately did not make: distributed writers, automatic co
 
 ## Publication gate
 
-Both posts need reproducible results and limitations beside the claims. A live demonstration and measured before/after optimization are still outstanding. Current tests establish useful correctness properties; they are not a benchmark. Keep all proposed results labeled as experiments until run.
+Both posts need reproducible results and limitations beside the claims. A measured before/after optimization is recorded, and both technical drafts have concrete evidence. A configured live model/source demonstration, broader dependency/topology performance trials and a fair branch-strategy comparison remain outstanding. Tests establish correctness properties; they are not throughput benchmarks. Keep proposed results labeled as experiments until run.
 
 References: [FalkorDB profile command](https://docs.falkordb.com/commands/graph.profile), [PlanetScale benchmarking](https://planetscale.com/blog/on-benchmarking), [PlanetScale query optimization](https://planetscale.com/blog/arewefastyet-query-optimization-with-insights).
 

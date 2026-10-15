@@ -350,7 +350,7 @@ export async function runHistoryWorkload(
         writers,
         ontology,
         model:
-          "one API writer; SDK clients; no injected process/network faults",
+          "one API writer; SDK callers; no injected process/network faults",
       },
       entries: entries.sort((a, b) => a.id - b.id),
       summary: checkHistory(entries),

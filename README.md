@@ -213,3 +213,5 @@ Target tracks: **Company Brain** and **Agents That Act on Connected Data**. Offi
 AI coding assistance (OpenAI Codex) is used for implementation and verification. Participants remain responsible for reviewing and understanding the system. This disclosure is independent of commit authorship.
 
 All included business data is synthetic. No confidential employer information is used. Operational ontology concepts are established ideas, not a claim of conceptual novelty. Project code is MIT licensed; dependencies retain their own licenses. FalkorDB server is distributed separately under SSPLv1.
+
+For measured engineering evidence, see the [aggregate before/after study](docs/performance-study.md), [concurrent-history checker](docs/concurrency-checker.md) and [versioning implementation draft](docs/versioning-notes.md).

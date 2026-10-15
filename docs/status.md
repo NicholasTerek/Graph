@@ -35,8 +35,10 @@ For the GPU application and a defensible engineering article, prioritize the ite
 
 1. Configure a small real source and one real model; demonstrate source → graph evidence → isolated alternatives → reviewed action.
 2. Profile actual dependency queries and measure how native traversal scales with graph size/topology and concurrent readers.
-3. Remove measured platform bottlenecks: full-state mutation planning, full-state function views, repeated array scans, TypeScript aggregation, and globally serialized consistency work.
+3. Remove measured platform bottlenecks: full-state mutation planning, full-state function views, repeated array scans, and globally serialized consistency work.
 4. Measure branch storage, creation, edit, evaluation and promotion costs; improve only the expensive paths and retain conflict tests.
 5. Add restart/failure experiments and document exactly what survived and what needed reconciliation.
 
 Distributed deployment, enterprise governance, dozens of connectors, and a general-purpose analytics suite are separate projects. They are not prerequisites for this demonstration.
+
+Native count/sum/avg/min/max aggregates now execute one Cypher query with the same validated filters. The [recorded study](performance-study.md) includes before/after raw trials and plans. The [concurrent-history checker](concurrency-checker.md) records guarded-write/pinned-read/branch schedules and tests its own anomaly detection. Larger graphs, mixed workloads and a native overlay branch strategy remain unmeasured.

@@ -179,6 +179,8 @@ Implemented: `pnpm check:history` and [its exact workload/checks](concurrency-ch
 
 ### Harness and measurements
 
+Recorded now: [aggregate before/after study](performance-study.md), exact plans, 4,800 requests per implementation, 250/1,000 objects and concurrency 1/8. Fixed request counts, warm local fixtures and three repeats; this is not the entire matrix below.
+
 - [x] Small HTTP baseline command and explicit benchmark limitations.
 - [ ] Generate deterministic GPU dependency graphs: chain, bounded degree and hubs, with known answer cardinality.
 - [ ] Separate database-only fixtures from end-to-end platform ingestion so setup shortcuts aren't presented as platform capacity.
@@ -190,25 +192,25 @@ Implemented: `pnpm check:history` and [its exact workload/checks](concurrency-ch
 - [ ] Measure warmup and repeated sustained trials; latency p50/p95/p99, achieved throughput, errors and timeouts.
 - [ ] Vary reader concurrency (1/8/32) and read/write mixtures; declare open/closed-loop load and queueing behavior.
 - [ ] Record per-process CPU/RSS, database memory, serialized bytes and disk/temp copy costs.
-- [ ] Record hardware, versions, persistence, indexes, network placement and warm/cold state.
-- [ ] Commit raw samples, scripts and reproduction commands; build charts directly from recorded data.
+- [x] Record hardware, versions, persistence, indexes, network placement and warm/cold state for the aggregate study.
+- [x] Commit raw samples, scripts and reproduction commands; build the aggregate chart directly from recorded trials.
 
 ### Measured optimizations
 
-- [ ] Identify the first dominant cost before changing storage or caching.
-- [ ] Push aggregates into native Cypher instead of paging all values through TypeScript.
+- [x] Identify a concrete first aggregate bottleneck before changing storage or caching.
+- [x] Push aggregates into native Cypher instead of paging all values through TypeScript.
 - [ ] Replace repeated GraphView array scans with indexed lookups or a bounded native graph-view contract.
 - [ ] Bound function dependency slices instead of always loading the full ontology, while preserving a consistent snapshot.
 - [ ] Reduce full-state mutation planning/validation where local constraints permit it.
 - [ ] Measure projection/copy overhead separately from native algorithm execution.
-- [ ] Preserve output equivalence and conflict tests across every optimization.
-- [ ] Publish before/after results, regressions and tradeoffs; don't infer a speedup from using GraphBLAS.
+- [x] Preserve aggregate output equivalence and existing conflict tests for the first optimization; require equivalent checks for subsequent changes.
+- [x] Record the aggregate before/after results, CPU costs, trial variation and remaining branch-copy tradeoffs; do not infer a speedup from GraphBLAS.
 - [ ] Defer read replicas until replication consistency and pinned-snapshot semantics are understood and testable.
 
 ### Two articles
 
-- [ ] Performance article: concrete dependency question → bottleneck → plan → change → measured results → limitations.
-- [ ] Versioning article: competing plans → storage model → visibility/conflicts → failure histories → copy/overlay costs → GC.
+- [x] Draft the first concrete aggregate performance article with bottleneck, native plans, actual before/after results and limits. Broader dependency-query article remains work.
+- [x] Draft the versioning article around implemented visibility, branch publication, conflicts, tested failure cases and GC; leave overlay comparison explicitly pending.
 - [ ] Include actual Cypher, invariant examples, one discovered bug/fix and reproducible benchmark links.
 - [ ] State concurrency control rather than distribution unless distributed behavior was implemented and verified.
 - [ ] Say whether a result is a fixture, real model run, native engine measurement or end-to-end measurement.
