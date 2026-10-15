@@ -14,6 +14,8 @@ import {
   aggregationInput,
   algorithmInput,
   explanationInput,
+  historicalInput,
+  snapshotInput,
 } from "@graph/contracts";
 import {
   GraphStore,
@@ -27,6 +29,7 @@ import {
   graphAlgorithms,
   ExplanationService,
   FunctionRuntime,
+  SnapshotService,
 } from "@graph/core";
 import type { Security } from "./security.js";
 export function platformRoutes(
@@ -44,6 +47,76 @@ export function platformRoutes(
   const promotion = new PromotionService(store, scenarios);
   const backup = new BackupService(store);
   const algorithms = new AlgorithmService(store, scenarios);
+  const snapshots = new SnapshotService(store);
+  const ontologyOnly = z.object({ ontology: identifier });
+  app.post(
+    "/api/ontologies/:ontology/state/at",
+    {
+      schema: {
+        params: ontologyOnly,
+        body: historicalInput,
+        tags: ["History"],
+      },
+    },
+    (req) =>
+      snapshots.state(
+        req.params.ontology,
+        req.body,
+        security.principal(req).name,
+      ),
+  );
+  app.get(
+    "/api/ontologies/:ontology/commits",
+    {
+      schema: {
+        params: ontologyOnly,
+        querystring: z
+          .object({
+            after: z.coerce.number().int().min(-1).default(-1),
+            limit: z.coerce.number().int().min(1).max(100).default(100),
+          })
+          .strict(),
+        tags: ["History"],
+      },
+    },
+    (req) =>
+      store.exclusive(() =>
+        store.temporal.commits(
+          req.params.ontology,
+          req.query.after,
+          req.query.limit,
+        ),
+      ),
+  );
+  app.post(
+    "/api/ontologies/:ontology/snapshots",
+    {
+      schema: { params: ontologyOnly, body: snapshotInput, tags: ["History"] },
+    },
+    (req) =>
+      snapshots.create(
+        req.params.ontology,
+        req.body,
+        security.principal(req).name,
+      ),
+  );
+  app.delete(
+    "/api/ontologies/:ontology/snapshots/:id",
+    {
+      schema: {
+        params: ontologyOnly.extend({ id: identifier }),
+        tags: ["History"],
+      },
+    },
+    async (req, reply) => {
+      await snapshots.release(
+        req.params.ontology,
+        req.params.id,
+        security.principal(req).name,
+      );
+      return reply.code(204).send();
+    },
+  );
   if (functions) {
     const explanations = new ExplanationService(store, scenarios, functions);
     app.post(

@@ -202,3 +202,7 @@ Scenarios now use native FalkorDB graphs, with a compatibility overlay derived o
 ## Explain a calculation
 
 `client.explain(ontology, {root, targets?, runId?, scenario?, maxDepth?})` returns revision-bound claims, native directed paths, object/edge evidence and source checkpoints. New runs retain bounded immutable read sets; old stale runs without captured evidence explicitly omit historical paths. See [evidence semantics](explainability.md). The route uses read scope.
+
+## Historical state and read pins
+
+`client.stateAt(ontology, {revision? , at?, snapshot?, generation?})` selects one committed native visibility context. `client.commits` lists commit metadata; `createReadSnapshot`/`releaseReadSnapshot` manage principal-owned leases for repeatable reads. Routes require read scope. Restores invalidate old generation contexts; version vacuum and full-history backup are not implemented. See [temporal semantics](temporal.md).

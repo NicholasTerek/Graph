@@ -12,6 +12,10 @@ import type {
   AlgorithmResult,
   ExplanationInput,
   Explanation,
+  HistoricalInput,
+  HistoricalState,
+  ReadSnapshot,
+  CommitList,
   Ontology,
   GraphState,
   Ingestion,
@@ -38,6 +42,34 @@ export class GraphApiError extends Error {
   }
 }
 export class GraphClient {
+  stateAt(ontology: string, input: HistoricalInput = {}) {
+    return this.call<HistoricalState>(
+      `${this.path(ontology)}/state/at`,
+      "POST",
+      input,
+    );
+  }
+  commits(ontology: string, after = -1, limit = 100) {
+    return this.call<CommitList>(
+      `${this.path(ontology)}/commits?${this.query({ after, limit })}`,
+    );
+  }
+  createReadSnapshot(
+    ontology: string,
+    input: HistoricalInput & { ttlSeconds?: number } = {},
+  ) {
+    return this.call<ReadSnapshot>(
+      `${this.path(ontology)}/snapshots`,
+      "POST",
+      input,
+    );
+  }
+  releaseReadSnapshot(ontology: string, id: string) {
+    return this.call<void>(
+      `${this.path(ontology)}/snapshots/${encodeURIComponent(id)}`,
+      "DELETE",
+    );
+  }
   explain(ontology: string, input: ExplanationInput) {
     return this.call<Explanation>(
       `${this.path(ontology)}/explain`,

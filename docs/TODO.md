@@ -113,32 +113,32 @@ This is planned work. The native-copy implementation is the functional baseline,
 ### Design and correctness contract
 
 - [x] Write an ADR comparing full native copies, previous JSON shared bases and a native revision/overlay model, including migration, read path and GC complexity.
-- [ ] Specify per-ontology monotonically increasing commit revisions and stable logical IDs separately from physical version IDs.
+- [x] Specify per-ontology monotonically increasing commit revisions and stable logical IDs separately from physical version IDs.
 - [ ] Define transaction/read-snapshot boundaries explicitly. A visibility predicate alone does not establish multi-call snapshot isolation.
-- [ ] Define commit records, timestamp-to-revision mapping, failed-write allocation policy and no-op revision policy.
-- [ ] Define restore generations/epochs so old snapshot tokens cannot accidentally refer to unrelated restored history.
-- [ ] Define object AND relationship version visibility, including deletes, endpoint existence and relationship/property updates.
+- [x] Define commit records, timestamp-to-revision mapping, failed-write allocation policy and no-op revision policy.
+- [x] Define restore generations/epochs so old snapshot tokens cannot accidentally refer to unrelated restored history.
+- [x] Define object AND relationship version visibility, including deletes, endpoint existence and relationship/property updates.
 - [ ] Choose branch-base and overlay precedence rules, including tombstones, new objects, changed relationships and inherited values.
 - [ ] State unsupported anomalies/operations: cross-ontology atomicity, direct database writes, multiple API writers and distributed serializability.
 
 ### Native version persistence
 
-- [ ] Store valid_from and valid_to (exclusive upper bound/absent while current) as native properties for object versions.
-- [ ] Version relationships natively too; preserve stable relationship IDs and provenance.
-- [ ] Close old versions, create new versions/edges and advance commit revision in one guarded Cypher write.
-- [ ] Enforce at most one visible version per logical identity at a chosen revision.
+- [x] Store valid_from and valid_to (exclusive upper bound/absent while current) as native properties for object versions.
+- [x] Version relationships natively too; preserve stable relationship IDs and provenance.
+- [x] Close old versions, create new versions/edges and advance commit revision in one guarded Cypher write.
+- [x] Enforce at most one visible version per logical identity at a chosen revision.
 - [ ] Create visibility-related indexes supported by the pinned engine, then inspect real query plans.
-- [ ] Backfill an initial version baseline without inventing historical timestamps or provenance that was never stored.
-- [ ] Preserve source checkpoint/history atomicity and action approval invalidation across the migration.
+- [x] Backfill an initial version baseline without inventing historical timestamps or provenance that was never stored.
+- [x] Preserve source checkpoint/history atomicity and action approval invalidation across the migration.
 - [ ] Export/restore versions, commit records and branch dependencies with validation and generation safety.
 
 ### Historical reads and branches
 
-- [ ] Add read-at-revision and read-at-time endpoints and SDK methods.
-- [ ] Push `valid_from <= revision AND (valid_to IS NULL OR valid_to > revision)` into Cypher.
+- [x] Add read-at-revision and read-at-time endpoints and SDK methods.
+- [x] Push `valid_from <= revision AND (valid_to IS NULL OR valid_to > revision)` into Cypher.
 - [ ] Return one consistent visibility context for objects, relationships, traversals and deterministic functions.
-- [ ] Support pinned multi-read snapshot tokens/leases if claiming snapshot isolation across API calls.
-- [ ] Define missing/out-of-retention/future revision errors; don't silently return the current graph.
+- [x] Support pinned multi-read snapshot tokens/leases if claiming snapshot isolation across API calls.
+- [x] Define missing/out-of-retention/future revision errors; don't silently return the current graph.
 - [ ] Add cheap branch metadata at a pinned revision with native overlay versions and explicit shadow/tombstone rules.
 - [ ] Make algorithms consume a correctly scoped effective graph; account for any projection needed by whole-graph procedures.
 - [ ] Benchmark the version/overlay approach against native graph copies before replacing the working default.

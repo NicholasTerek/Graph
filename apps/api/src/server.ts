@@ -17,6 +17,8 @@ const db = await FalkorDB.connect({
 const store = new GraphStore(db, process.env.GRAPH_NAME ?? "graph");
 await store.initialize();
 await store.backfillNativeProperties();
+for (const ontology of await store.listOntologies())
+  await store.temporal.ensure(ontology.id);
 await new ScenarioService(store).initialize();
 const app = createApp(store, {
   logger: true,

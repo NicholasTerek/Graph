@@ -2,6 +2,7 @@ import { canonical, recordChanges, validateUniqueState } from "./state.js";
 import { FalkorDB } from "falkordb";
 import { NativeGraphs } from "./native-graphs.js";
 import { evidencePathQuery } from "./explanations.js";
+import { TemporalStorage } from "./temporal.js";
 import type {
   Ontology,
   GraphObject,
@@ -30,6 +31,7 @@ type QueryValue =
 
 export class GraphStore {
   readonly nativeGraphs: NativeGraphs;
+  readonly temporal: TemporalStorage;
   private graph;
   private pending: Promise<unknown> = Promise.resolve();
   constructor(
@@ -38,6 +40,9 @@ export class GraphStore {
   ) {
     this.graph = db.selectGraph(name);
     this.nativeGraphs = new NativeGraphs(db, name);
+    this.temporal = new TemporalStorage((query, params) =>
+      this.rows(query, params),
+    );
   }
 
   private async rows(
@@ -59,6 +64,7 @@ export class GraphStore {
   }
 
   async initialize() {
+    await this.temporal.initialize();
     for (const query of [
       "CREATE INDEX FOR (n:Ontology) ON (n.id)",
       "CREATE INDEX FOR (n:Object) ON (n.ontology, n.id)",
@@ -135,11 +141,24 @@ export class GraphStore {
             409,
             "Ontology already exists with a different schema; schema migrations are not supported yet",
           );
-        if (String(rows[0].schema) !== JSON.stringify(ontology))
-          await this.rows(
-            "MATCH (o:Ontology {id:$id}) SET o.schema=$schema, o.revision=coalesce(o.revision,0)+1",
-            { id: ontology.id, schema: JSON.stringify(ontology) },
+        if (String(rows[0].schema) !== JSON.stringify(ontology)) {
+          const before = await this.snapshot(ontology.id);
+          const revision = (await this.revision(ontology.id)) + 1;
+          const history = await this.temporal.plan(
+            ontology.id,
+            before,
+            before,
+            revision,
           );
+          await this.rows(
+            `MATCH (o:Ontology {id:$id}) SET o.schema=$schema,o.revision=$revision WITH count(*) AS changed ${history.query}`,
+            {
+              ...history.params,
+              id: ontology.id,
+              schema: JSON.stringify(ontology),
+            },
+          );
+        }
         return ontology;
       }
       await this.rows(
@@ -149,6 +168,10 @@ export class GraphStore {
           schema: JSON.stringify(ontology),
         },
       );
+      await this.temporal.ensure(ontology.id, {
+        objects: [],
+        relationships: [],
+      });
       return ontology;
     });
   }
@@ -327,6 +350,16 @@ export class GraphStore {
       revisionFloor === undefined
     )
       return revision;
+    const versioned =
+      objects.length || relationships.length || revisionFloor !== undefined
+        ? await this.temporal.plan(
+            ontology,
+            before,
+            after,
+            next,
+            revisionFloor !== undefined,
+          )
+        : null;
     await this.rows(
       `MATCH (:Object {ontology:$ontology})-[r:LINK]->(:Object {ontology:$ontology}) WHERE r.id IN $removeRelationships DELETE r WITH count(*) AS removed
       MATCH (o:Object {ontology:$ontology}) WHERE o.id IN $removeObjects DELETE o WITH count(*) AS removed
@@ -334,8 +367,10 @@ export class GraphStore {
       UNWIND $relationships AS item MATCH (a:Object {ontology:$ontology,id:item.from}),(b:Object {ontology:$ontology,id:item.to}) CREATE (a)-[:LINK {id:item.id,type:item.type,record:item.record}]->(b) WITH count(*) AS written
       MATCH (d:Document {ontology:$ontology}) WHERE any(item IN $removeDocuments WHERE item.kind=d.kind AND item.id=d.id) DELETE d WITH count(*) AS removed
       UNWIND $documents AS item MERGE (d:Document {ontology:$ontology,kind:item.kind,id:item.id}) SET d.record=item.record WITH count(*) AS written
+      ${versioned ? versioned.query + " WITH count(*) AS versioned" : ""}
       MATCH (meta:Ontology {id:$ontology}) SET meta.revision=$revision`,
       {
+        ...versioned?.params,
         ontology,
         removeRelationships,
         removeObjects,

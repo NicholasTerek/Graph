@@ -303,6 +303,50 @@ export type Explanation = {
   };
   warnings: string[];
 };
+export const historicalInput = z
+  .object({
+    revision: z.number().int().nonnegative().optional(),
+    at: z.iso.datetime().optional(),
+    snapshot: identifier.optional(),
+    generation: z.uuid().optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (
+      [value.revision, value.at, value.snapshot].filter((v) => v !== undefined)
+        .length > 1
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "Select exactly one of revision, at or snapshot",
+      });
+  });
+export const snapshotInput = historicalInput.safeExtend({
+  ttlSeconds: z.number().int().min(1).max(3600).default(300),
+});
+export type HistoricalInput = z.input<typeof historicalInput>;
+export type HistoricalState = GraphState & {
+  generation: string;
+  committedAt: string;
+  retainedFrom: number;
+  snapshot?: string;
+};
+export type ReadSnapshot = {
+  id: string;
+  ontology: string;
+  owner: string;
+  generation: string;
+  revision: number;
+  committedAt: string;
+  createdAt: string;
+  expiresAt: string;
+};
+export type CommitList = {
+  generation: string;
+  retainedFrom: number;
+  currentRevision: number;
+  items: { revision: number; committedAt: string }[];
+};
 export const functionInvocation = z
   .object({ input: z.unknown(), scenario: identifier.optional() })
   .strict();
