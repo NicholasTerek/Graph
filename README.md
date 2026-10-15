@@ -30,22 +30,24 @@ FalkorDB uses append-only persistence in the `graph-data` volume. Published port
 
 ## Implemented capabilities
 
-| Area | Implemented |
-|---|---|
-| Ontology | Runtime registration; typed scalar properties and endpoints; safe additive schema changes |
-| Graph API | CRUD, partial edits, cursor lists, native property predicates, aggregates, property indexes, bounded Cypher traversal |
-| Ingestion | CSV/JSON snapshots and paginated public GitHub repository/issues readers; deterministic mappings and optional cross-source identity keys |
-| Sync correctness | Preview, checksum binding, checkpoints, safe deletions, no-op replay, detection of manual changes, atomic graph/history/checkpoint writes |
-| Provenance | Current source metadata, historical before/after records, and contributing source mappings |
-| Business logic | Typed deterministic extensions, read-only graph views, discoverable schemas, persisted calculation runs |
-| Scenarios | Pinned bases shared across sibling branches, sparse overlays, object/edge diffs, version checks, selective three-way promotion |
-| Agent | Bounded tool loop through the public SDK; optional compatible model; explicit deterministic mode without a model; recorded traces and historical summaries |
-| Actions | Typed proposals, exact review digest, approval/rejection, separate execution, idempotency, failure records, uncertain-outcome reconciliation |
-| Operations | Scoped API tokens, ontology restrictions, host/origin checks, backup/restore, health diagnostics, request metrics, distributable SDK/contracts |
+| Area             | Implemented                                                                                                                                                         |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ontology         | Runtime registration; typed scalar properties and endpoints; safe additive schema changes                                                                           |
+| Graph API        | CRUD, partial edits, cursor lists, native property predicates, aggregates, property indexes, bounded Cypher traversal                                               |
+| Ingestion        | CSV/JSON snapshots, public GitHub repository/issues, Notion data-source and Discord channel readers; deterministic mappings and optional cross-source identity keys |
+| Sync correctness | Preview, checksum binding, checkpoints, safe deletions, no-op replay, detection of manual changes, atomic graph/history/checkpoint writes                           |
+| Provenance       | Current source metadata, historical before/after records, and contributing source mappings                                                                          |
+| Business logic   | Typed deterministic extensions, read-only graph views, discoverable schemas, persisted calculation runs                                                             |
+| Scenarios        | Pinned bases shared across sibling branches, sparse overlays, object/edge diffs, version checks, selective three-way promotion                                      |
+| Agent            | Bounded tool loop through the public SDK; optional compatible model; explicit deterministic mode without a model; recorded traces and historical summaries          |
+| Actions          | Typed proposals, exact review digest, approval/rejection, separate execution, idempotency, failure records, uncertain-outcome reconciliation                        |
+| Operations       | Scoped API tokens, ontology restrictions, host/origin checks, backup/restore, health diagnostics, request metrics, distributable SDK/contracts                      |
 
 The agent has **no approval, execution, or promotion tool**. Its internal API credential has read/write scopes only. A human must review the target and contents before an external action can execute.
 
 ## Real integrations and credentials
+
+Notion data-source properties and Discord channel messages can also be read using named, ontology-restricted server connections. See [connector setup and limits](docs/connectors.md). These readers are add/update only, explicit syncs; a missing record does not establish remote deletion. Neither was tested against a live account during development.
 
 ### GitHub reads and actions
 
@@ -118,22 +120,34 @@ Configuration defaults are listed in `.env.example`. Export variables in your sh
 - Benchmarks: [docs/benchmarks.md](docs/benchmarks.md)
 
 ```ts
-import { GraphClient } from '@graph/sdk';
+import { GraphClient } from "@graph/sdk";
 
-const graph = new GraphClient('http://127.0.0.1:3001', fetch, {
+const graph = new GraphClient("http://127.0.0.1:3001", fetch, {
   token: process.env.GRAPH_API_TOKEN,
 });
-const baseline = await graph.snapshot('semiconductor');
-let scenario = await graph.createScenario('semiconductor', {
-  id: 'supplier-investigation', name: 'Alternative takes 14 days',
+const baseline = await graph.snapshot("semiconductor");
+let scenario = await graph.createScenario("semiconductor", {
+  id: "supplier-investigation",
+  name: "Alternative takes 14 days",
   expectedRevision: baseline.revision,
 });
-scenario = await graph.patchScenarioObject('semiconductor', scenario.id, 'meridian', {
-  properties: { leadDays: 14 }, expectedVersion: scenario.version,
-});
-const result = await graph.runFunction('semiconductor', 'launch-readiness', {
-  productId: 'aquila-x900',
-}, scenario.id);
+scenario = await graph.patchScenarioObject(
+  "semiconductor",
+  scenario.id,
+  "meridian",
+  {
+    properties: { leadDays: 14 },
+    expectedVersion: scenario.version,
+  },
+);
+const result = await graph.runFunction(
+  "semiconductor",
+  "launch-readiness",
+  {
+    productId: "aquila-x900",
+  },
+  scenario.id,
+);
 ```
 
 Run the same workflow with `pnpm demo` or `docker compose exec app node --import tsx scripts/launch-demo.ts`. It asserts that changing an assumption changes the recommendation while leaving live state untouched.
@@ -175,6 +189,8 @@ pnpm benchmark
 Integration/browser tests require FalkorDB and use disposable graphs. Unit tests run without a database. CI verifies the build, packaged client, real FalkorDB behavior, browser workflows, and Docker Compose setup. [Development log](docs/development.md) records observed results and limitations.
 
 ## Remaining work
+
+The [engineering status](docs/status.md) distinguishes implemented mechanisms, tested evidence, and missing production work, including the exact versioning/multi-agent guarantees. The [article plan](docs/blog-plan.md) defines the performance and versioned-scenario experiments needed before publishing claims.
 
 This implements the six requested next steps at prototype scope. Remaining platform work includes richer ontology types and cardinality, distributed write coordination, production governance, large-source ingestion and resumable workers, richer entity-resolution policies, temporal history queries, nested/rebased branches, approval revocation/expiry, and production-grade backup retention. Model-backed investigation and authenticated GitHub execution still need verification in the operator's configured environment. A complete Foundry or Helix Foundry port is not claimed.
 

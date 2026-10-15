@@ -3,7 +3,7 @@ import { githubRecoveryAction } from "../../../examples/semiconductor/actions/gi
 import { credentialSchema } from "./security.js";
 import { platformFunctions } from "./extensions.js";
 import { FalkorDB } from "falkordb";
-import { GraphStore } from "@graph/core";
+import { GraphStore, connectionsSchema } from "@graph/core";
 import { createApp } from "./app.js";
 
 const db = await FalkorDB.connect({
@@ -21,6 +21,9 @@ const app = createApp(store, {
   logger: true,
   serveWeb: true,
   functions: platformFunctions,
+  sourceConnections: connectionsSchema.parse(
+    JSON.parse(process.env.GRAPH_SOURCE_CONNECTIONS || "{}"),
+  ),
   modelProvider:
     process.env.GRAPH_AGENT_BASE_URL && process.env.GRAPH_AGENT_MODEL
       ? new CompatibleModelProvider({

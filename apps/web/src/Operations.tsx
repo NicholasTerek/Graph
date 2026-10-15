@@ -79,7 +79,7 @@ export default function Operations({
         await client.syncSource(ontology, staged.id, {
           content: staged.content,
           expectedRevision: state.revision,
-          expectedCheckpoint:sync?.checkpoint,
+          expectedCheckpoint: sync?.checkpoint,
         }),
       );
       setStaged(null);
@@ -192,7 +192,9 @@ export default function Operations({
                   {source.mapping.type} · {Object.keys(source.managed).length}{" "}
                   mapped records
                   <br />
-                  {source.repository ?? "Uploaded snapshots"}
+                  {source.repository ??
+                    source.connection ??
+                    "Uploaded snapshots"}
                 </p>
                 <dl>
                   <dt>Last sync</dt>
@@ -208,7 +210,8 @@ export default function Operations({
                   className="primary-button"
                   disabled={busy}
                   onClick={() => {
-                    if (source.connector === "github") void preview(source.id);
+                    if (!["csv", "json"].includes(source.connector))
+                      void preview(source.id);
                     else {
                       setUploadFor(source.id);
                       file.current?.click();

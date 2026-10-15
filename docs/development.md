@@ -85,3 +85,13 @@ Implemented the six requested priorities as a cohesive prototype: source synchro
 - Docker remains unavailable in this coding environment. The actual Compose stack is checked by CI. Earlier foundation and scenario milestone CI runs passed; this expansion needs its own post-commit CI result.
 
 The production gaps remain explicit: one API writer, small-graph full-state reads, bounded snapshot connectors, no durable scheduler or distributed coordination, no enterprise governance, and no assertion of Foundry feature parity. README and operations/API guides describe supported behavior rather than presenting those gaps as implemented features.
+
+## Small connectors and explicit concurrency evidence
+
+Added Notion data-source and Discord channel readers behind the existing source interface. Connections are server-configured, resource-fixed and ontology-allowlisted; tokens are omitted from documents and logical backups. Pagination, response sizes, timeouts and record counts are bounded. Errors leave graph/checkpoints unchanged. These readers retain records absent from later fetches because missing permissions and mutable pagination do not prove deletion. No live account was configured; verification uses protocol fixtures plus real FalkorDB/API sync.
+
+Added evidence for the intended single-server multi-agent use: two simultaneous edits with the same scenario version yield one success and one conflict; separate branches remain isolated and can promote independent properties; a fresh store/service can read the persisted branch. These are API client concurrency tests, not a demonstration of two live models or distributed workers.
+
+Observed local verification: 70 unit/integration tests and nine Chromium browser tests pass. The preceding operational expansion commit passed both CI jobs, including real Docker Compose startup/seed/demo. This connector commit requires its own CI verification.
+
+The new status document lists gaps and performance bottlenecks without conflating endpoint coverage with maturity. The blog plan focuses on measured native graph queries and revision/overlay tradeoffs. It does not claim database-native MVCC, persistent tree structures, GPU acceleration, or a measured speedup from unrun experiments.

@@ -11,12 +11,14 @@ import {
 import { GraphStore } from "./store.js";
 import { canonical } from "./state.js";
 import { PlatformError } from "./validation.js";
+import { readRemoteSource, type SourceConnections } from "./connectors.js";
 const hash = (value: unknown) =>
   createHash("sha256").update(canonical(value)).digest("hex");
 export class SourceService {
   constructor(
     private store: GraphStore,
     private request: typeof fetch = fetch,
+    private connections: SourceConnections = {},
   ) {}
   async list(ontology: string) {
     await this.store.ontology(ontology);
@@ -110,7 +112,20 @@ export class SourceService {
     const runId = `sync-${randomUUID()}`;
     try {
       let records: Record<string, unknown>[];
-      if (source.connector === "github") {
+      if (source.connector === "notion" || source.connector === "discord") {
+        if (input.content !== undefined)
+          throw new PlatformError(
+            400,
+            "Remote sources fetch their configured connection",
+          );
+        records = await readRemoteSource(
+          source.connector,
+          source.connection!,
+          ontology,
+          this.connections,
+          this.request,
+        );
+      } else if (source.connector === "github") {
         if (input.content !== undefined)
           throw new PlatformError(
             400,
@@ -280,6 +295,13 @@ export class SourceService {
           const peers = await this.list(ontology);
           for (const objectId of Object.keys(current.managed))
             if (!managed[objectId]) {
+              if (
+                source.connector === "notion" ||
+                source.connector === "discord"
+              ) {
+                managed[objectId] = current.managed[objectId];
+                continue;
+              }
               if (
                 peers.some(
                   (peer) =>

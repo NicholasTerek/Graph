@@ -205,7 +205,8 @@ export const sourceSchema = z
   .object({
     id: identifier,
     name: z.string().min(1).max(100),
-    connector: z.enum(["csv", "json", "github"]),
+    connector: z.enum(["csv", "json", "github", "notion", "discord"]),
+    connection: identifier.optional(),
     githubResource: z.enum(["issues", "repository"]).default("issues"),
     repository: z
       .string()
@@ -223,6 +224,11 @@ export const sourceSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
+    if (["notion", "discord"].includes(value.connector) && !value.connection)
+      ctx.addIssue({
+        code: "custom",
+        message: "Remote sources require a server-side connection name",
+      });
     if (value.connector === "github" && !value.repository)
       ctx.addIssue({
         code: "custom",

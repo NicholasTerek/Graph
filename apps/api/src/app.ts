@@ -50,6 +50,7 @@ export function createApp(
     modelProvider?: ModelProvider;
     security?: SecurityOptions;
     connectorFetch?: typeof fetch;
+    sourceConnections?: import("@graph/core").SourceConnections;
   } = {},
 ) {
   const app = Fastify({
@@ -162,6 +163,7 @@ export function createApp(
       security,
       options.connectorFetch,
       actions,
+      options.sourceConnections,
     );
     app.get("/api/metrics", { schema: { tags: ["Operations"] } }, () => ({
       uptimeSeconds: process.uptime(),

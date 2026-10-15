@@ -8,6 +8,8 @@ export { ScenarioService, applyOverlay } from "./scenarios.js";
 export { FunctionRuntime, GraphView, defineFunction } from "./functions.js";
 export type { FunctionDefinition, FunctionContext } from "./functions.js";
 export { SourceService } from "./ingestion.js";
+export { connectionsSchema } from "./connectors.js";
+export type { SourceConnections } from "./connectors.js";
 export { PromotionService } from "./promotion.js";
 export { ActionService, ExternalActionError } from "./actions.js";
 export type {

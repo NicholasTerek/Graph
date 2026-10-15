@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { FalkorDB } from "falkordb";
-import { GraphStore } from "@graph/core";
+import { GraphStore, ScenarioService } from "@graph/core";
 import { GraphClient } from "@graph/sdk";
 import { createApp } from "../apps/api/src/app.js";
 import { platformFunctions } from "../apps/api/src/extensions.js";
@@ -446,6 +446,198 @@ suite("operational platform capabilities", () => {
         filters: [{ property: "leadDays", operator: "gte", value: "bad" }],
       }),
     ).rejects.toMatchObject({ status: 422 });
+  });
+  it("persists remote connector syncs without treating lost visibility as deletion", async () => {
+    let visible = true;
+    let failed = false;
+    const remote = createApp(store, {
+      sourceConnections: {
+        notes: {
+          connector: "notion",
+          resource: "0123456789abcdef0123456789abcdef",
+          token: "private-notion-token",
+          ontologies: ["semiconductor"],
+        },
+        chat: {
+          connector: "discord",
+          resource: "123456789012345678",
+          token: "private-discord-token",
+          ontologies: ["semiconductor"],
+        },
+      },
+      connectorFetch: async (url) => {
+        if (failed) return Response.json({}, { status: 429 });
+        if (String(url).startsWith("https://api.notion.com/"))
+          return Response.json({
+            has_more: false,
+            next_cursor: null,
+            results: visible
+              ? [
+                  {
+                    object: "page",
+                    id: "page-one",
+                    url: "https://notion.so/page-one",
+                    last_edited_time: "2026-10-15T00:00:00Z",
+                    properties: {
+                      Title: {
+                        type: "title",
+                        title: [{ plain_text: "Memory regression" }],
+                      },
+                    },
+                  },
+                ]
+              : [],
+          });
+        return Response.json(
+          visible
+            ? [
+                {
+                  id: "999999999999999999",
+                  channel_id: "123456789012345678",
+                  content: "Packaging delay",
+                  timestamp: "2026-10-15T00:00:00Z",
+                  edited_timestamp: null,
+                  author: { id: "user", username: "engineer" },
+                },
+              ]
+            : [],
+        );
+      },
+    });
+    await remote.ready();
+    const sdk = new GraphClient("http://localhost", transport(remote));
+    try {
+      for (const connector of ["notion", "discord"] as const) {
+        const id = `${connector}-fixture`;
+        await sdk.registerSource("semiconductor", {
+          id,
+          name: connector,
+          connector,
+          connection: connector === "notion" ? "notes" : "chat",
+          mapping: {
+            type: "Issue",
+            idField: "id",
+            properties: {
+              name: {
+                field: connector === "notion" ? "property:Title" : "content",
+              },
+              status: { value: "open" },
+              fixDays: { value: 3 },
+            },
+          },
+        });
+        const preview = await sdk.syncSource("semiconductor", id, {
+          dryRun: true,
+        });
+        const result = await sdk.syncSource("semiconductor", id, {
+          dryRun: false,
+          expectedCheckpoint: preview.checkpoint,
+        });
+        expect(result.added).toHaveLength(1);
+        const replay = await sdk.syncSource("semiconductor", id, {
+          dryRun: false,
+        });
+        expect(replay.revision).toBe(result.revision);
+        visible = false;
+        expect(
+          (await sdk.syncSource("semiconductor", id, { dryRun: false }))
+            .removed,
+        ).toEqual([]);
+        expect(
+          (await sdk.object("semiconductor", result.added[0])).properties
+            .status,
+        ).toBe("open");
+        const checkpoint = (await sdk.sources("semiconductor")).find(
+          (s) => s.id === id,
+        )!.checkpoint;
+        failed = true;
+        await expect(
+          sdk.syncSource("semiconductor", id, { dryRun: false }),
+        ).rejects.toMatchObject({ status: 422 });
+        expect(
+          (await sdk.sources("semiconductor")).find((s) => s.id === id)!
+            .checkpoint,
+        ).toBe(checkpoint);
+        visible = true;
+        failed = false;
+      }
+      expect(JSON.stringify(await sdk.sources("semiconductor"))).not.toContain(
+        "private-notion-token",
+      );
+      expect(JSON.stringify(await sdk.backup("semiconductor"))).not.toContain(
+        "private-discord-token",
+      );
+    } finally {
+      await remote.close();
+    }
+  });
+  it("rejects one of two simultaneous edits at the same scenario version", async () => {
+    const secondAgent = new GraphClient("http://localhost", transport(app));
+    const branch = await client.createScenario("semiconductor", {
+      id: "agent-race",
+      name: "Concurrent editors",
+    });
+    const results = await Promise.allSettled([
+      client.patchScenarioObject("semiconductor", branch.id, "meridian", {
+        properties: { leadDays: 11 },
+        expectedVersion: 0,
+      }),
+      secondAgent.patchScenarioObject("semiconductor", branch.id, "meridian", {
+        properties: { leadDays: 12 },
+        expectedVersion: 0,
+      }),
+    ]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((r) => r.status === "rejected")).toMatchObject({
+      reason: { status: 409 },
+    });
+    const recovered = new ScenarioService(new GraphStore(db, graphName));
+    const state = await recovered.state("semiconductor", branch.id);
+    expect(state.scenarioVersion).toBe(1);
+    expect([11, 12]).toContain(
+      state.objects.find((o) => o.id === "meridian")!.properties.leadDays,
+    );
+  });
+  it("keeps two agent branches isolated and merges independent edits", async () => {
+    const original = await client.object("semiconductor", "meridian");
+    const a = await client.createScenario("semiconductor", {
+      id: "agent-a",
+      name: "Supply analyst",
+    });
+    const b = await client.createScenario("semiconductor", {
+      id: "agent-b",
+      name: "Capacity analyst",
+    });
+    await Promise.all([
+      client.patchScenarioObject("semiconductor", a.id, "meridian", {
+        properties: { leadDays: 13 },
+        expectedVersion: 0,
+      }),
+      client.patchScenarioObject("semiconductor", b.id, "meridian", {
+        properties: { dailyCapacity: 450 },
+        expectedVersion: 0,
+      }),
+    ]);
+    expect(
+      (await client.object("semiconductor", "meridian")).properties,
+    ).toEqual(original.properties);
+    for (const branch of [a, b]) {
+      const review = await client.reviewScenario("semiconductor", branch.id);
+      expect(review.conflicts).toHaveLength(0);
+      await client.promoteScenario("semiconductor", branch.id, {
+        expectedVersion: 1,
+        expectedRevision: review.liveRevision,
+        objects: ["meridian"],
+        relationships: [],
+        confirm: true,
+      });
+    }
+    expect(
+      (await client.object("semiconductor", "meridian")).properties,
+    ).toMatchObject({ leadDays: 13, dailyCapacity: 450 });
+    await client.patchObject("semiconductor", "meridian", {
+      properties: original.properties,
+    });
   });
   it("promotes selected properties with a three-way merge and preserves unrelated edits", async () => {
     const branch = await client.createScenario("semiconductor", {

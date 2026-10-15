@@ -30,9 +30,10 @@ export function platformRoutes(
   security: Security,
   request?: typeof fetch,
   actions?: ActionService,
+  connections?: import("@graph/core").SourceConnections,
 ) {
   const app = instance.withTypeProvider<ZodTypeProvider>();
-  const sources = new SourceService(store, request);
+  const sources = new SourceService(store, request, connections);
   const promotion = new PromotionService(store, scenarios);
   const backup = new BackupService(store);
   const params = z.object({ ontology: identifier });

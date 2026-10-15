@@ -8,6 +8,8 @@
 
 ## Source sync
 
+For Notion and Discord setup, fields, credential restrictions, and add/update-only semantics, see [connectors](connectors.md). Configure `GRAPH_SOURCE_CONNECTIONS` on the server; credentials never belong in source mappings. Remote sources preview and apply from the same console without uploading files.
+
 The seed registers packaging CSV, driver JSON, and a public GitHub repository source. The operations console previews a snapshot before applying it. File contents are uploaded; the API does not read arbitrary server paths or fetch arbitrary URLs.
 
 A source mapping defines its object type, external ID field, mapped properties, optional existing object-ID field, and optional shared identity field. Shared identities are normalized by trimming and case-folding, then scoped by ontology and type. This is explicit deterministic resolution, not fuzzy entity matching. Mapping definitions are immutable; use a new source ID to change them.
