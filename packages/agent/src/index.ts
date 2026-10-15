@@ -145,6 +145,7 @@ export class GraphAgent {
     },
     save: (record: Investigation) => Promise<void>,
     memory: string[] = [],
+    cancellation?: AbortSignal,
   ): Promise<Investigation> {
     const record: Investigation = {
       id: `investigation-${randomUUID()}`,
@@ -369,12 +370,14 @@ export class GraphAgent {
           }),
       },
     ];
-    const signal = AbortSignal.timeout(60000);
+    const signal = cancellation
+      ? AbortSignal.any([cancellation, AbortSignal.timeout(60000)])
+      : AbortSignal.timeout(60000);
     let calls = 0;
     const invoke = async (name: string, raw: unknown) => {
       if (++calls > input.maxSteps)
         throw new Error("Investigation tool budget exhausted");
-      if (signal.aborted) throw new Error("Investigation timed out");
+      signal.throwIfAborted();
       let output: unknown;
       let error: string | undefined;
       try {

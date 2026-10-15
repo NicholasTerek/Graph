@@ -712,6 +712,8 @@ export const backupPayloadSchema = z
               "run",
               "promotion",
               "investigation",
+              "job",
+              "schedule",
             ]),
             id: z.string().min(1).max(200),
             value: z.unknown(),
@@ -732,3 +734,108 @@ export const restoreInput = z
     confirmOntology: identifier,
   })
   .strict();
+
+export const jobCreate = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("source-sync"),
+      sourceId: identifier,
+      maxAttempts: z.number().int().min(1).max(5).default(3),
+      notBefore: z.iso.datetime().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("investigation"),
+      request: investigationInput,
+      notBefore: z.iso.datetime().optional(),
+    })
+    .strict(),
+]);
+export type JobRequest = z.input<typeof jobCreate>;
+export type JobRecord = {
+  id: string;
+  ontology: string;
+  owner: string;
+  version: number;
+  input: z.output<typeof jobCreate>;
+  status:
+    | "queued"
+    | "running"
+    | "retrying"
+    | "cancelled"
+    | "succeeded"
+    | "failed"
+    | "interrupted";
+  attempt: number;
+  maxAttempts: number;
+  createdAt: string;
+  updatedAt: string;
+  notBefore: string;
+  lease?: string;
+  leaseUntil?: string;
+  cancellationRequestedAt?: string;
+  result?: unknown;
+  error?: string;
+  recovered?: boolean;
+  scheduleId?: string;
+  queuedRevision?: number;
+  queuedScenarioVersion?: number | null;
+};
+export const scheduleInput = z
+  .object({
+    id: identifier,
+    sourceId: identifier,
+    intervalSeconds: z.number().int().min(60).max(604800),
+    enabled: z.boolean().default(true),
+    expectedVersion: z.number().int().nonnegative().optional(),
+  })
+  .strict();
+export type SourceSchedule = {
+  id: string;
+  ontology: string;
+  sourceId: string;
+  owner: string;
+  intervalSeconds: number;
+  enabled: boolean;
+  version: number;
+  nextRunAt: string;
+  updatedAt: string;
+};
+
+export const jobRecordSchema = z
+  .object({
+    id: identifier,
+    ontology: identifier,
+    owner: z.string().min(1).max(200),
+    version: z.number().int().nonnegative(),
+    input: jobCreate,
+    status: z.enum([
+      "queued",
+      "running",
+      "retrying",
+      "cancelled",
+      "succeeded",
+      "failed",
+      "interrupted",
+    ]),
+    attempt: z.number().int().nonnegative(),
+    maxAttempts: z.number().int().min(1).max(5),
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
+    notBefore: z.iso.datetime(),
+  })
+  .passthrough();
+export const sourceScheduleSchema = z
+  .object({
+    id: identifier,
+    ontology: identifier,
+    sourceId: identifier,
+    owner: z.string().min(1).max(200),
+    intervalSeconds: z.number().int().min(60).max(604800),
+    enabled: z.boolean(),
+    version: z.number().int().nonnegative(),
+    nextRunAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
+  })
+  .passthrough();

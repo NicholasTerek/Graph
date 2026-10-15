@@ -1,5 +1,30 @@
 import { test, expect } from "@playwright/test";
 
+test("queues a durable investigation and explicitly cancels it in operations", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Launch operations" }).click();
+  await expect(page.getByTestId("recommendation")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Queue investigation", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Operations console" }).click();
+  await page
+    .getByRole("button", { name: "Jobs & refresh", exact: true })
+    .click();
+  await expect(page.locator(".jobs-panel")).toContainText("Worker paused");
+  const job = page
+    .locator(".job-record")
+    .filter({ hasText: "investigation · queued" })
+    .first();
+  const id = await job.locator("code").textContent();
+  await job.getByRole("button", { name: "Cancel job" }).click();
+  await expect(
+    page.locator(".job-record").filter({ hasText: id! }),
+  ).toContainText("investigation · cancelled");
+});
+
 test("explains a recovery with captured source records and native dependency paths", async ({
   page,
 }) => {

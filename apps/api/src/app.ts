@@ -1,3 +1,4 @@
+import { jobRoutes } from "./job-routes.js";
 import { agentRoutes, internalAgentCredential } from "./agent-routes.js";
 import type { ModelProvider } from "../../../packages/agent/src/index.js";
 import { platformRoutes } from "./platform-routes.js";
@@ -43,6 +44,7 @@ import {
 export function createApp(
   store: GraphStore,
   options: {
+    jobsEnabled?: boolean;
     logger?: boolean;
     serveWeb?: boolean;
     functions?: FunctionDefinition[];
@@ -174,7 +176,17 @@ export function createApp(
         meanMs: m.totalMs / m.count,
       })),
     }));
-    agentRoutes(app, store, agentCredential.token, options.modelProvider);
+    const investigate = agentRoutes(
+      app,
+      store,
+      agentCredential.token,
+      options.modelProvider,
+    );
+    jobRoutes(app, store, security, investigate, {
+      enabled: options.jobsEnabled,
+      connectorFetch: options.connectorFetch,
+      sourceConnections: options.sourceConnections,
+    });
     app.get("/api/openapi.json", { schema: { hide: true } }, () =>
       app.swagger(),
     );

@@ -23,3 +23,5 @@ export { AlgorithmService, graphAlgorithms } from "./algorithms.js";
 export { ExplanationService } from "./explanations.js";
 export { SnapshotService } from "./snapshots.js";
 export { VacuumService } from "./vacuum.js";
+export { JobService, JobFailure } from "./jobs.js";
+export type { JobHandler } from "./jobs.js";

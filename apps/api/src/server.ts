@@ -22,6 +22,7 @@ for (const ontology of await store.listOntologies())
 await new ScenarioService(store).initialize();
 const app = createApp(store, {
   logger: true,
+  jobsEnabled: process.env.GRAPH_JOBS_ENABLED !== "false",
   serveWeb: true,
   functions: platformFunctions,
   sourceConnections: connectionsSchema.parse(

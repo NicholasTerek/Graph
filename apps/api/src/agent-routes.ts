@@ -65,35 +65,33 @@ export function agentRoutes(
       return record;
     },
   );
+  const investigate = async (
+    ontology: string,
+    input: Parameters<GraphAgent["investigate"]>[1],
+    signal?: AbortSignal,
+  ) => {
+    await store.ontology(ontology);
+    const memory = (
+      await store.documents<Investigation>("investigation", ontology)
+    )
+      .filter((r) => r.status === "completed")
+      .slice(-3)
+      .map((r) => r.answer);
+    return agent.investigate(
+      ontology,
+      input,
+      (record) =>
+        store.exclusive(() =>
+          store.saveDocument("investigation", ontology, record.id, record),
+        ),
+      memory,
+      signal,
+    );
+  };
   app.post(
     "/api/ontologies/:ontology/investigations",
     { schema: { tags: ["Agent"], params, body: investigationInput } },
-    async (req) => {
-      await store.ontology(req.params.ontology);
-      const memory = (
-        await store.documents<Investigation>(
-          "investigation",
-          req.params.ontology,
-        )
-      )
-        .filter((r) => r.status === "completed")
-        .slice(-3)
-        .map((r) => r.answer);
-      return agent.investigate(
-        req.params.ontology,
-        req.body,
-        (record) =>
-          store.exclusive(() =>
-            store.saveDocument(
-              "investigation",
-              req.params.ontology,
-              record.id,
-              record,
-            ),
-          ),
-        memory,
-      );
-    },
+    (req) => investigate(req.params.ontology, req.body),
   );
   app.get("/api/agent/capabilities", { schema: { tags: ["Agent"] } }, () => ({
     mode: provider ? "model-tools" : "deterministic-tools",
@@ -101,4 +99,5 @@ export function agentRoutes(
     executionTools: false,
     maxToolCalls: 16,
   }));
+  return investigate;
 }

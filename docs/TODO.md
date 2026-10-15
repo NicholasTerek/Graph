@@ -40,7 +40,7 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [ ] Validate each authenticated reader using an actual configured demonstration account.
 - [x] Add redacted non-probing source-connection status, setup guidance and actionable permission/rate-limit errors in the UI; live-account validation remains separate.
 - [x] Register source relationship mappings so imported scalar references become native graph edges, with preview, ownership and temporal history.
-- [ ] Add scheduled explicit refresh with durable jobs, leases, bounded retries and cancellation.
+- [x] Add scheduled explicit refresh with durable jobs, leases, bounded retries and cancellation; see [job semantics](jobs.md).
 - [ ] Add progress/checkpoints for resumable larger imports if measured workloads need them.
 - [ ] Keep OAuth, CDC, arbitrary REST adapters and additional SaaS connectors out of the critical path.
 
@@ -67,7 +67,7 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [x] Native shortest path, PageRank, sampled betweenness and degree via API/SDK/agent tools.
 - [ ] Run an actual configured model against the GPU workflow and evaluate its evidence/answer quality.
 - [ ] Complete one explicitly approved real external action against a demonstration repository.
-- [ ] Add a durable investigation/job state machine with cancellation, bounded retries and recovery.
+- [x] Add a durable investigation/job state machine with cancellation and recovery; source retries are bounded, interrupted agents require explicit retry.
 - [ ] Add approval expiry/revocation and surface stale context before execution.
 - [ ] Build a two-agent demonstration with separate branches, visible roles, saved results and human promotion.
 - [ ] Add branch ownership/agent credentials and prevent one agent silently changing another's plan.

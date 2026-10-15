@@ -36,6 +36,7 @@ export default function RecoveryWorkflow({
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [queuedJob, setQueuedJob] = useState<string | null>(null);
   useEffect(() => {
     client
       .agentCapabilities()
@@ -71,6 +72,22 @@ export default function RecoveryWorkflow({
           maxSteps: 12,
         }),
       );
+    });
+  }
+  async function enqueue() {
+    await task(async () => {
+      const job = await client.enqueueJob("semiconductor", {
+        kind: "investigation",
+        request: {
+          question,
+          root: "aquila-x900",
+          functionId: "launch-readiness",
+          input: { productId: "aquila-x900" },
+          scenario,
+          maxSteps: 12,
+        },
+      });
+      setQueuedJob(job.id);
     });
   }
   async function propose() {
@@ -161,6 +178,16 @@ export default function RecoveryWorkflow({
           >
             Investigate through tools
           </button>
+          <button disabled={busy || readOnly} onClick={() => void enqueue()}>
+            Queue investigation
+          </button>
+          {queuedJob && (
+            <p role="status">
+              Queued {queuedJob}. Track or cancel it in Operations → Jobs &
+              refresh.
+            </p>
+          )}
+
           {investigation && (
             <div className="investigation-result">
               <strong>

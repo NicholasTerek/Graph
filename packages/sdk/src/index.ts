@@ -1,5 +1,8 @@
 import type {
   BackupArchive,
+  JobRequest,
+  JobRecord,
+  SourceSchedule,
   Investigation,
   ActionRecord,
   ActionInfo,
@@ -347,6 +350,58 @@ export class GraphClient {
   }
   runs(ontology: string) {
     return this.call<FunctionRun[]>(`${this.path(ontology)}/runs`);
+  }
+  jobCapabilities() {
+    return this.call<{
+      workerEnabled: boolean;
+      delivery: string;
+      sourceRetries: boolean;
+      investigationAutoRetry: boolean;
+    }>("/jobs/capabilities");
+  }
+  jobs(ontology: string) {
+    return this.call<JobRecord[]>(`${this.path(ontology)}/jobs`);
+  }
+  job(ontology: string, id: string) {
+    return this.call<JobRecord>(
+      `${this.path(ontology)}/jobs/${encodeURIComponent(id)}`,
+    );
+  }
+  enqueueJob(ontology: string, input: JobRequest) {
+    return this.call<JobRecord>(`${this.path(ontology)}/jobs`, "POST", input);
+  }
+  cancelJob(ontology: string, id: string, expectedVersion: number) {
+    return this.call<JobRecord>(
+      `${this.path(ontology)}/jobs/${encodeURIComponent(id)}/cancel`,
+      "POST",
+      { expectedVersion },
+    );
+  }
+  retryJob(ontology: string, id: string, expectedVersion: number) {
+    return this.call<JobRecord>(
+      `${this.path(ontology)}/jobs/${encodeURIComponent(id)}/retry`,
+      "POST",
+      { expectedVersion },
+    );
+  }
+  sourceSchedules(ontology: string) {
+    return this.call<SourceSchedule[]>(`${this.path(ontology)}/schedules`);
+  }
+  setSourceSchedule(
+    ontology: string,
+    input: {
+      id: string;
+      sourceId: string;
+      intervalSeconds: number;
+      enabled?: boolean;
+      expectedVersion?: number;
+    },
+  ) {
+    return this.call<SourceSchedule>(
+      `${this.path(ontology)}/schedules`,
+      "POST",
+      input,
+    );
   }
   sourceStatuses(ontology: string) {
     return this.call<SourceStatus[]>(`${this.path(ontology)}/sources/status`);

@@ -746,6 +746,23 @@ export class GraphStore {
     ).map((r) => JSON.parse(String(r.record)));
   }
 
+  async saveDocuments(
+    ontology: string,
+    documents: { kind: string; id: string; value: unknown }[],
+  ) {
+    await this.rows(
+      "UNWIND $documents AS item MERGE (d:Document {ontology:$ontology,kind:item.kind,id:item.id}) SET d.record=item.record",
+      {
+        ontology,
+        documents: documents.map((d) => ({
+          kind: d.kind,
+          id: d.id,
+          record: JSON.stringify(d.value),
+        })),
+      },
+    );
+  }
+
   async saveDocument(
     kind: string,
     ontology: string,

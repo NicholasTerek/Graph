@@ -1,3 +1,4 @@
+import JobsPanel from "./JobsPanel.js";
 import { useEffect, useState, useRef } from "react";
 import { GraphClient } from "@graph/sdk";
 import type {
@@ -169,25 +170,32 @@ export default function Operations({
         </button>
       </div>
       <div className="operation-tabs">
-        {["sources", "actions", "investigations", "history", "backup"].map(
-          (name) => (
-            <button
-              key={name}
-              className={tab === name ? "selected" : ""}
-              onClick={() => setTab(name)}
-            >
-              {name === "sources"
-                ? "Data sources"
-                : name === "actions"
-                  ? "Action approvals"
-                  : name === "investigations"
-                    ? "Investigation history"
+        {[
+          "sources",
+          "actions",
+          "investigations",
+          "jobs",
+          "history",
+          "backup",
+        ].map((name) => (
+          <button
+            key={name}
+            className={tab === name ? "selected" : ""}
+            onClick={() => setTab(name)}
+          >
+            {name === "sources"
+              ? "Data sources"
+              : name === "actions"
+                ? "Action approvals"
+                : name === "investigations"
+                  ? "Investigation history"
+                  : name === "jobs"
+                    ? "Jobs & refresh"
                     : name === "history"
                       ? "History & retention"
                       : "Backup & restore"}
-            </button>
-          ),
-        )}
+          </button>
+        ))}
       </div>
       {error && (
         <div role="alert" className="error">
@@ -488,6 +496,7 @@ export default function Operations({
           ))}
         </>
       )}
+      {tab === "jobs" && <JobsPanel client={client} ontology={ontology} />}
       {tab === "history" && (
         <RetentionPanel client={client} ontology={ontology} />
       )}

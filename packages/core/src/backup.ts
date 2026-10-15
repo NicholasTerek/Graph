@@ -1,5 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
-import { backupSchema, type BackupArchive } from "@graph/contracts";
+import {
+  backupSchema,
+  jobRecordSchema,
+  sourceScheduleSchema,
+  type BackupArchive,
+} from "@graph/contracts";
 import { GraphStore } from "./store.js";
 import { canonical } from "./state.js";
 import { PlatformError, isAdditiveSchema } from "./validation.js";
@@ -14,6 +19,8 @@ const kinds = [
   "run",
   "promotion",
   "investigation",
+  "job",
+  "schedule",
 ] as const;
 const digest = (value: unknown) =>
   createHash("sha256").update(canonical(value)).digest("hex");
@@ -32,6 +39,21 @@ export class BackupService {
           ontology,
         )) {
           let value = document.value;
+          if (kind === "job") {
+            const job = value as import("@graph/contracts").JobRecord;
+            const { lease, leaseUntil, ...portable } = job;
+            value = ["queued", "running", "retrying"].includes(job.status)
+              ? {
+                  ...portable,
+                  status: "interrupted",
+                  error:
+                    "Restored job history is not executable; explicitly retry after reviewing context",
+                }
+              : portable;
+          }
+          if (kind === "schedule")
+            value = { ...(value as object), enabled: false };
+
           if (
             kind === "base" &&
             (value as { storage?: string }).storage === "falkordb"
@@ -117,6 +139,39 @@ export class BackupService {
         400,
         "Backup and confirmation must match the destination ontology",
       );
+    const restoredDocuments = archive.documents.map((document) => {
+      if (document.kind === "job") {
+        const parsed = jobRecordSchema.safeParse(document.value);
+        if (
+          !parsed.success ||
+          parsed.data.id !== document.id ||
+          parsed.data.ontology !== ontology
+        )
+          throw new PlatformError(422, "Invalid job history in backup");
+        const { lease, leaseUntil, ...job } = parsed.data;
+        return {
+          ...document,
+          value: ["queued", "running", "retrying"].includes(job.status)
+            ? {
+                ...job,
+                status: "interrupted",
+                error: "Restored job history requires explicit retry",
+              }
+            : job,
+        };
+      }
+      if (document.kind === "schedule") {
+        const parsed = sourceScheduleSchema.safeParse(document.value);
+        if (
+          !parsed.success ||
+          parsed.data.id !== document.id ||
+          parsed.data.ontology !== ontology
+        )
+          throw new PlatformError(422, "Invalid source schedule in backup");
+        return { ...document, value: { ...parsed.data, enabled: false } };
+      }
+      return document;
+    });
     return this.store.transact(
       ontology,
       input.expectedRevision,
@@ -142,7 +197,7 @@ export class BackupService {
           state: archive.state,
           revisionFloor: Math.max(state.revision, archive.revision) + 1,
           documents: [
-            ...archive.documents,
+            ...restoredDocuments,
             { kind: "restore", id: result.id, value: result },
           ],
           removeDocuments,

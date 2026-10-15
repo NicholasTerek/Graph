@@ -229,6 +229,7 @@ export class SourceService {
       dryRun: boolean;
       expectedRevision?: number;
       expectedCheckpoint?: string;
+      signal?: AbortSignal;
     },
   ): Promise<SyncResult> {
     const source = await this.get(ontology, id);
@@ -287,11 +288,13 @@ export class SourceService {
           409,
           "Source changed after preview; review the new snapshot",
         );
+      input.signal?.throwIfAborted();
       const observedAt = new Date().toISOString();
       const outcome = await this.store.transact(
         ontology,
         input.expectedRevision,
         async (state, schema) => {
+          input.signal?.throwIfAborted();
           const current = await this.get(ontology, id);
           if (current.version !== source.version)
             throw new PlatformError(409, "Source changed during sync; retry");

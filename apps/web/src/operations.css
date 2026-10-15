@@ -292,3 +292,28 @@
 .source-status-error {
   color: #e5ad83;
 }
+.jobs-panel {
+  display: grid;
+  gap: 16px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.jobs-panel label {
+  display: block;
+  margin: 10px 0;
+}
+.jobs-panel select,
+.jobs-panel input {
+  margin: 0 8px;
+  padding: 7px;
+  background: #142026;
+  border: 1px solid #32434b;
+  color: inherit;
+  max-width: 100%;
+}
+.jobs-panel button {
+  margin: 6px 8px 6px 0;
+}
+.job-record code {
+  overflow-wrap: anywhere;
+}
