@@ -246,6 +246,14 @@ export default function Operations({
                 {sync.added.length} additions · {sync.updated.length} updates ·{" "}
                 {sync.removed.length} deletions · {sync.unchanged} unchanged
               </p>
+              {sync.relationships && (
+                <p aria-label="Relationship changes">
+                  Links: {sync.relationships.added.length} additions ·{" "}
+                  {sync.relationships.updated.length} updates ·{" "}
+                  {sync.relationships.removed.length} deletions ·{" "}
+                  {sync.relationships.unchanged} unchanged
+                </p>
+              )}
               <code>Checkpoint {sync.checkpoint}</code>
               {staged && (
                 <button

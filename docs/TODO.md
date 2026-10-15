@@ -39,7 +39,7 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [x] Retain absent Notion/Discord records rather than infer deletion from lost visibility.
 - [ ] Validate each authenticated reader using an actual configured demonstration account.
 - [ ] Add source-connection status, setup guidance and actionable permission/rate-limit errors in the UI.
-- [ ] Register source relationship mappings so imported references become native graph edges.
+- [x] Register source relationship mappings so imported scalar references become native graph edges, with preview, ownership and temporal history.
 - [ ] Add scheduled explicit refresh with durable jobs, leases, bounded retries and cancellation.
 - [ ] Add progress/checkpoints for resumable larger imports if measured workloads need them.
 - [ ] Keep OAuth, CDC, arbitrary REST adapters and additional SaaS connectors out of the critical path.

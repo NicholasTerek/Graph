@@ -214,3 +214,5 @@ Scenarios now use native FalkorDB graphs, with a compatibility overlay derived o
 ### Branch backend choice
 
 `client.createScenario(ontology, {id, name, strategy?: "copy" | "overlay"})` defaults to copy. Overlay branches store a native history-generation/base pin and native deltas. Existing graph/edit/diff/function/explain/review/promote/discard routes work with either. Whole-graph overlay algorithms include temporary projection cost; restored portable branches use copy storage. See [semantics](native-overlays.md) and [measurements](branch-study.md).
+
+Source `mapping.relationships` maps row references into native edges. Sync results include separate relationship change counts; preview validates endpoint existence/types before any operational write. Explicit object IDs and exact shared identities are supported. See [source relationship mappings](source-relationships.md) for direction, limits, deletion protection and remote visibility semantics.

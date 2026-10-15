@@ -446,6 +446,18 @@ export const mappingValue = z.union([
     .object({ value: z.union([z.string(), z.number().finite(), z.boolean()]) })
     .strict(),
 ]);
+export const sourceRelationshipMapping = z
+  .object({
+    id: identifier,
+    type: identifier,
+    direction: z.enum(["out", "in"]).optional(),
+    optional: z.boolean().optional(),
+    target: z.union([
+      z.object({ objectId: mappingValue }).strict(),
+      z.object({ type: identifier, identity: mappingValue }).strict(),
+    ]),
+  })
+  .strict();
 export const sourceSchema = z
   .object({
     id: identifier,
@@ -464,6 +476,7 @@ export const sourceSchema = z
         objectIdField: z.string().min(1).optional(),
         identityField: z.string().min(1).optional(),
         properties: z.record(identifier, mappingValue),
+        relationships: z.array(sourceRelationshipMapping).max(10).optional(),
       })
       .strict(),
   })
@@ -485,6 +498,10 @@ export type Source = z.output<typeof sourceSchema> & {
   version: number;
   checkpoint: string | null;
   lastSyncedAt: string | null;
+  managedRelationships?: Record<
+    string,
+    { externalId: string; relationship: GraphRelationship; created: boolean }
+  >;
   managed: Record<
     string,
     {
@@ -503,6 +520,12 @@ export type SyncResult = {
   updated: string[];
   removed: string[];
   unchanged: number;
+  relationships?: {
+    added: string[];
+    updated: string[];
+    removed: string[];
+    unchanged: number;
+  };
   checkpoint: string;
   error?: string;
   startedAt: string;

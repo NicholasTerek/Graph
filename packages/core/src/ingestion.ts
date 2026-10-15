@@ -6,11 +6,12 @@ import {
   type Source,
   type SourceConfig,
   type GraphObject,
+  type GraphRelationship,
   type SyncResult,
 } from "@graph/contracts";
 import { GraphStore } from "./store.js";
 import { canonical } from "./state.js";
-import { PlatformError } from "./validation.js";
+import { PlatformError, validateIngestion } from "./validation.js";
 import { readRemoteSource, type SourceConnections } from "./connectors.js";
 const hash = (value: unknown) =>
   createHash("sha256").update(canonical(value)).digest("hex");
@@ -30,6 +31,7 @@ export class SourceService {
     return source;
   }
   async register(ontology: string, config: SourceConfig) {
+    config = sourceSchema.parse(config);
     return this.store.exclusive(async () => {
       const schema = await this.store.ontology(ontology);
       if (!schema.objectTypes.some((t) => t.name === config.mapping.type))
@@ -37,13 +39,44 @@ export class SourceService {
           422,
           "Mapping references an unknown object type",
         );
+      const names = new Set<string>();
+      for (const mapping of config.mapping.relationships ?? []) {
+        if (names.has(mapping.id))
+          throw new PlatformError(422, "Duplicate relationship mapping ID");
+        names.add(mapping.id);
+        const relation = schema.relationshipTypes.find(
+          (r) => r.name === mapping.type,
+        );
+        if (!relation)
+          throw new PlatformError(
+            422,
+            "Mapping references an unknown relationship type",
+          );
+        const incoming = mapping.direction === "in";
+        if (
+          (incoming ? relation.to : relation.from) !== config.mapping.type ||
+          ("type" in mapping.target &&
+            mapping.target.type !== (incoming ? relation.from : relation.to))
+        )
+          throw new PlatformError(
+            422,
+            "Relationship mapping endpoint types do not match the ontology",
+          );
+      }
       const previous = await this.store.document<Source>(
         "source",
         ontology,
         config.id,
       );
       if (previous) {
-        const { version, checkpoint, lastSyncedAt, managed, ...old } = previous;
+        const {
+          version,
+          checkpoint,
+          lastSyncedAt,
+          managed,
+          managedRelationships,
+          ...old
+        } = previous;
         if (canonical(old) !== canonical(config))
           throw new PlatformError(
             409,
@@ -176,11 +209,29 @@ export class SourceService {
           )!;
           const objects = new Map(state.objects.map((o) => [o.id, o]));
           const managed: Source["managed"] = Object.create(null);
+          const relationships = new Map(
+            state.relationships.map((r) => [r.id, r]),
+          );
+          const managedRelationships: NonNullable<
+            Source["managedRelationships"]
+          > = Object.create(null);
+          const relationshipChanges = {
+            added: [] as string[],
+            updated: [] as string[],
+            removed: [] as string[],
+            unchanged: 0,
+          };
+          const mappedRows: {
+            record: Record<string, unknown>;
+            objectId: string;
+            externalId: string;
+          }[] = [];
           const added: string[] = [],
             updated: string[] = [],
             removed: string[] = [];
           let unchanged = 0;
           const externalIds = new Set<string>();
+          let mappedRelationshipCount = 0;
           for (const record of records) {
             const rawId = record[source.mapping.idField];
             if (rawId === null || rawId === undefined || String(rawId) === "")
@@ -212,6 +263,7 @@ export class SourceService {
                 422,
                 "Multiple source rows resolve to the same entity; supply a unique identity",
               );
+            mappedRows.push({ record, objectId, externalId });
             const fields: GraphObject["properties"] = {};
             for (const [key, mapping] of Object.entries(
               source.mapping.properties,
@@ -293,6 +345,132 @@ export class SourceService {
             (previous ? updated : added).push(objectId);
           }
           const peers = await this.list(ontology);
+          for (const { record, objectId, externalId } of mappedRows) {
+            for (const mapping of source.mapping.relationships ?? []) {
+              const selector =
+                "objectId" in mapping.target
+                  ? mapping.target.objectId
+                  : mapping.target.identity;
+              const raw =
+                "value" in selector ? selector.value : record[selector.field];
+              if (
+                raw === null ||
+                raw === undefined ||
+                String(raw).trim() === ""
+              ) {
+                if (mapping.optional) continue;
+                throw new PlatformError(
+                  422,
+                  `Missing target for relationship mapping ${mapping.id} in row ${externalId}`,
+                );
+              }
+              if (!["string", "number", "boolean"].includes(typeof raw))
+                throw new PlatformError(
+                  422,
+                  `Invalid target for relationship mapping ${mapping.id}`,
+                );
+              const targetId =
+                "objectId" in mapping.target
+                  ? identifier.safeParse(raw)
+                  : {
+                      success: true as const,
+                      data: `entity-${hash([ontology, mapping.target.type, "shared", String(raw).trim().toLowerCase()]).slice(0, 24)}`,
+                    };
+              if (!targetId.success)
+                throw new PlatformError(
+                  422,
+                  `Invalid target object ID for relationship mapping ${mapping.id}`,
+                );
+              if (!objects.has(targetId.data))
+                throw new PlatformError(
+                  422,
+                  `Target not found for relationship mapping ${mapping.id} in row ${externalId}: ${targetId.data}`,
+                );
+              const relationshipId = `link-${hash([ontology, id, mapping.id, externalId]).slice(0, 24)}`;
+              const previous = relationships.get(relationshipId);
+              const last = current.managedRelationships?.[relationshipId];
+              if (
+                last &&
+                (!previous ||
+                  canonical(previous) !== canonical(last.relationship))
+              )
+                throw new PlatformError(
+                  409,
+                  `Source-managed relationship was changed outside this source: ${relationshipId}`,
+                );
+              const from =
+                mapping.direction === "in" ? targetId.data : objectId;
+              const to = mapping.direction === "in" ? objectId : targetId.data;
+              const matches =
+                previous?.type === mapping.type &&
+                previous.from === from &&
+                previous.to === to;
+              if (previous && !last && !matches)
+                throw new PlatformError(
+                  409,
+                  `Relationship identity collides with an existing link: ${relationshipId}`,
+                );
+              const relationship: GraphRelationship = matches
+                ? previous!
+                : {
+                    id: relationshipId,
+                    type: mapping.type,
+                    from,
+                    to,
+                    provenance: { source: id, externalId, observedAt },
+                  };
+              managedRelationships[relationshipId] = {
+                externalId,
+                relationship,
+                created: last?.created ?? !previous,
+              };
+              if (++mappedRelationshipCount > 5000)
+                throw new PlatformError(
+                  422,
+                  "Source exceeds the 5,000-relationship snapshot limit",
+                );
+              relationships.set(relationshipId, relationship);
+              if (matches) relationshipChanges.unchanged++;
+              else
+                (previous
+                  ? relationshipChanges.updated
+                  : relationshipChanges.added
+                ).push(relationshipId);
+            }
+          }
+          for (const [relationshipId, last] of Object.entries(
+            current.managedRelationships ?? {},
+          )) {
+            if (managedRelationships[relationshipId]) continue;
+            if (["notion", "discord"].includes(source.connector)) {
+              managedRelationships[relationshipId] = last;
+              continue;
+            }
+            if (
+              peers.some(
+                (peer) =>
+                  peer.id !== id &&
+                  Object.hasOwn(
+                    peer.managedRelationships ?? {},
+                    relationshipId,
+                  ),
+              )
+            )
+              continue;
+            const previous = relationships.get(relationshipId);
+            if (
+              !previous ||
+              !last.created ||
+              canonical(previous) !== canonical(last.relationship)
+            )
+              throw new PlatformError(
+                409,
+                `Cannot delete a pre-existing or externally changed relationship: ${relationshipId}`,
+              );
+            relationships.delete(relationshipId);
+            relationshipChanges.removed.push(relationshipId);
+          }
+
           for (const objectId of Object.keys(current.managed))
             if (!managed[objectId]) {
               if (
@@ -333,7 +511,7 @@ export class SourceService {
                   `Cannot delete an externally edited entity: ${objectId}`,
                 );
               if (
-                state.relationships.some(
+                [...relationships.values()].some(
                   (r) => r.from === objectId || r.to === objectId,
                 )
               )
@@ -344,7 +522,22 @@ export class SourceService {
               objects.delete(objectId);
               removed.push(objectId);
             }
-          const changed = added.length + updated.length + removed.length;
+          const candidate = {
+            objects: [...objects.values()],
+            relationships: [...relationships.values()],
+          };
+          validateIngestion(
+            schema,
+            { objects: [], relationships: [] },
+            candidate,
+          );
+          const changed =
+            added.length +
+            updated.length +
+            removed.length +
+            relationshipChanges.added.length +
+            relationshipChanges.updated.length +
+            relationshipChanges.removed.length;
           const revision = state.revision + (changed ? 1 : 0);
           const result: SyncResult = {
             id: runId,
@@ -355,16 +548,14 @@ export class SourceService {
             updated,
             removed,
             unchanged,
+            relationships: relationshipChanges,
             checkpoint,
             startedAt,
             finishedAt: new Date().toISOString(),
           };
           if (input.dryRun) return { state, result };
           return {
-            state: {
-              objects: [...objects.values()],
-              relationships: state.relationships,
-            },
+            state: candidate,
             documents: [
               {
                 kind: "source",
@@ -373,6 +564,7 @@ export class SourceService {
                   ...current,
                   version: current.version + 1,
                   managed,
+                  managedRelationships,
                   checkpoint,
                   lastSyncedAt: observedAt,
                 },
