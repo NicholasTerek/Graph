@@ -29,9 +29,9 @@ The present benchmark is a 1k-object chain, 25 sequential samples, no comparativ
 
 Working title: **One graph, two recovery plans: versioned scenarios on FalkorDB.**
 
-Start two analysts from the same revision: one changes supplier lead time, another changes capacity or driver repair. Show shared base + separate overlays, version-checked edits, calculations against each state, then explicit selected promotion. Include simultaneous edit rejection and a conflicting promotion example.
+Start two analysts from the same revision: one changes supplier lead time, another changes capacity or driver repair. The current implementation uses a shared native base plus independent GRAPH.COPY candidates. Show version-checked edits, calculations against each state, then explicit selected promotion. Include simultaneous edit rejection and a conflicting promotion example.
 
-Explain the design as an application-level snapshot/overlay scheme with optimistic concurrency and one writer. Contrast its guarantees with database MVCC accurately. Persisted JSON snapshots are durable data; they are not a persistent functional data structure. We share whole bases per revision, not tree nodes across arbitrary updates. See [status](status.md) for exact limits.
+Explain the current native-copy design with optimistic concurrency, candidate publication and one writer. Compare it with the former JSON overlay design and the proposed native revision/overlay visibility model before choosing the final article implementation. Native GRAPH.COPY is not zero-copy or MVCC. Future valid_from/valid_to filtering, consistent snapshot reads and watermark vacuum must be implemented/tested before being presented as completed work. See [status](status.md) and the [complete backlog](TODO.md).
 
 Measure first versus sibling branch creation, storage bytes versus full-clone baselines, increasing changed-record counts, branch evaluation, promotion latency and conflict behavior. Show how costs grow with base size and overlay size. Account for materialization and document rewriting, not just the small stored overlay. Do not promise constant-time branches or lock-free readers without implementing and measuring them.
 
@@ -42,3 +42,5 @@ End with choices we deliberately did not make: distributed writers, automatic co
 Both posts need reproducible results and limitations beside the claims. A live demonstration and measured before/after optimization are still outstanding. Current tests establish useful correctness properties; they are not a benchmark. Keep all proposed results labeled as experiments until run.
 
 References: [FalkorDB profile command](https://docs.falkordb.com/commands/graph.profile), [PlanetScale benchmarking](https://planetscale.com/blog/on-benchmarking), [PlanetScale query optimization](https://planetscale.com/blog/arewefastyet-query-optimization-with-insights).
+
+The complete added work (explainability first, temporal visibility, concurrency checker, retention watermark, reproducible benchmark matrix, UI branch/as-of controls and bounded entity resolution) is tracked in [TODO](TODO.md). The roadmap is not evidence that those mechanisms already exist.

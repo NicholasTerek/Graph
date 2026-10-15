@@ -192,6 +192,8 @@ Integration/browser tests require FalkorDB and use disposable graphs. Unit tests
 
 ## Remaining work
 
+The [complete engineering backlog](docs/TODO.md) tracks every original requirement and the added explainability, native branching, temporal/MVCC-style visibility, correctness, performance and UI work. It separates implemented baseline behavior from unimplemented goals.
+
 The [engineering status](docs/status.md) distinguishes implemented mechanisms, tested evidence, and missing production work, including the exact versioning/multi-agent guarantees. The [article plan](docs/blog-plan.md) defines the performance and versioned-scenario experiments needed before publishing claims.
 
 This implements the six requested next steps at prototype scope. Remaining platform work includes richer ontology types and cardinality, distributed write coordination, production governance, large-source ingestion and resumable workers, richer entity-resolution policies, temporal history queries, nested/rebased branches, approval revocation/expiry, and production-grade backup retention. Model-backed investigation and authenticated GitHub execution still need verification in the operator's configured environment. A complete Foundry or Helix Foundry port is not claimed.
