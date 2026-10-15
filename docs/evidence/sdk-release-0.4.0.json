@@ -1,0 +1,19 @@
+{
+  "format": "graph-sdk-release-v1",
+  "commit": "52808f5e1b0e8cce07d231ddd3885943bd9d1724",
+  "version": "0.4.0",
+  "node": "v24.19.0",
+  "pnpm": "11.25.0",
+  "artifacts": [
+    {
+      "name": "graph-contracts-0.4.0.tgz",
+      "sha256": "97904b82f170247da4380c8bb73c03ef5e963e1529b8b5a40331aea4f80d1717",
+      "bytes": 8891
+    },
+    {
+      "name": "graph-sdk-0.4.0.tgz",
+      "sha256": "991fb650cc4a15061ebfae3d7c625a0bc7f05afa5885248a5adf043c721b5a6b",
+      "bytes": 5519
+    }
+  ]
+}

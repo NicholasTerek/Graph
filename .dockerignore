@@ -2,6 +2,8 @@
 node_modules
 apps/web/dist
 .env
+.env*
+artifacts
 coverage
 test-results
 playwright-report
