@@ -88,7 +88,7 @@ For another compatible provider, configure its HTTPS base URL, model, and server
 
 ## Historical reads
 
-Launch operations includes a revision scrubber that recalculates the GPU plan from a pinned read-only snapshot. Native object and relationship visibility runs in Cypher; snapshot leases preserve one generation/revision across reads. Restores establish a new history generation. See [temporal semantics and limits](docs/temporal.md). Reviewed watermark-based vacuum is available in Operations → History & retention. Opt-in revision/overlay branches pin their base and store native deltas; full-history backup remains separate work. See the [branch strategy measurements](docs/branch-study.md).
+Launch operations includes a revision scrubber that recalculates the GPU plan from a pinned read-only snapshot. Native object and relationship visibility runs in Cypher; snapshot leases preserve one generation/revision across reads. Restores establish a new history generation. See [temporal semantics and limits](docs/temporal.md). Reviewed watermark-based vacuum is available in Operations → History & retention. Opt-in revision/overlay branches pin their base and store native deltas; optional v2 exports preserve retained temporal history, with reviewed local archive retention. See [backup recovery and limits](docs/temporal-backups.md). See the [branch strategy measurements](docs/branch-study.md).
 
 ## Explain decisions
 
@@ -204,7 +204,7 @@ The [complete engineering backlog](docs/TODO.md) tracks every original requireme
 
 The [engineering status](docs/status.md) distinguishes implemented mechanisms, tested evidence, and missing production work, including the exact versioning/multi-agent guarantees. The [article plan](docs/blog-plan.md) defines the performance and versioned-scenario experiments needed before publishing claims.
 
-This implements the six requested next steps at prototype scope. Remaining platform work includes richer ontology types and cardinality, distributed write coordination, production governance, large-source ingestion and resumable workers, richer entity-resolution policies, temporal retention and full-history backups, nested/rebased branches, approval revocation/expiry, and production-grade backup retention. Model-backed investigation and authenticated GitHub execution still need verification in the operator's configured environment. A complete Foundry or Helix Foundry port is not claimed.
+The prototype includes reviewed temporal vacuum, retained-history backups, action expiry/revocation, durable bounded jobs and a [reversible supplier identity lab](docs/entity-resolution.md). Remaining work includes broader branch/storage/fault measurements, live Notion/Discord and model validation, an explicitly approved external action, and a clean recorded GPU demonstration. Richer ontology types, distributed write coordination, enterprise governance, large resumable imports, general identity resolution, nested/rebased branches and off-host backup operations remain outside the current demonstration. A complete Foundry or Helix Foundry port is not claimed.
 
 ## Graph Hacks 2026
 

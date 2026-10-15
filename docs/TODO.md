@@ -169,11 +169,11 @@ Implemented: `pnpm check:history` and [its exact workload/checks](concurrency-ch
 - [x] Journal invocation/completion, input/output, revision/version and explicit success/conflict/failed/unknown outcomes, including cleanup.
 - [x] Check guarded increments and explicitly demonstrate blind lost increments and unguarded last-write behavior in local mutation tests.
 - [x] Check repeatable pinned reads, object/edge read skew and zero dangling visible edges.
-- [ ] Check branch isolation, no partial candidate publication and no stale promotion/action execution.
-- [ ] Check temporal visibility intervals and commit/restore generation monotonicity.
+- [x] Check isolation, failed candidate publication and stale promotion/action rejection in the independent native, overlay and workflow integration suites; these are separate from the journal workload.
+- [x] Check visibility intervals and fresh monotonic restore heads/generations in temporal and v2 backup integration suites.
 - [x] Test same-record guards, independent fields, linked-deletion rejection and deliberate cross-record write skew; do not claim generic serializability.
 - [ ] Inject failures before native write, after candidate write, before/after pointer publication and before acknowledgment.
-- [ ] Restart API/database and verify persisted histories, pins and cleanup within the documented durability mode.
+- [x] Verify persisted copy/overlay branches, histories and pins across graceful persistent API/database restart in the passing Compose drill. Abrupt crashes and timed orphan recovery remain separate work.
 - [x] Save seeds/full journals, a bounded reduced diagnostic witness and a human-readable failure report; label reducer/replay limits explicitly.
 - [x] Run a small seeded suite in milestone CI; put longer concurrent schedules behind `pnpm check:history`. Scheduling itself is nondeterministic.
 
@@ -204,7 +204,7 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 - [x] Replace repeated GraphView array scans with indexed lookups; preserve ordering/evidence and record equivalent before/after trials.
 - [x] Add declared native dependency slices for live/history/copy functions with bounded results and captured context; overlay uses an explicitly reported full-read fallback.
 - [x] Use local schema validation and one-object version deltas for scalar patches; preserve broad planning for topology/source/promotion operations and measure equivalent guarded HTTP writes.
-- [ ] Measure projection/copy overhead separately from native algorithm execution.
+- [x] Separate temporary native projection, algorithm-query round trip, guards, cleanup and residual HTTP/input costs for 1k/5k live/copy/overlay contexts; [90 measured requests](algorithm-phases.md), with lifecycle/I/O limits explicit.
 - [x] Preserve aggregate output equivalence and existing conflict tests for the first optimization; require equivalent checks for subsequent changes.
 - [x] Record the aggregate before/after results, CPU costs, trial variation and remaining branch-copy tradeoffs; do not infer a speedup from GraphBLAS.
 - [ ] Defer read replicas until replication consistency and pinned-snapshot semantics are understood and testable.
