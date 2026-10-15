@@ -192,7 +192,7 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 - [ ] Measure ingestion: row-by-row versus batched UNWIND, with equal validation/history/durability semantics.
 - [x] Capture GRAPH.EXPLAIN and read-only GRAPH.PROFILE for the actual aggregate/reference-page queries and range index; broader dependency queries remain work.
 - [x] Record warmups and repeated fixed-duration function trials with p50/p95/p99, achieved completions, errors and CPU/memory; short-trial limits are explicit.
-- [ ] Extend the measured closed-loop function readers (1/8/32) with business read/write mixtures; declare queueing and achieved load.
+- [x] Add guarded scalar writes with zero/eight closed-loop aggregate readers, alongside 1/8/32 function readers; report achieved load and remaining queue costs.
 - [ ] Record per-process CPU/RSS, database memory, serialized bytes and disk/temp copy costs.
 - [x] Record hardware, versions, persistence, indexes, network placement and warm/cold state for the aggregate study.
 - [x] Commit raw samples, scripts and reproduction commands; build the aggregate chart directly from recorded trials.
@@ -203,7 +203,7 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 - [x] Push aggregates into native Cypher instead of paging all values through TypeScript.
 - [x] Replace repeated GraphView array scans with indexed lookups; preserve ordering/evidence and record equivalent before/after trials.
 - [x] Add declared native dependency slices for live/history/copy functions with bounded results and captured context; overlay uses an explicitly reported full-read fallback.
-- [ ] Reduce full-state mutation planning/validation where local constraints permit it.
+- [x] Use local schema validation and one-object version deltas for scalar patches; preserve broad planning for topology/source/promotion operations and measure equivalent guarded HTTP writes.
 - [ ] Measure projection/copy overhead separately from native algorithm execution.
 - [x] Preserve aggregate output equivalence and existing conflict tests for the first optimization; require equivalent checks for subsequent changes.
 - [x] Record the aggregate before/after results, CPU costs, trial variation and remaining branch-copy tradeoffs; do not infer a speedup from GraphBLAS.

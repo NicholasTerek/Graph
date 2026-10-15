@@ -1,0 +1,683 @@
+{
+  "node": "v24.19.0",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "baselineCommit": "724128bd40c4b53a0b614cc4fd341932edefb1a0",
+  "baselineSha256": "2d578744c87483e45ca05ee5d14e0c3c7099d7e4d0162836940ede4c9b44da20",
+  "workload": "Real loopback HTTP; identical Zod validation, scalar updates, guarded revisions, atomic native history and response shape; ten warmups; fixed successful write counts, sequential writer with zero/eight closed-loop aggregate readers; alternating implementation order; history retained throughout each fixture",
+  "summaries": [
+    {
+      "size": 1000,
+      "mode": "full",
+      "readers": 0,
+      "trial": 0,
+      "elapsedMs": 1628.067552,
+      "writer": {
+        "count": 80,
+        "p50Ms": 19.30010399999992,
+        "p95Ms": 28.43487499999992,
+        "p99Ms": 35.92856900000015
+      },
+      "reader": {
+        "count": 0,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null
+      },
+      "writesPerSecond": 49.13801021445577,
+      "readsPerSecond": 0,
+      "errors": 0,
+      "cpuMs": 1130.907,
+      "databaseCpuSeconds": 0.42399499999999996,
+      "rssBefore": 379916288,
+      "rssAfter": 389222400,
+      "databaseUsedMemory": 7761696,
+      "file": "1000-full-readers0-t0.csv"
+    },
+    {
+      "size": 1000,
+      "mode": "local",
+      "readers": 0,
+      "trial": 0,
+      "elapsedMs": 458.21192199999996,
+      "writer": {
+        "count": 80,
+        "p50Ms": 5.436709000000064,
+        "p95Ms": 7.645235999999841,
+        "p99Ms": 12.332625999999891
+      },
+      "reader": {
+        "count": 0,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null
+      },
+      "writesPerSecond": 174.59170344328143,
+      "readsPerSecond": 0,
+      "errors": 0,
+      "cpuMs": 150.45,
+      "databaseCpuSeconds": 0.24001000000000006,
+      "rssBefore": 389353472,
+      "rssAfter": 389746688,
+      "databaseUsedMemory": 8449528,
+      "file": "1000-local-readers0-t0.csv"
+    },
+    {
+      "size": 1000,
+      "mode": "local",
+      "readers": 0,
+      "trial": 1,
+      "elapsedMs": 435.17588399999977,
+      "writer": {
+        "count": 80,
+        "p50Ms": 5.397891000000072,
+        "p95Ms": 6.563943000000108,
+        "p99Ms": 8.37820899999997
+      },
+      "reader": {
+        "count": 0,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null
+      },
+      "writesPerSecond": 183.83371630032707,
+      "readsPerSecond": 0,
+      "errors": 0,
+      "cpuMs": 135.197,
+      "databaseCpuSeconds": 0.23115300000000008,
+      "rssBefore": 390008832,
+      "rssAfter": 390533120,
+      "databaseUsedMemory": 8654552,
+      "file": "1000-local-readers0-t1.csv"
+    },
+    {
+      "size": 1000,
+      "mode": "full",
+      "readers": 0,
+      "trial": 1,
+      "elapsedMs": 1534.6251619999994,
+      "writer": {
+        "count": 80,
+        "p50Ms": 18.853590000000622,
+        "p95Ms": 22.472601000000395,
+        "p99Ms": 28.094108000000233
+      },
+      "reader": {
+        "count": 0,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null
+      },
+      "writesPerSecond": 52.12999368245732,
+      "readsPerSecond": 0,
+      "errors": 0,
+      "cpuMs": 1027.986,
+      "databaseCpuSeconds": 0.43942800000000015,
+      "rssBefore": 394203136,
+      "rssAfter": 395776000,
+      "databaseUsedMemory": 8828272,
+      "file": "1000-full-readers0-t1.csv"
+    },
+    {
+      "size": 1000,
+      "mode": "full",
+      "readers": 0,
+      "trial": 2,
+      "elapsedMs": 1479.3286239999998,
+      "writer": {
+        "count": 80,
+        "p50Ms": 18.28236900000047,
+        "p95Ms": 19.848589000000175,
+        "p99Ms": 29.508654000000206
+      },
+      "reader": {
+        "count": 0,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null
+      },
+      "writesPerSecond": 54.078585854497746,
+      "readsPerSecond": 0,
+      "errors": 0,
+      "cpuMs": 1023.837,
+      "databaseCpuSeconds": 0.3992730000000002,
+      "rssBefore": 396169216,
+      "rssAfter": 398135296,
+      "databaseUsedMemory": 9101648,
+      "file": "1000-full-readers0-t2.csv"
+    },
+    {
+      "size": 1000,
+      "mode": "local",
+      "readers": 0,
+      "trial": 2,
+      "elapsedMs": 483.94028199999957,
+      "writer": {
+        "count": 80,
+        "p50Ms": 5.68333100000018,
+        "p95Ms": 8.690891000000192,
+        "p99Ms": 13.37472600000001
+      },
+      "reader": {
+        "count": 0,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null
+      },
+      "writesPerSecond": 165.30965281373307,
+      "readsPerSecond": 0,
+      "errors": 0,
+      "cpuMs": 175.179,
+      "databaseCpuSeconds": 0.26751400000000014,
+      "rssBefore": 398266368,
+      "rssAfter": 408621056,
+      "databaseUsedMemory": 9288392,
+      "file": "1000-local-readers0-t2.csv"
+    },
+    {
+      "size": 1000,
+      "mode": "full",
+      "readers": 8,
+      "trial": 0,
+      "elapsedMs": 2041.2706130000006,
+      "writer": {
+        "count": 80,
+        "p50Ms": 24.91946900000039,
+        "p95Ms": 28.806370000000243,
+        "p99Ms": 34.175884000000224
+      },
+      "reader": {
+        "count": 648,
+        "p50Ms": 24.97694500000034,
+        "p95Ms": 28.283337000000756,
+        "p99Ms": 34.718245000000024
+      },
+      "writesPerSecond": 39.191276007459955,
+      "readsPerSecond": 317.4493356604256,
+      "errors": 0,
+      "cpuMs": 1490.506,
+      "databaseCpuSeconds": 0.757852,
+      "rssBefore": 410193920,
+      "rssAfter": 425398272,
+      "databaseUsedMemory": 9440336,
+      "file": "1000-full-readers8-t0.csv"
+    },
+    {
+      "size": 1000,
+      "mode": "local",
+      "readers": 8,
+      "trial": 0,
+      "elapsedMs": 960.7765399999989,
+      "writer": {
+        "count": 80,
+        "p50Ms": 11.590319999999338,
+        "p95Ms": 13.60117899999932,
+        "p99Ms": 17.50386300000173
+      },
+      "reader": {
+        "count": 648,
+        "p50Ms": 11.633273999999801,
+        "p95Ms": 13.974921999999424,
+        "p99Ms": 15.94484999999986
+      },
+      "writesPerSecond": 83.26597982919118,
+      "readsPerSecond": 674.4544366164486,
+      "errors": 0,
+      "cpuMs": 477.004,
+      "databaseCpuSeconds": 0.6141690000000002,
+      "rssBefore": 425398272,
+      "rssAfter": 430510080,
+      "databaseUsedMemory": 9630264,
+      "file": "1000-local-readers8-t0.csv"
+    },
+    {
+      "size": 1000,
+      "mode": "local",
+      "readers": 8,
+      "trial": 1,
+      "elapsedMs": 952.6285149999985,
+      "writer": {
+        "count": 80,
+        "p50Ms": 11.612716999999975,
+        "p95Ms": 13.511431999999331,
+        "p99Ms": 20.295344999998633
+      },
+      "reader": {
+        "count": 648,
+        "p50Ms": 11.539913000000524,
+        "p95Ms": 13.456890999999814,
+        "p99Ms": 17.68034600000101
+      },
+      "writesPerSecond": 83.9781706513374,
+      "readsPerSecond": 680.2231822758329,
+      "errors": 0,
+      "cpuMs": 491.791,
+      "databaseCpuSeconds": 0.6098819999999995,
+      "rssBefore": 430510080,
+      "rssAfter": 446894080,
+      "databaseUsedMemory": 9599880,
+      "file": "1000-local-readers8-t1.csv"
+    },
+    {
+      "size": 1000,
+      "mode": "full",
+      "readers": 8,
+      "trial": 1,
+      "elapsedMs": 1929.2709160000013,
+      "writer": {
+        "count": 80,
+        "p50Ms": 23.668722000000344,
+        "p95Ms": 26.578985000000102,
+        "p99Ms": 27.555936999999176
+      },
+      "reader": {
+        "count": 648,
+        "p50Ms": 23.59623300000021,
+        "p95Ms": 26.438489000000118,
+        "p99Ms": 28.27064900000005
+      },
+      "writesPerSecond": 41.46644171979004,
+      "readsPerSecond": 335.87817793029933,
+      "errors": 0,
+      "cpuMs": 1359.56,
+      "databaseCpuSeconds": 0.7572659999999999,
+      "rssBefore": 456855552,
+      "rssAfter": 471797760,
+      "databaseUsedMemory": 9787352,
+      "file": "1000-full-readers8-t1.csv"
+    },
+    {
+      "size": 1000,
+      "mode": "full",
+      "readers": 8,
+      "trial": 2,
+      "elapsedMs": 2128.8294430000005,
+      "writer": {
+        "count": 80,
+        "p50Ms": 25.274611000000732,
+        "p95Ms": 34.35333600000013,
+        "p99Ms": 42.08665899999869
+      },
+      "reader": {
+        "count": 648,
+        "p50Ms": 25.125356000000465,
+        "p95Ms": 34.80028500000117,
+        "p99Ms": 38.649508000000424
+      },
+      "writesPerSecond": 37.579337444366594,
+      "readsPerSecond": 304.39263329936944,
+      "errors": 0,
+      "cpuMs": 1431.333,
+      "databaseCpuSeconds": 0.8690259999999997,
+      "rssBefore": 472322048,
+      "rssAfter": 487395328,
+      "databaseUsedMemory": 9989328,
+      "file": "1000-full-readers8-t2.csv"
+    },
+    {
+      "size": 1000,
+      "mode": "local",
+      "readers": 8,
+      "trial": 2,
+      "elapsedMs": 954.1962480000002,
+      "writer": {
+        "count": 80,
+        "p50Ms": 11.645433000001503,
+        "p95Ms": 14.052362999998877,
+        "p99Ms": 21.71654900000067
+      },
+      "reader": {
+        "count": 648,
+        "p50Ms": 11.613304999998945,
+        "p95Ms": 15.602543000000878,
+        "p99Ms": 21.587305000000924
+      },
+      "writesPerSecond": 83.84019552338461,
+      "readsPerSecond": 679.1055837394152,
+      "errors": 0,
+      "cpuMs": 413.442,
+      "databaseCpuSeconds": 0.6249880000000007,
+      "rssBefore": 487395328,
+      "rssAfter": 490672128,
+      "databaseUsedMemory": 10264744,
+      "file": "1000-local-readers8-t2.csv"
+    },
+    {
+      "size": 5000,
+      "mode": "full",
+      "readers": 0,
+      "trial": 0,
+      "elapsedMs": 5346.250053,
+      "writer": {
+        "count": 80,
+        "p50Ms": 65.97777399999904,
+        "p95Ms": 70.09995300000082,
+        "p99Ms": 89.82970299999943
+      },
+      "reader": {
+        "count": 0,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null
+      },
+      "writesPerSecond": 14.963759496267617,
+      "readsPerSecond": 0,
+      "errors": 0,
+      "cpuMs": 4484.946,
+      "databaseCpuSeconds": 1.1244800000000006,
+      "rssBefore": 504176640,
+      "rssAfter": 518840320,
+      "databaseUsedMemory": 23805736,
+      "file": "5000-full-readers0-t0.csv"
+    },
+    {
+      "size": 5000,
+      "mode": "local",
+      "readers": 0,
+      "trial": 0,
+      "elapsedMs": 762.3945999999996,
+      "writer": {
+        "count": 80,
+        "p50Ms": 9.16171100000065,
+        "p95Ms": 11.896741000000475,
+        "p99Ms": 13.15809999999692
+      },
+      "reader": {
+        "count": 0,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null
+      },
+      "writesPerSecond": 104.93253755994604,
+      "readsPerSecond": 0,
+      "errors": 0,
+      "cpuMs": 97.187,
+      "databaseCpuSeconds": 0.5764650000000004,
+      "rssBefore": 518840320,
+      "rssAfter": 518840320,
+      "databaseUsedMemory": 23964112,
+      "file": "5000-local-readers0-t0.csv"
+    },
+    {
+      "size": 5000,
+      "mode": "local",
+      "readers": 0,
+      "trial": 1,
+      "elapsedMs": 752.6782170000006,
+      "writer": {
+        "count": 80,
+        "p50Ms": 9.20165199999974,
+        "p95Ms": 10.463070999998308,
+        "p99Ms": 13.22914800000217
+      },
+      "reader": {
+        "count": 0,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null
+      },
+      "writesPerSecond": 106.28712003764544,
+      "readsPerSecond": 0,
+      "errors": 0,
+      "cpuMs": 99.301,
+      "databaseCpuSeconds": 0.5697399999999995,
+      "rssBefore": 518840320,
+      "rssAfter": 518840320,
+      "databaseUsedMemory": 24120120,
+      "file": "5000-local-readers0-t1.csv"
+    },
+    {
+      "size": 5000,
+      "mode": "full",
+      "readers": 0,
+      "trial": 1,
+      "elapsedMs": 5500.044125,
+      "writer": {
+        "count": 80,
+        "p50Ms": 67.12630300000092,
+        "p95Ms": 78.37542499999836,
+        "p99Ms": 95.01915600000211
+      },
+      "reader": {
+        "count": 0,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null
+      },
+      "writesPerSecond": 14.545337852175868,
+      "readsPerSecond": 0,
+      "errors": 0,
+      "cpuMs": 4635.08,
+      "databaseCpuSeconds": 1.1605450000000002,
+      "rssBefore": 525844480,
+      "rssAfter": 562331648,
+      "databaseUsedMemory": 24356968,
+      "file": "5000-full-readers0-t1.csv"
+    },
+    {
+      "size": 5000,
+      "mode": "full",
+      "readers": 0,
+      "trial": 2,
+      "elapsedMs": 5719.776254999997,
+      "writer": {
+        "count": 80,
+        "p50Ms": 68.6763890000002,
+        "p95Ms": 80.99992099999508,
+        "p99Ms": 128.35868000000482
+      },
+      "reader": {
+        "count": 0,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null
+      },
+      "writesPerSecond": 13.98656108795641,
+      "readsPerSecond": 0,
+      "errors": 0,
+      "cpuMs": 4892.095,
+      "databaseCpuSeconds": 1.191099,
+      "rssBefore": 569597952,
+      "rssAfter": 575799296,
+      "databaseUsedMemory": 24474752,
+      "file": "5000-full-readers0-t2.csv"
+    },
+    {
+      "size": 5000,
+      "mode": "local",
+      "readers": 0,
+      "trial": 2,
+      "elapsedMs": 772.3097730000009,
+      "writer": {
+        "count": 80,
+        "p50Ms": 9.448963999995613,
+        "p95Ms": 10.91251299999567,
+        "p99Ms": 13.726232000000891
+      },
+      "reader": {
+        "count": 0,
+        "p50Ms": null,
+        "p95Ms": null,
+        "p99Ms": null
+      },
+      "writesPerSecond": 103.58537829871527,
+      "readsPerSecond": 0,
+      "errors": 0,
+      "cpuMs": 100.737,
+      "databaseCpuSeconds": 0.5912189999999995,
+      "rssBefore": 575799296,
+      "rssAfter": 575799296,
+      "databaseUsedMemory": 24643744,
+      "file": "5000-local-readers0-t2.csv"
+    },
+    {
+      "size": 5000,
+      "mode": "full",
+      "readers": 8,
+      "trial": 0,
+      "elapsedMs": 6539.924648,
+      "writer": {
+        "count": 80,
+        "p50Ms": 80.11740899999859,
+        "p95Ms": 90.39410100000532,
+        "p99Ms": 113.42944400000124
+      },
+      "reader": {
+        "count": 648,
+        "p50Ms": 79.93810899999517,
+        "p95Ms": 89.31679799999984,
+        "p99Ms": 114.6518320000032
+      },
+      "writesPerSecond": 12.232556842144215,
+      "readsPerSecond": 99.08371042136814,
+      "errors": 0,
+      "cpuMs": 5111.213,
+      "databaseCpuSeconds": 2.260484999999999,
+      "rssBefore": 542007296,
+      "rssAfter": 541728768,
+      "databaseUsedMemory": 24658392,
+      "file": "5000-full-readers8-t0.csv"
+    },
+    {
+      "size": 5000,
+      "mode": "local",
+      "readers": 8,
+      "trial": 0,
+      "elapsedMs": 1930.2421939999986,
+      "writer": {
+        "count": 80,
+        "p50Ms": 23.326866999996128,
+        "p95Ms": 25.41467499999999,
+        "p99Ms": 54.63737299999775
+      },
+      "reader": {
+        "count": 648,
+        "p50Ms": 23.278973000000406,
+        "p95Ms": 25.964983999998367,
+        "p99Ms": 48.183303999998316
+      },
+      "writesPerSecond": 41.44557623321753,
+      "readsPerSecond": 335.709167489062,
+      "errors": 0,
+      "cpuMs": 434.789,
+      "databaseCpuSeconds": 1.676121,
+      "rssBefore": 541204480,
+      "rssAfter": 541204480,
+      "databaseUsedMemory": 24862368,
+      "file": "5000-local-readers8-t0.csv"
+    },
+    {
+      "size": 5000,
+      "mode": "local",
+      "readers": 8,
+      "trial": 1,
+      "elapsedMs": 1928.8306420000008,
+      "writer": {
+        "count": 80,
+        "p50Ms": 23.06803900000523,
+        "p95Ms": 27.879187999998976,
+        "p99Ms": 52.51778399999603
+      },
+      "reader": {
+        "count": 648,
+        "p50Ms": 23.0953010000012,
+        "p95Ms": 27.344842999998946,
+        "p99Ms": 46.2584149999966
+      },
+      "writesPerSecond": 41.4759068308082,
+      "readsPerSecond": 335.9548453295464,
+      "errors": 0,
+      "cpuMs": 446.948,
+      "databaseCpuSeconds": 1.7131939999999997,
+      "rssBefore": 541204480,
+      "rssAfter": 541204480,
+      "databaseUsedMemory": 25002920,
+      "file": "5000-local-readers8-t1.csv"
+    },
+    {
+      "size": 5000,
+      "mode": "full",
+      "readers": 8,
+      "trial": 1,
+      "elapsedMs": 6764.002955999997,
+      "writer": {
+        "count": 80,
+        "p50Ms": 81.08796299999813,
+        "p95Ms": 102.50193500000023,
+        "p99Ms": 133.51007399999799
+      },
+      "reader": {
+        "count": 648,
+        "p50Ms": 80.92071100000612,
+        "p95Ms": 103.51810200000182,
+        "p99Ms": 132.75500699999975
+      },
+      "writesPerSecond": 11.827315943000313,
+      "readsPerSecond": 95.80125913830253,
+      "errors": 0,
+      "cpuMs": 5018.735,
+      "databaseCpuSeconds": 2.314481000000001,
+      "rssBefore": 541110272,
+      "rssAfter": 560209920,
+      "databaseUsedMemory": 25124376,
+      "file": "5000-full-readers8-t1.csv"
+    },
+    {
+      "size": 5000,
+      "mode": "full",
+      "readers": 8,
+      "trial": 2,
+      "elapsedMs": 6451.988515999998,
+      "writer": {
+        "count": 80,
+        "p50Ms": 79.44346600000426,
+        "p95Ms": 85.3197880000007,
+        "p99Ms": 110.52457800000411
+      },
+      "reader": {
+        "count": 648,
+        "p50Ms": 79.3106970000008,
+        "p95Ms": 85.46811699999671,
+        "p99Ms": 110.43766699999833
+      },
+      "writesPerSecond": 12.399278114276177,
+      "readsPerSecond": 100.43415272563703,
+      "errors": 0,
+      "cpuMs": 5075.547,
+      "databaseCpuSeconds": 2.170480999999998,
+      "rssBefore": 575553536,
+      "rssAfter": 602562560,
+      "databaseUsedMemory": 25263032,
+      "file": "5000-full-readers8-t2.csv"
+    },
+    {
+      "size": 5000,
+      "mode": "local",
+      "readers": 8,
+      "trial": 2,
+      "elapsedMs": 1902.4948139999906,
+      "writer": {
+        "count": 80,
+        "p50Ms": 23.499390000011772,
+        "p95Ms": 24.88047600000573,
+        "p99Ms": 30.20233200000075
+      },
+      "reader": {
+        "count": 648,
+        "p50Ms": 23.452258999997866,
+        "p95Ms": 25.123741999996128,
+        "p99Ms": 27.11046899999201
+      },
+      "writesPerSecond": 42.05004892065919,
+      "readsPerSecond": 340.6053962573394,
+      "errors": 0,
+      "cpuMs": 448.554,
+      "databaseCpuSeconds": 1.6425419999999988,
+      "rssBefore": 602038272,
+      "rssAfter": 602038272,
+      "databaseUsedMemory": 25447464,
+      "file": "5000-local-readers8-t2.csv"
+    }
+  ],
+  "persistence": "FalkorDB 4.18.3 / Redis 8.6.2; appendonly no; empty RDB save policy",
+  "placement": "API and client share one Node process on loopback; database is a separate local process"
+}

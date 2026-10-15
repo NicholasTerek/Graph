@@ -20,6 +20,7 @@ import type {
 import {
   PlatformError,
   validateIngestion,
+  validateObject,
   isAdditiveSchema,
 } from "./validation.js";
 
@@ -499,11 +500,15 @@ export class GraphStore {
         properties: { ...current.properties, ...patch.properties },
         provenance: patch.provenance ?? current.provenance,
       };
-      await this.ingestUnlocked(ontology, {
-        objects: [object],
-        relationships: [],
-      });
-      return { object, revision: await this.revision(ontology) };
+      validateObject(await this.ontology(ontology), object);
+      // Legacy installations need their complete baseline before a local delta.
+      await this.temporal.ensure(ontology);
+      const next = await this.commitState(
+        ontology,
+        { objects: [current], relationships: [] },
+        { objects: [object], relationships: [] },
+      );
+      return { object, revision: next };
     });
   }
 
