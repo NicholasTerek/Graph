@@ -100,7 +100,7 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [x] Test concurrent branch edits, live/sibling isolation, failed publication and lost acknowledgment.
 - [x] Collect unreferenced graphs at startup/discard; clean acknowledged superseded candidates.
 - [x] Add a reproducible graceful API/database stop/start check to milestone CI.
-- [ ] Observe the new Compose stop/start check passing for the exact native milestone SHA.
+- [x] Observe the new Compose stop/start check passing for the exact native milestone SHA.
 - [ ] Measure copy creation/edit overhead, temporary I/O, memory and disk footprint.
 - [ ] Stress copy failure/restart during preparation; quantify orphan cleanup and recovery time.
 - [ ] Add a safe operator dry-run/report for graph retention and collection.
@@ -112,7 +112,7 @@ This is planned work. The native-copy implementation is the functional baseline,
 
 ### Design and correctness contract
 
-- [ ] Write an ADR comparing full native copies, previous JSON shared bases and a native revision/overlay model, including migration, read path and GC complexity.
+- [x] Write an ADR comparing full native copies, previous JSON shared bases and a native revision/overlay model, including migration, read path and GC complexity.
 - [ ] Specify per-ontology monotonically increasing commit revisions and stable logical IDs separately from physical version IDs.
 - [ ] Define transaction/read-snapshot boundaries explicitly. A visibility predicate alone does not establish multi-call snapshot isolation.
 - [ ] Define commit records, timestamp-to-revision mapping, failed-write allocation policy and no-op revision policy.
