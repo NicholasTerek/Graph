@@ -9,6 +9,7 @@ import type {
   ScenarioDiff,
   Change,
 } from "@graph/contracts";
+import { createHash } from "node:crypto";
 import { GraphStore } from "./store.js";
 import { PlatformError, validateIngestion } from "./validation.js";
 
@@ -431,6 +432,50 @@ export class ScenarioService {
       }
     }
     return this.store.nativeGraphs.collect(references);
+  }
+  async retainGraphs(
+    ontology: string,
+    input: { dryRun: boolean; digest?: string; confirmOntology?: string },
+  ) {
+    return this.store.exclusive(async () => {
+      await this.store.ontology(ontology);
+      const references = new Set<string>();
+      for (const base of await this.store.documents<
+        import("./native-graphs.js").NativeBase
+      >("base", ontology))
+        if (base.storage === "falkordb") references.add(base.graphKey);
+      for (const branch of await this.list(ontology)) {
+        if (branch.graphKey) references.add(branch.graphKey);
+        if (branch.baseGraphKey) references.add(branch.baseGraphKey);
+      }
+      const graphs = await this.store.nativeGraphs.inventory(
+        ontology,
+        references,
+      );
+      const digest = createHash("sha256")
+        .update(
+          canonical({ ontology, graphs, references: [...references].sort() }),
+        )
+        .digest("hex");
+      const orphans = graphs.filter((g) => !g.retained);
+      if (!input.dryRun) {
+        if (input.digest !== digest || input.confirmOntology !== ontology)
+          throw new PlatformError(
+            409,
+            "Review the current native graph inventory and confirm this ontology",
+          );
+        for (const orphan of orphans)
+          await this.store.nativeGraphs.remove(ontology, orphan.key);
+      }
+      return {
+        ontology,
+        digest,
+        dryRun: input.dryRun,
+        graphs,
+        orphanCount: orphans.length,
+        deleted: input.dryRun ? [] : orphans.map((g) => g.key),
+      };
+    });
   }
   async initialize() {
     return this.store.exclusive(async () => {

@@ -207,6 +207,16 @@ test("previews history retention and requires explicit confirmation while protec
     await panel.getByLabel("Confirm history pruning").check();
     await expect(prune).toBeEnabled();
     await panel.getByLabel("Confirm history pruning").uncheck();
+    await page.getByRole("button", { name: "Preview orphan graphs" }).click();
+    await expect(
+      page
+        .locator(".operation-card")
+        .filter({
+          has: page.getByRole("heading", {
+            name: "Native branch graph retention",
+          }),
+        }),
+    ).toContainText("unreferenced");
     await panel.screenshot({ path: "/tmp/graph-retention.png" });
     expect(
       (

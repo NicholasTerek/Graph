@@ -111,7 +111,9 @@ export class Security {
             ? ["execute"]
             : /\/scenarios\/[^/]+\/promote$/.test(request.url)
               ? ["write", "approve"]
-              : /\/(restore|indexes|vacuum)$/.test(request.url)
+              : /\/(restore|indexes|vacuum)$|\/native-graphs\/collect$/.test(
+                    request.url,
+                  )
                 ? ["admin"]
                 : /\/functions\/[^/]+\/run$|\/objects\/query$|\/aggregate$|\/algorithms\/run$|\/explain$|\/state\/at(?:\/traverse)?$|\/snapshots(?:\/[^/]+)?$/.test(
                       request.url,

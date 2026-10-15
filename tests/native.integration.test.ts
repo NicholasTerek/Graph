@@ -444,4 +444,36 @@ suite("native graphs and algorithm tools", () => {
       (await client.scenarioGraph("network", "branch-a")).objects,
     ).toHaveLength(4);
   });
+  it("reviews orphan collection, rejects changed inventories and retains published and foreign graphs", async () => {
+    const state = await client.snapshot("network");
+    const orphan = await store.nativeGraphs.create("network", state);
+    const foreign = await store.nativeGraphs.create(
+      "other",
+      await client.snapshot("other"),
+    );
+    const plan = await client.collectNativeGraphs("network");
+    expect(plan.deleted).toEqual([]);
+    expect(plan.graphs.find((g) => g.key === orphan)?.retained).toBe(false);
+    expect(plan.graphs.some((g) => g.key === foreign)).toBe(false);
+    const late = await store.nativeGraphs.create("network", state);
+    await expect(
+      client.collectNativeGraphs("network", {
+        dryRun: false,
+        digest: plan.digest,
+        confirmOntology: "network",
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    const fresh = await client.collectNativeGraphs("network");
+    const result = await client.collectNativeGraphs("network", {
+      dryRun: false,
+      digest: fresh.digest,
+      confirmOntology: "network",
+    });
+    expect(result.deleted).toEqual(expect.arrayContaining([orphan, late]));
+    expect(await db.list()).toContain(foreign);
+    expect(
+      (await client.scenarioGraph("network", "branch-a")).objects,
+    ).toHaveLength(4);
+    await store.nativeGraphs.remove("other", foreign);
+  });
 });

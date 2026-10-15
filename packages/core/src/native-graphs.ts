@@ -149,4 +149,10 @@ export class NativeGraphs {
       }
     return deleted;
   }
+  async inventory(ontology: string, references: Set<string>) {
+    const keys = (await this.db.list())
+      .filter((key) => key.startsWith(this.scope(ontology)))
+      .sort();
+    return keys.map((key) => ({ key, retained: references.has(key) }));
+  }
 }

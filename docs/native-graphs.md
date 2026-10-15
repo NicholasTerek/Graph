@@ -76,3 +76,9 @@ References: [copy source pinned to v4.18.3](https://github.com/FalkorDB/FalkorDB
 ## Alternative backend
 
 This document describes the default copy backend. `strategy: "overlay"` selects the [native revision/overlay backend](native-overlays.md), which pins history and publishes native deltas in the main graph. [Measured costs](branch-study.md) include the temporary projection required for overlay algorithms.
+
+## Reviewed operator collection
+
+Operations → History & retention previews native branch graph retention. `client.collectNativeGraphs(ontology)` requires admin scope and returns an inventory, retained flags, orphan count and SHA-256 review digest. Apply with `{dryRun: false, digest, confirmOntology: ontology}`. The service re-reads references and inventory under the single-writer queue and rejects any change since preview. Only unreferenced graph keys in this namespace AND ontology are eligible; published branch/base graphs and other ontologies/namespaces are retained. Algorithm projection and branch publication use the same queue, so an active coordinated candidate cannot be collected.
+
+Deletion is sequential and idempotent, not one atomic multi-graph transaction. A failure may remove a subset; preview again before retrying. This operation does not vacuum temporal versions or orphan overlay delta records; their existing collection paths remain separate. Startup/discard collection remains automatic. The planner displays native copy/revision overlay, base revision and current version. Tests create unpublished graphs, change the inventory after review, verify stale-review rejection and prove published/foreign graph survival.

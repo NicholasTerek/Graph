@@ -103,8 +103,8 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [x] Observe the new Compose stop/start check passing for the exact native milestone SHA.
 - [ ] Measure copy creation/edit overhead, temporary I/O, memory and disk footprint.
 - [ ] Stress copy failure/restart during preparation; quantify orphan cleanup and recovery time.
-- [ ] Add a safe operator dry-run/report for graph retention and collection.
-- [ ] Add a UI branch indicator showing storage mode/base revision and current version.
+- [x] Add scoped admin native-graph inventory, reviewed digest and explicit-confirmation collection; test stale reviews and published/foreign graph protection.
+- [x] Show branch storage mode, base revision and current version in the planner.
 
 ## D. Versioned storage, visibility and “as of” reads
 

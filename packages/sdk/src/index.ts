@@ -51,6 +51,19 @@ export class GraphApiError extends Error {
   }
 }
 export class GraphClient {
+  collectNativeGraphs(
+    ontology: string,
+    input: { dryRun?: boolean; digest?: string; confirmOntology?: string } = {},
+  ) {
+    return this.call<{
+      ontology: string;
+      digest: string;
+      dryRun: boolean;
+      graphs: { key: string; retained: boolean }[];
+      orphanCount: number;
+      deleted: string[];
+    }>(`${this.path(ontology)}/native-graphs/collect`, "POST", input);
+  }
   historyStatus(ontology: string) {
     return this.call<HistoryStatus>(`${this.path(ontology)}/history`);
   }

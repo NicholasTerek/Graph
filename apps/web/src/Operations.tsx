@@ -1,4 +1,5 @@
 import JobsPanel from "./JobsPanel.js";
+import GraphRetention from "./GraphRetention.js";
 import { useEffect, useState, useRef } from "react";
 import { GraphClient } from "@graph/sdk";
 import type {
@@ -549,7 +550,10 @@ export default function Operations({
       )}
       {tab === "jobs" && <JobsPanel client={client} ontology={ontology} />}
       {tab === "history" && (
-        <RetentionPanel client={client} ontology={ontology} />
+        <>
+          <RetentionPanel client={client} ontology={ontology} />
+          <GraphRetention key={ontology} client={client} ontology={ontology} />
+        </>
       )}
       {tab === "backup" && (
         <div className="backup-grid">

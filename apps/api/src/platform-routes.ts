@@ -349,6 +349,23 @@ export function platformRoutes(
     );
   }
 
+  app.post(
+    "/api/ontologies/:ontology/native-graphs/collect",
+    {
+      schema: {
+        tags: ["Operations"],
+        params,
+        body: z
+          .object({
+            dryRun: z.boolean().default(true),
+            digest: z.string().length(64).optional(),
+            confirmOntology: identifier.optional(),
+          })
+          .strict(),
+      },
+    },
+    (req) => scenarios.retainGraphs(req.params.ontology, req.body),
+  );
   app.get(
     "/api/ontologies/:ontology/backup",
     { schema: { tags: ["Operations"], params } },

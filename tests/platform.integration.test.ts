@@ -772,6 +772,9 @@ suite("operational platform capabilities", () => {
   });
   it("expires approvals and revokes authorization without issuing external writes", async () => {
     const before = posts;
+    await expect(
+      forRole("writer").collectNativeGraphs("semiconductor"),
+    ).rejects.toMatchObject({ status: 403 });
     const action = await propose("expiry-operation");
     const approved = await client.reviewAction("semiconductor", action.id, {
       expectedVersion: 0,
