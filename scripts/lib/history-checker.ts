@@ -263,15 +263,17 @@ export async function runHistoryWorkload(
           const state = await read("scenario-agent");
           if (!state) return;
           const id = `branch-${i}`;
+          const strategy = i % 2 ? ("copy" as const) : ("overlay" as const);
           const branch = await observe(
             "scenario-agent",
             "branch",
-            { expectedRevision: state.revision },
+            { expectedRevision: state.revision, strategy },
             () =>
               client.createScenario(ontology, {
                 id,
                 name: id,
                 expectedRevision: state.revision,
+                strategy,
               }),
           );
           if (!branch) continue;
@@ -317,6 +319,7 @@ export async function runHistoryWorkload(
         id: "final-branch",
         name: "Final branch",
         expectedRevision: state.revision,
+        strategy: "overlay",
       });
       branches.push(branch.id);
       const edited = await client.patchScenarioObject(

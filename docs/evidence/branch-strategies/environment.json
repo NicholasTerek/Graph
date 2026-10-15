@@ -1,0 +1,40 @@
+{
+  "node": "v24.19.0",
+  "platform": "linux",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "visibleCpus": 9,
+  "cpuQuota": "800000 100000",
+  "memoryLimit": "8589934592",
+  "moduleInfo": [
+    [
+      "name",
+      "vectorset",
+      "ver",
+      1,
+      "path",
+      "",
+      "args",
+      []
+    ],
+    [
+      "name",
+      "graph",
+      "ver",
+      41803,
+      "path",
+      "/tmp/graph-db-test/redislite/bin/falkordb.so",
+      "args",
+      []
+    ]
+  ],
+  "redisServer": "# Server\r\nredis_version:8.6.2\r\nredis_git_sha1:15f8d357\r\nredis_git_dirty:0\r\nredis_build_id:7b5063eb305dad6a\r\nredis_mode:standalone\r\nos:Linux 6.18.44 x86_64\r\narch_bits:64\r\nmonotonic_clock:POSIX clock_gettime\r\nmultiplexing_api:epoll\r\natomicvar_api:c11-builtin\r\ngcc_version:13.3.0\r\nprocess_id:5\r\nprocess_supervised:no\r\nrun_id:0282ecc9f804c9f48b029c3d0f1d795b9826d460\r\ntcp_port:6379\r\nserver_time_usec:1792071412678063\r\nuptime_in_seconds:14\r\nuptime_in_days:0\r\nhz:10\r\nconfigured_hz:10\r\nlru_clock:13686516\r\nexecutable:/tmp/graph-db-test/bin/redis-server\r\nconfig_file:\r\nio_threads_active:0\r\nlistener0:name=tcp,bind=127.0.0.1,port=6379\r\n",
+  "redisPersistence": "# Persistence\r\nloading:0\r\nasync_loading:0\r\ncurrent_cow_peak:0\r\ncurrent_cow_size:0\r\ncurrent_cow_size_age:0\r\ncurrent_fork_perc:0.00\r\ncurrent_save_keys_processed:0\r\ncurrent_save_keys_total:0\r\nrdb_changes_since_last_save:202\r\nrdb_bgsave_in_progress:0\r\nrdb_last_save_time:1792071398\r\nrdb_last_bgsave_status:ok\r\nrdb_last_bgsave_time_sec:-1\r\nrdb_current_bgsave_time_sec:-1\r\nrdb_saves:0\r\nrdb_saves_consecutive_failures:0\r\nrdb_last_cow_size:0\r\nrdb_last_load_keys_expired:0\r\nrdb_last_load_keys_loaded:0\r\naof_enabled:0\r\naof_rewrite_in_progress:0\r\naof_rewrite_scheduled:0\r\naof_last_rewrite_time_sec:-1\r\naof_current_rewrite_time_sec:-1\r\naof_last_bgrewrite_status:ok\r\naof_rewrites:0\r\naof_rewrites_consecutive_failures:0\r\naof_last_write_status:ok\r\naof_last_cow_size:0\r\nmodule_fork_in_progress:0\r\nmodule_fork_last_cow_size:495616\r\n",
+  "sizes": [
+    1000,
+    5000
+  ],
+  "trials": 5,
+  "sourceCommit": "2936016d19c11f0d0779a2638179426d860063ea",
+  "sourceTree": "aae4c49b4cb5bb57a9bcdff19ae4568109b26a58",
+  "note": "Real HTTP client/API in one Node process; local database separate process by default. Sequential trials; first and sibling creation distinguished. Full API ingestion and history enabled. A single changed object, chain topology and five-hop path. Algorithm timings include overlay projection. Main graph memory is cumulative across ontologies; copy working memory excludes shared base. Memory estimates are not exclusive storage or disk bytes. Five samples are descriptive, not percentiles or capacity results."
+}
