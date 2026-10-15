@@ -398,7 +398,9 @@ export class ScenarioService {
       else await this.store.removeDocument("scenario", ontology, id);
       if (
         !(await this.list(ontology)).some(
-          (s) => s.baseRevision === scenario.baseRevision,
+          (s) =>
+            s.storage !== "falkordb-overlay" &&
+            s.baseRevision === scenario.baseRevision,
         )
       )
         await this.store.removeDocument(

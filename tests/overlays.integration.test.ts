@@ -358,6 +358,28 @@ suite("native revision overlay scenarios", () => {
     expect(free.watermark).toBe(h.revision);
     expect(free.protectedBranches).toEqual([]);
   });
+  it("reclaims an unused copy base while a same-revision overlay remains", async () => {
+    await seed("mixed");
+    const copy = await client.createScenario("mixed", {
+      id: "copy",
+      name: "Copy",
+    });
+    await client.createScenario("mixed", {
+      id: "overlay",
+      name: "Overlay",
+      strategy: "overlay",
+    });
+    expect(await db.list()).toContain(copy.baseGraphKey);
+    await client.discardScenario("mixed", "copy");
+    expect(await store.documents("base", "mixed")).toEqual([]);
+    expect(await db.list()).not.toContain(copy.baseGraphKey);
+    expect(
+      (await client.scenarioGraph("mixed", "overlay")).objects,
+    ).toHaveLength(3);
+    expect(
+      (await client.backup("mixed")).documents.some((d) => d.kind === "base"),
+    ).toBe(true);
+  });
   it("exports portable base/deltas and restores as independent copy branches", async () => {
     await seed("backup");
     await client.createScenario("backup", {

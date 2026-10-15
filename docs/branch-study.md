@@ -40,7 +40,7 @@ Branches pin their native base revision for vacuum. They do not expire when an a
 
 ## Correctness and recovery
 
-Eight overlay integration tests cover native overrides/tombstones/edges, inherited values after live writes, sibling isolation, selected promotion/conflicts, pinned retention, cross-instance reopen, portable backup/restore, obsolete generations, invalid dangling-edge edits, racing edits and uncertain acknowledgments. A deliberate nested property in a native write plan produces a real engine runtime error; the previous deltas and branch version remain intact. That test exercises rollback rather than merely rejecting invalid API input before a query.
+Nine overlay integration tests cover native overrides/tombstones/edges, inherited values after live writes, sibling isolation, mixed-backend copy-base reclamation, selected promotion/conflicts, pinned retention, cross-instance reopen, portable backup/restore, obsolete generations, invalid dangling-edge edits, racing edits and uncertain acknowledgments. A deliberate nested property in a native write plan produces a real engine runtime error; the previous deltas and branch version remain intact. That test exercises rollback rather than merely rejecting invalid API input before a query.
 
 Logical backups materialize the base and portable deltas. Restore uses independent copy branches so it does not depend on an old generation. Unreferenced overlay records are collected on startup/discard. Algorithms/explanations remove their temporary projections; orphan collection handles interrupted cleanup. The GPU planner can reopen, calculate and explain an overlay created through the SDK. Compose CI now persists and restarts both branch backends.
 

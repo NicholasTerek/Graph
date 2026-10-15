@@ -17,3 +17,5 @@ Vacuum lowers its watermark to every active same-generation overlay base. Discar
 The two strategies are intentionally explicit while their costs are measured. A portable backup contains effective branch content, not the overlay backend choice. Do not claim historical-layer backup, zero-copy native algorithms, multiple API writers or distributed coordination.
 
 Editable branch versions retain only their latest native deltas; their monotonic version guards edits. Historical branch-version reads are not implemented. Saved calculation evidence is retained separately. [Measured costs](branch-study.md) explain why copy remains the default.
+
+In a mixed copy/overlay revision, deleting the last copy branch releases its unused native copy base even if overlays remain. Their historical base pin is independent; portable backup still materializes the required base from native history.
