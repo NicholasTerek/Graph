@@ -1,0 +1,334 @@
+{
+  "objects": [
+    {
+      "id": "aquila-x900",
+      "type": "Product",
+      "properties": {
+        "name": "Aquila X900",
+        "status": "at-risk"
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "aquila-x900",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "aquila-x700",
+      "type": "Product",
+      "properties": {
+        "name": "Aquila X700",
+        "status": "ready"
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "aquila-x700",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "advanced-package",
+      "type": "Component",
+      "properties": {
+        "name": "Advanced package",
+        "status": "delayed"
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "advanced-package",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "standard-package",
+      "type": "Component",
+      "properties": {
+        "name": "Standard package",
+        "status": "ready"
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "standard-package",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "northstar",
+      "type": "Supplier",
+      "properties": {
+        "name": "Northstar Packaging",
+        "status": "delayed",
+        "leadDays": 28
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "northstar",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "meridian",
+      "type": "Supplier",
+      "properties": {
+        "name": "Meridian Packaging",
+        "status": "available",
+        "leadDays": 7
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "meridian",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "driver-26-10",
+      "type": "Release",
+      "properties": {
+        "name": "Driver 26.10",
+        "status": "blocked"
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "driver-26-10",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "driver-26-09",
+      "type": "Release",
+      "properties": {
+        "name": "Driver 26.09",
+        "status": "validated"
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "driver-26-09",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "gpu-142",
+      "type": "Issue",
+      "properties": {
+        "name": "GPU-142 · memory regression",
+        "status": "open"
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "gpu-142",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "memory-validation",
+      "type": "Test",
+      "properties": {
+        "name": "Memory residency suite",
+        "status": "failed"
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "memory-validation",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "graphics-team",
+      "type": "Team",
+      "properties": {
+        "name": "Graphics systems",
+        "status": "assigned"
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "graphics-team",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "launch-x900",
+      "type": "Launch",
+      "properties": {
+        "name": "X900 launch · Nov 5",
+        "status": "at-risk",
+        "daysRemaining": 21
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "launch-x900",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "customer-orbit",
+      "type": "Customer",
+      "properties": {
+        "name": "Orbit Compute",
+        "status": "committed"
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "customer-orbit",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "customer-cinder",
+      "type": "Customer",
+      "properties": {
+        "name": "Cinder Labs",
+        "status": "committed"
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "customer-cinder",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "id": "r01",
+      "type": "REQUIRES",
+      "from": "aquila-x900",
+      "to": "advanced-package",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r01",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r02",
+      "type": "SUPPLIED_BY",
+      "from": "advanced-package",
+      "to": "northstar",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r02",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r03",
+      "type": "ALTERNATIVE",
+      "from": "northstar",
+      "to": "meridian",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r03",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r04",
+      "type": "NEEDS_RELEASE",
+      "from": "aquila-x900",
+      "to": "driver-26-10",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r04",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r05",
+      "type": "BLOCKED_BY",
+      "from": "driver-26-10",
+      "to": "gpu-142",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r05",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r06",
+      "type": "VALIDATED_BY",
+      "from": "driver-26-10",
+      "to": "memory-validation",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r06",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r07",
+      "type": "OWNED_BY",
+      "from": "gpu-142",
+      "to": "graphics-team",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r07",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r08",
+      "type": "SCHEDULED_FOR",
+      "from": "aquila-x900",
+      "to": "launch-x900",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r08",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r09",
+      "type": "COMMITS_TO",
+      "from": "launch-x900",
+      "to": "customer-orbit",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r09",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r10",
+      "type": "COMMITS_TO",
+      "from": "launch-x900",
+      "to": "customer-cinder",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r10",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r11",
+      "type": "REQUIRES",
+      "from": "aquila-x700",
+      "to": "standard-package",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r11",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r12",
+      "type": "SUPPLIED_BY",
+      "from": "standard-package",
+      "to": "meridian",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r12",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r13",
+      "type": "NEEDS_RELEASE",
+      "from": "aquila-x700",
+      "to": "driver-26-09",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r13",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    }
+  ]
+}

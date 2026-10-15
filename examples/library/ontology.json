@@ -1,0 +1,43 @@
+{
+  "id": "library",
+  "name": "City Library",
+  "description": "A second ontology demonstrating that the platform has no semiconductor assumptions.",
+  "objectTypes": [
+    {
+      "name": "Book",
+      "description": "",
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "Author",
+      "description": "",
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "required": true
+        }
+      }
+    }
+  ],
+  "relationshipTypes": [
+    {
+      "name": "WRITTEN_BY",
+      "from": "Book",
+      "to": "Author",
+      "description": ""
+    }
+  ]
+}

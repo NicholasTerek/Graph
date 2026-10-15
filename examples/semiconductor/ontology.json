@@ -1,0 +1,197 @@
+{
+  "id": "semiconductor",
+  "name": "Aquila Semiconductor",
+  "description": "Synthetic hardware and software operations, connected through launch dependencies.",
+  "objectTypes": [
+    {
+      "name": "Product",
+      "description": "Commercial hardware and its launch dependencies",
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "Component",
+      "description": "Required hardware component",
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "Supplier",
+      "description": "Manufacturing or packaging partner",
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "required": true
+        },
+        "leadDays": {
+          "type": "number",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "Release",
+      "description": "Software release required for launch",
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "Issue",
+      "description": "Engineering defect",
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "Test",
+      "description": "Validation gate",
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "Team",
+      "description": "Accountable engineering team",
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "Customer",
+      "description": "Synthetic customer commitment",
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "Launch",
+      "description": "Commercial launch milestone",
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "required": true
+        },
+        "daysRemaining": {
+          "type": "number",
+          "required": true
+        }
+      }
+    }
+  ],
+  "relationshipTypes": [
+    {
+      "name": "REQUIRES",
+      "from": "Product",
+      "to": "Component",
+      "description": ""
+    },
+    {
+      "name": "SUPPLIED_BY",
+      "from": "Component",
+      "to": "Supplier",
+      "description": ""
+    },
+    {
+      "name": "NEEDS_RELEASE",
+      "from": "Product",
+      "to": "Release",
+      "description": ""
+    },
+    {
+      "name": "BLOCKED_BY",
+      "from": "Release",
+      "to": "Issue",
+      "description": ""
+    },
+    {
+      "name": "VALIDATED_BY",
+      "from": "Release",
+      "to": "Test",
+      "description": ""
+    },
+    {
+      "name": "OWNED_BY",
+      "from": "Issue",
+      "to": "Team",
+      "description": ""
+    },
+    {
+      "name": "SCHEDULED_FOR",
+      "from": "Product",
+      "to": "Launch",
+      "description": ""
+    },
+    {
+      "name": "COMMITS_TO",
+      "from": "Launch",
+      "to": "Customer",
+      "description": ""
+    },
+    {
+      "name": "ALTERNATIVE",
+      "from": "Supplier",
+      "to": "Supplier",
+      "description": ""
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@graph/contracts": ["packages/contracts/src/index.ts"],
+      "@graph/core": ["packages/core/src/index.ts"],
+      "@graph/sdk": ["packages/sdk/src/index.ts"]
+    }
+  },
+  "include": ["apps", "packages", "scripts", "tests"]
+}

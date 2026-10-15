@@ -1,0 +1,43 @@
+{
+  "objects": [
+    {
+      "id": "book-1",
+      "type": "Book",
+      "properties": {
+        "name": "The Connected City",
+        "status": "available"
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "book-1",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "author-1",
+      "type": "Author",
+      "properties": {
+        "name": "Alex Rivers",
+        "status": "active"
+      },
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "author-1",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "id": "written-1",
+      "type": "WRITTEN_BY",
+      "from": "book-1",
+      "to": "author-1",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "written-1",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    }
+  ]
+}
