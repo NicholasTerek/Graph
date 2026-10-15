@@ -1,5 +1,9 @@
 # Operating Graph
 
+## Milestone verification
+
+Full CI runs on pull requests, manual dispatch and pushes to `ci/verify`; ordinary `main` commits do not launch the suite. Run `gh workflow run ci.yml --ref main`, use GitHub's Run workflow button, or advance the verification branch with `git push origin main:ci/verify`. The branch should track a selected main milestone; don't force it past unrelated work. A newer run on the same ref cancels an older in-progress run. Local checks still apply before code commits. CI status belongs to the exact tested SHA; a green older milestone does not verify later code.
+
 ## Diagnose
 
 `pnpm doctor:graph` checks a real database query, visible ontologies, source checkpoints, and agent mode through HTTP. Use the explicit script name: `pnpm doctor` invokes pnpm's unrelated built-in diagnostic command.

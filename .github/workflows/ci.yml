@@ -1,5 +1,12 @@
 name: Verify
-on: [push, pull_request]
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches: [ci/verify]
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-latest
