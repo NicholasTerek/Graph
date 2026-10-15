@@ -19,3 +19,4 @@ export type {
 } from "./actions.js";
 
 export { BackupService } from "./backup.js";
+export { AlgorithmService, graphAlgorithms } from "./algorithms.js";

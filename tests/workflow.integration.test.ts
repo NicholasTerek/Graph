@@ -62,6 +62,7 @@ suite("GPU application through the public SDK", () => {
   afterAll(async () => {
     await app?.close();
     if (db) {
+      await store.nativeGraphs.collect(new Set());
       await db.selectGraph(name).delete();
       await db.close();
     }

@@ -164,6 +164,7 @@ suite("operational platform capabilities", () => {
     await secured?.close();
     await modelApp?.close();
     if (db) {
+      await store.nativeGraphs.collect(new Set());
       await db.selectGraph(graphName).delete();
       await db.close();
     }

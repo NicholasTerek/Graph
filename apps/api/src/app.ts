@@ -448,7 +448,10 @@ export function createApp(
           params: scenarioParams,
         },
       },
-      (req) => scenarios.get(req.params.ontology, req.params.scenario),
+      (req) =>
+        store.exclusive(() =>
+          scenarios.get(req.params.ontology, req.params.scenario),
+        ),
     );
     app.get(
       "/api/ontologies/:ontology/scenarios/:scenario/graph",

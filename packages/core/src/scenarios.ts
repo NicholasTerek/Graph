@@ -71,21 +71,83 @@ export class ScenarioService {
     await this.store.ontology(ontology);
     return this.store.documents<Scenario>("scenario", ontology);
   }
-  async get(ontology: string, id: string): Promise<Scenario> {
+  async base(scenario: Scenario): Promise<GraphState> {
+    const value = await this.store.document<
+      GraphState | import("./native-graphs.js").NativeBase
+    >("base", scenario.ontology, String(scenario.baseRevision));
+    if (!value)
+      throw new PlatformError(500, "Scenario base state is unavailable");
+    return "storage" in value
+      ? {
+          ...(await this.store.nativeGraphs.snapshot(
+            scenario.ontology,
+            value.graphKey,
+          )),
+          revision: value.revision,
+        }
+      : value;
+  }
+  async reference(ontology: string, id: string): Promise<Scenario> {
     await this.store.ontology(ontology);
     const value = await this.store.document<Scenario>("scenario", ontology, id);
     if (!value) throw new PlatformError(404, `Scenario not found: ${id}`);
-    return value;
-  }
-  private async base(scenario: Scenario): Promise<GraphState> {
-    const value = await this.store.document<GraphState>(
-      "base",
-      scenario.ontology,
-      String(scenario.baseRevision),
+    if (value.storage === "falkordb") {
+      if (!value.graphKey || !value.baseGraphKey)
+        throw new PlatformError(500, "Incomplete native scenario metadata");
+      return value;
+    }
+    const base = await this.base(value);
+    const state = applyOverlay(base, value.overlay);
+    const schema = await this.store.ontology(ontology);
+    validateIngestion(schema, { objects: [], relationships: [] }, base);
+    validateIngestion(schema, { objects: [], relationships: [] }, state);
+    let savedBase = await this.store.document<
+      import("./native-graphs.js").NativeBase
+    >("base", ontology, String(value.baseRevision));
+    if (savedBase?.storage !== "falkordb") {
+      savedBase = {
+        storage: "falkordb",
+        graphKey: await this.store.nativeGraphs.create(ontology, base),
+        revision: value.baseRevision,
+      };
+      await this.store.saveDocument(
+        "base",
+        ontology,
+        String(value.baseRevision),
+        savedBase,
+      );
+    }
+    const key = await this.store.nativeGraphs.copy(
+      ontology,
+      savedBase.graphKey,
     );
-    if (!value)
-      throw new PlatformError(500, "Scenario base state is unavailable");
-    return value;
+    await this.store.nativeGraphs.update(ontology, key, base, state);
+    const migrated: Scenario = {
+      ...value,
+      storage: "falkordb",
+      graphKey: key,
+      baseGraphKey: savedBase.graphKey,
+      overlay: emptyOverlay(),
+    };
+    await this.store.saveDocument("scenario", ontology, id, migrated);
+    return migrated;
+  }
+  async readState(ontology: string, id: string) {
+    const scenario = await this.reference(ontology, id);
+    return {
+      ...(await this.store.nativeGraphs.snapshot(ontology, scenario.graphKey!)),
+      revision: scenario.baseRevision,
+      scenarioVersion: scenario.version,
+    };
+  }
+  async get(ontology: string, id: string): Promise<Scenario> {
+    const scenario = await this.reference(ontology, id);
+    const base = await this.base(scenario);
+    const state = await this.store.nativeGraphs.snapshot(
+      ontology,
+      scenario.graphKey!,
+    );
+    return { ...scenario, overlay: toOverlay(base, state) };
   }
   async create(
     ontology: string,
@@ -109,13 +171,19 @@ export class ScenarioService {
           409,
           `Revision conflict: expected ${input.expectedRevision}, current ${revision}`,
         );
-      if (!(await this.store.document("base", ontology, String(revision)))) {
-        const snapshot = await this.store.snapshot(ontology);
-        await this.store.saveDocument("base", ontology, String(revision), {
-          ...snapshot,
+      let base = await this.store.document<
+        import("./native-graphs.js").NativeBase | GraphState
+      >("base", ontology, String(revision));
+      if (!base || !("storage" in base)) {
+        const state = base ?? (await this.store.snapshot(ontology));
+        base = {
+          storage: "falkordb",
+          graphKey: await this.store.nativeGraphs.create(ontology, state),
           revision,
-        });
+        };
+        await this.store.saveDocument("base", ontology, String(revision), base);
       }
+      const key = await this.store.nativeGraphs.copy(ontology, base.graphKey);
       const now = new Date().toISOString();
       const scenario: Scenario = {
         id: input.id,
@@ -126,32 +194,23 @@ export class ScenarioService {
         version: 0,
         createdAt: now,
         updatedAt: now,
-        overlay: {
-          objects: [],
-          relationships: [],
-          removeObjects: [],
-          removeRelationships: [],
-        },
+        storage: "falkordb",
+        graphKey: key,
+        baseGraphKey: base.graphKey,
+        overlay: emptyOverlay(),
       };
-      await this.store.saveDocument("scenario", ontology, input.id, scenario);
+      await this.store.saveDocument(
+        "scenario",
+        ontology,
+        scenario.id,
+        scenario,
+      );
       return scenario;
     });
   }
-  async state(
-    ontology: string,
-    id: string,
-  ): Promise<GraphState & { scenarioVersion: number }> {
-    return this.store.exclusive(async () => {
-      const scenario = await this.get(ontology, id);
-      const base = await this.base(scenario);
-      return {
-        ...applyOverlay(base, scenario.overlay),
-        revision: scenario.baseRevision,
-        scenarioVersion: scenario.version,
-      };
-    });
+  async state(ontology: string, id: string) {
+    return this.store.exclusive(() => this.readState(ontology, id));
   }
-
   private async saveEdit(
     scenario: Scenario,
     ontology: Ontology,
@@ -178,39 +237,21 @@ export class ScenarioService {
           "Cannot upsert and remove the same ID in one edit",
         );
     }
-    const objects = new Map(scenario.overlay.objects.map((o) => [o.id, o]));
-    const relationships = new Map(
-      scenario.overlay.relationships.map((r) => [r.id, r]),
+    const before = await this.store.nativeGraphs.snapshot(
+      scenario.ontology,
+      scenario.graphKey!,
     );
-    const removeObjects = new Set(scenario.overlay.removeObjects);
-    const removeRelationships = new Set(scenario.overlay.removeRelationships);
-    for (const id of edit.removeObjects) {
-      objects.delete(id);
-      removeObjects.add(id);
-    }
-    for (const id of edit.removeRelationships) {
-      relationships.delete(id);
-      removeRelationships.add(id);
-    }
-    for (const object of edit.objects) {
-      objects.set(object.id, object);
-      removeObjects.delete(object.id);
-    }
-    for (const rel of edit.relationships) {
-      relationships.set(rel.id, rel);
-      removeRelationships.delete(rel.id);
-    }
-    const overlay = {
-      objects: [...objects.values()],
-      relationships: [...relationships.values()],
-      removeObjects: [...removeObjects],
-      removeRelationships: [...removeRelationships],
-    };
-    const state = applyOverlay(await this.base(scenario), overlay);
+    const state = applyOverlay(before, edit);
     validateIngestion(ontology, { objects: [], relationships: [] }, state);
-    const result = {
+    const key = await this.store.nativeGraphs.copy(
+      scenario.ontology,
+      scenario.graphKey!,
+    );
+    await this.store.nativeGraphs.update(scenario.ontology, key, before, state);
+    const result: Scenario = {
       ...scenario,
-      overlay,
+      graphKey: key,
+      overlay: emptyOverlay(),
       version: scenario.version + 1,
       updatedAt: new Date().toISOString(),
     };
@@ -220,6 +261,9 @@ export class ScenarioService {
       scenario.id,
       result,
     );
+    await this.store.nativeGraphs
+      .remove(scenario.ontology, scenario.graphKey!)
+      .catch(() => {});
     return result;
   }
   async edit(
@@ -229,7 +273,7 @@ export class ScenarioService {
   ) {
     return this.store.exclusive(async () =>
       this.saveEdit(
-        await this.get(ontology, id),
+        await this.reference(ontology, id),
         await this.store.ontology(ontology),
         edit,
         edit.expectedVersion,
@@ -243,9 +287,10 @@ export class ScenarioService {
     patch: { properties: GraphObject["properties"]; expectedVersion: number },
   ) {
     return this.store.exclusive(async () => {
-      const scenario = await this.get(ontology, id);
-      const state = applyOverlay(await this.base(scenario), scenario.overlay);
-      const current = state.objects.find((o) => o.id === objectId);
+      const scenario = await this.reference(ontology, id);
+      const current = (
+        await this.store.nativeGraphs.snapshot(ontology, scenario.graphKey!)
+      ).objects.find((o) => o.id === objectId);
       if (!current)
         throw new PlatformError(
           404,
@@ -263,21 +308,19 @@ export class ScenarioService {
       return this.saveEdit(
         scenario,
         await this.store.ontology(ontology),
-        {
-          objects: [object],
-          relationships: [],
-          removeObjects: [],
-          removeRelationships: [],
-        },
+        { ...emptyOverlay(), objects: [object] },
         patch.expectedVersion,
       );
     });
   }
   async diff(ontology: string, id: string): Promise<ScenarioDiff> {
     return this.store.exclusive(async () => {
-      const scenario = await this.get(ontology, id);
+      const scenario = await this.reference(ontology, id);
       const base = await this.base(scenario);
-      const state = applyOverlay(base, scenario.overlay);
+      const state = await this.store.nativeGraphs.snapshot(
+        ontology,
+        scenario.graphKey!,
+      );
       const liveRevision = await this.store.revision(ontology);
       return {
         scenario: id,
@@ -285,25 +328,64 @@ export class ScenarioService {
         liveRevision,
         stale: liveRevision !== scenario.baseRevision,
         version: scenario.version,
-        objects: changes<GraphObject>(base.objects, state.objects),
-        relationships: changes<GraphRelationship>(
-          base.relationships,
-          state.relationships,
-        ),
+        objects: changes(base.objects, state.objects),
+        relationships: changes(base.relationships, state.relationships),
       };
     });
   }
   async discard(ontology: string, id: string) {
     return this.store.exclusive(async () => {
-      const scenario = await this.get(ontology, id);
+      const scenario = await this.reference(ontology, id);
       await this.store.removeDocument("scenario", ontology, id);
-      const others = await this.store.documents<Scenario>("scenario", ontology);
-      if (!others.some((s) => s.baseRevision === scenario.baseRevision))
+      if (
+        !(await this.list(ontology)).some(
+          (s) => s.baseRevision === scenario.baseRevision,
+        )
+      )
         await this.store.removeDocument(
           "base",
           ontology,
           String(scenario.baseRevision),
         );
+      await this.collect();
     });
   }
+  async collect() {
+    const references = new Set<string>();
+    for (const ontology of await this.store.listOntologies()) {
+      for (const base of await this.store.documents<
+        import("./native-graphs.js").NativeBase
+      >("base", ontology.id))
+        if (base.storage === "falkordb") references.add(base.graphKey);
+      for (const branch of await this.list(ontology.id)) {
+        if (branch.graphKey) references.add(branch.graphKey);
+        if (branch.baseGraphKey) references.add(branch.baseGraphKey);
+      }
+    }
+    return this.store.nativeGraphs.collect(references);
+  }
+  async initialize() {
+    return this.store.exclusive(async () => {
+      for (const ontology of await this.store.listOntologies())
+        for (const scenario of await this.list(ontology.id))
+          await this.reference(ontology.id, scenario.id);
+      return this.collect();
+    });
+  }
+}
+const emptyOverlay = (): Overlay => ({
+  objects: [],
+  relationships: [],
+  removeObjects: [],
+  removeRelationships: [],
+});
+function toOverlay(base: GraphSnapshot, state: GraphSnapshot): Overlay {
+  const objects = changes(base.objects, state.objects),
+    relationships = changes(base.relationships, state.relationships);
+  return {
+    objects: objects.flatMap((c) => (c.after ? [c.after] : [])),
+    relationships: relationships.flatMap((c) => (c.after ? [c.after] : [])),
+    removeObjects: objects.filter((c) => !c.after).map((c) => c.id),
+    removeRelationships: relationships.filter((c) => !c.after).map((c) => c.id),
+  };
 }

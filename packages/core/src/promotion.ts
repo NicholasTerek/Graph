@@ -17,15 +17,9 @@ export class PromotionService {
     private scenarios: ScenarioService,
   ) {}
   private async compare(ontology: string, id: string, live: GraphState) {
-    const branch = await this.scenarios.get(ontology, id);
-    const base = await this.store.document<GraphState>(
-      "base",
-      ontology,
-      String(branch.baseRevision),
-    );
-    if (!base) throw new PlatformError(500, "Missing scenario base");
-    const { applyOverlay } = await import("./scenarios.js");
-    const state = applyOverlay(base, branch.overlay);
+    const branch = await this.scenarios.reference(ontology, id);
+    const base = await this.scenarios.base(branch);
+    const state = await this.scenarios.readState(ontology, id);
     const changes = {
       objects: recordChanges(base.objects, state.objects),
       relationships: recordChanges(base.relationships, state.relationships),

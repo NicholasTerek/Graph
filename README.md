@@ -38,7 +38,7 @@ FalkorDB uses append-only persistence in the `graph-data` volume. Published port
 | Sync correctness | Preview, checksum binding, checkpoints, safe deletions, no-op replay, detection of manual changes, atomic graph/history/checkpoint writes                           |
 | Provenance       | Current source metadata, historical before/after records, and contributing source mappings                                                                          |
 | Business logic   | Typed deterministic extensions, read-only graph views, discoverable schemas, persisted calculation runs                                                             |
-| Scenarios        | Pinned bases shared across sibling branches, sparse overlays, object/edge diffs, version checks, selective three-way promotion                                      |
+| Scenarios        | Native FalkorDB base/branch graphs via GRAPH.COPY, object/edge diffs, version checks, selective three-way promotion                                                 |
 | Agent            | Bounded tool loop through the public SDK; optional compatible model; explicit deterministic mode without a model; recorded traces and historical summaries          |
 | Actions          | Typed proposals, exact review digest, approval/rejection, separate execution, idempotency, failure records, uncertain-outcome reconciliation                        |
 | Operations       | Scoped API tokens, ontology restrictions, host/origin checks, backup/restore, health diagnostics, request metrics, distributable SDK/contracts                      |
@@ -166,11 +166,13 @@ packages/agent           Tool orchestration using the SDK, without database acce
 examples/semiconductor   GPU schema, sources, planner, actions and application
 ```
 
-FalkorDB is the operational source of truth. `Ontology` nodes store schemas and revisions; `Object` nodes store stable scoped identities, typed native properties, and validated records; `LINK` edges represent actual domain relationships. `Document` nodes retain checkpoints, historical records, scenario bases/overlays, calculation runs, actions, and investigation traces. Domain property predicates bind values as parameters and use validated property names; there is no arbitrary Cypher execution endpoint.
+FalkorDB is the operational source of truth. `Ontology` nodes store schemas and revisions; `Object` nodes store stable scoped identities, typed native properties, and validated records; `LINK` edges represent actual domain relationships. `Document` nodes retain checkpoints, historical records, native scenario references, calculation runs, actions, and investigation traces. Domain property predicates bind values as parameters and use validated property names; there is no arbitrary Cypher execution endpoint.
 
 A live change, its before/after history, and associated checkpoint/audit documents are submitted in one Cypher write query. Mutations and consistent-state capture are serialized within one API process. Direct database writes, multiple API replicas, and distributed transactions are unsupported.
 
-Scenarios share one immutable JSON base snapshot per branched revision and retain sparse overrides/tombstones. This avoids cloning the operational graph for each branch but still snapshots a full small graph once per branched revision. Promotion merges selected property changes against current state, preserves unrelated edits, and rejects conflicts or dangling relationships. This is application-level versioning, not database-native MVCC.
+Scenarios use isolated native FalkorDB graphs. The first branch projects an ontology-only immutable base; siblings fork it with `GRAPH.COPY`. Edits prepare a copied candidate, apply native graph changes and publish a versioned pointer after validation. Promotion still merges selected changes against live state and rejects conflicts. This is a full-copy design with single-writer publication, not zero-copy branching or database-native MVCC. [Native storage, algorithms, migration and recovery](docs/native-graphs.md) describes exact costs and guarantees.
+
+Shortest path, PageRank, sampled betweenness centrality and degree are exposed through the API, SDK and agent tools. Scenario algorithms run directly against the native graph; live algorithms currently build a temporary ontology projection. Scores describe topology, not GPU launch risk.
 
 The GPU planner calculates missing inventory and production duration, checks supplier/component qualification, capacity and driver compatibility, then schedules repair, pre-validation, hardware-dependent tests, and final integration using a DAG longest-path calculation. It returns task timing, critical paths, constraint results, costs, and source evidence. Capacity is reserved for one product; yield, competing orders, shipping variability, advanced optimization, and stochastic forecasts remain outside the model. Predicted validation completion is not an actual passing test.
 

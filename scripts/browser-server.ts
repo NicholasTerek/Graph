@@ -19,6 +19,7 @@ const app = createApp(store, {
   actions: [githubRecoveryAction({})],
 });
 app.addHook("onClose", async () => {
+  await store.nativeGraphs.collect(new Set());
   await db.selectGraph(name).delete();
   await store.close();
 });

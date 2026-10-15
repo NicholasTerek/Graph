@@ -60,3 +60,7 @@ The default loopback workspace has a local owner without a token. Explicit Host/
 The write queue belongs to one API process. Do not run multiple replicas or mutate the database directly. Native property backfill at startup upgrades records from earlier milestones without changing their semantic revisions. The graph is intended for small datasets; full-state copies, historical scans, and function execution remain bounded by this prototype's size limits.
 
 External calls are bounded but remain synchronous. A process restart does not automatically replay work. Source sync can be re-run; external actions use explicit status and reconciliation rather than blind retries. There is no durable job scheduler or distributed lease manager yet.
+
+## Native scenarios
+
+Startup migrates legacy JSON scenarios and collects unreferenced native keys in this platform namespace before serving requests. Back up before upgrading; native graph keys share the FalkorDB volume. Logical export materializes portable base/overlay data without embedding graph references. A failed branch edit may leave an unpublished graph until collection; reread the branch version after an ambiguous response. See [native graphs and recovery check](native-graphs.md). Multiple API replicas remain unsupported.

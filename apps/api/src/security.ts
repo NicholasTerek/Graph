@@ -113,7 +113,7 @@ export class Security {
               ? ["write", "approve"]
               : /\/(restore|indexes)$/.test(request.url)
                 ? ["admin"]
-                : /\/functions\/[^/]+\/run$|\/objects\/query$|\/aggregate$/.test(
+                : /\/functions\/[^/]+\/run$|\/objects\/query$|\/aggregate$|\/algorithms\/run$/.test(
                       request.url,
                     )
                   ? ["read"]

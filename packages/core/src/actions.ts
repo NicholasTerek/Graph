@@ -117,18 +117,13 @@ export class ActionService {
       let snapshot = await this.store.snapshot(ontology);
       let scenarioVersion: number | null = null;
       if (input.scenario) {
-        const branch = await this.scenarios.get(ontology, input.scenario);
+        const branch = await this.scenarios.reference(ontology, input.scenario);
         if (branch.baseRevision !== liveRevision)
           throw new PlatformError(
             409,
             "Refresh the investigation: scenario base differs from live data",
           );
-        const base = await this.store.document<
-          import("@graph/contracts").GraphState
-        >("base", ontology, String(branch.baseRevision));
-        if (!base) throw new PlatformError(500, "Missing scenario base");
-        const { applyOverlay } = await import("./scenarios.js");
-        snapshot = applyOverlay(base, branch.overlay);
+        snapshot = await this.scenarios.readState(ontology, input.scenario);
         scenarioVersion = branch.version;
       }
       const context: ActionContext = {
@@ -237,7 +232,10 @@ export class ActionService {
           "Live data changed since approval; create a new proposal",
         );
       if (action.scenarioId) {
-        const scenario = await this.scenarios.get(ontology, action.scenarioId);
+        const scenario = await this.scenarios.reference(
+          ontology,
+          action.scenarioId,
+        );
         if (scenario.version !== action.scenarioVersion)
           throw new PlatformError(409, "Scenario changed since approval");
       }

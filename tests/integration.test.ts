@@ -32,6 +32,7 @@ suite("FalkorDB platform integration", () => {
   afterAll(async () => {
     await app?.close();
     if (db) {
+      await store.nativeGraphs.collect(new Set());
       await db.selectGraph(graphName).delete();
       await db.close();
     }

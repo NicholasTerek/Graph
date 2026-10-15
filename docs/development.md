@@ -95,3 +95,9 @@ Added evidence for the intended single-server multi-agent use: two simultaneous 
 Observed local verification: 70 unit/integration tests and nine Chromium browser tests pass. The preceding operational expansion commit passed both CI jobs, including real Docker Compose startup/seed/demo. This connector commit requires its own CI verification.
 
 The new status document lists gaps and performance bottlenecks without conflating endpoint coverage with maturity. The blog plan focuses on measured native graph queries and revision/overlay tradeoffs. It does not claim database-native MVCC, persistent tree structures, GPU acceleration, or a measured speedup from unrun experiments.
+
+## Native branching and graph algorithms
+
+Verified GRAPH.COPY, shortestPath, PageRank and sampled betweenness against pinned FalkorDB 4.18.3. Replaced authoritative JSON scenario bases/overlays with ontology-only native graph bases and independent candidate graphs. Versioned pointer publication preserves the old branch on preparation failure; uncertain publication is resolved by rereading metadata. Existing JSON scenarios migrate; portable backups reconstruct their former representation for export and restore. Added native algorithm discovery/execution to read-scoped API, SDK and agent tools.
+
+Local build, independent SDK package check, 78 unit/integration tests and nine browser tests pass. Native tests cover topology-specific answers, cross-ontology isolation, empty graphs, candidate failures and lost acknowledgments, migration/restore and agent dispatch. Added a Compose graceful stop/start scenario check; its result must be taken from this milestone's CI. No power-loss, partition, MVCC visibility or native-copy speedup claim is made. GRAPH.COPY's pinned source shows a fork/serialize/decode implementation, which is documented as a measured-baseline candidate rather than zero-copy branching.

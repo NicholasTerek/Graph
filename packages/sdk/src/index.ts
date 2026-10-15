@@ -8,6 +8,8 @@ import type {
   SyncResult,
   PromotionPreview,
   ObjectQuery,
+  AlgorithmInput,
+  AlgorithmResult,
   Ontology,
   GraphState,
   Ingestion,
@@ -34,6 +36,18 @@ export class GraphApiError extends Error {
   }
 }
 export class GraphClient {
+  algorithms(ontology: string) {
+    return this.call<{ id: string; description: string }[]>(
+      `${this.path(ontology)}/algorithms`,
+    );
+  }
+  runAlgorithm(ontology: string, input: AlgorithmInput) {
+    return this.call<AlgorithmResult>(
+      `${this.path(ontology)}/algorithms/run`,
+      "POST",
+      input,
+    );
+  }
   constructor(
     private baseUrl = "",
     private request: typeof fetch = (...args) => fetch(...args),

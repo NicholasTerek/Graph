@@ -12,6 +12,7 @@ import {
   promotionInput,
   objectQuery,
   aggregationInput,
+  algorithmInput,
 } from "@graph/contracts";
 import {
   GraphStore,
@@ -21,6 +22,8 @@ import {
   PromotionService,
   BackupService,
   ActionService,
+  AlgorithmService,
+  graphAlgorithms,
 } from "@graph/core";
 import type { Security } from "./security.js";
 export function platformRoutes(
@@ -36,6 +39,31 @@ export function platformRoutes(
   const sources = new SourceService(store, request, connections);
   const promotion = new PromotionService(store, scenarios);
   const backup = new BackupService(store);
+  const algorithms = new AlgorithmService(store, scenarios);
+  app.get(
+    "/api/ontologies/:ontology/algorithms",
+    {
+      schema: {
+        params: z.object({ ontology: identifier }),
+        tags: ["Algorithms"],
+      },
+    },
+    async (req) => {
+      await store.ontology(req.params.ontology);
+      return graphAlgorithms;
+    },
+  );
+  app.post(
+    "/api/ontologies/:ontology/algorithms/run",
+    {
+      schema: {
+        params: z.object({ ontology: identifier }),
+        body: algorithmInput,
+        tags: ["Algorithms"],
+      },
+    },
+    (req) => algorithms.run(req.params.ontology, req.body),
+  );
   const params = z.object({ ontology: identifier });
   const record = params.extend({ id: identifier });
   app.get(

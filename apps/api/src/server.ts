@@ -3,7 +3,7 @@ import { githubRecoveryAction } from "../../../examples/semiconductor/actions/gi
 import { credentialSchema } from "./security.js";
 import { platformFunctions } from "./extensions.js";
 import { FalkorDB } from "falkordb";
-import { GraphStore, connectionsSchema } from "@graph/core";
+import { GraphStore, ScenarioService, connectionsSchema } from "@graph/core";
 import { createApp } from "./app.js";
 
 const db = await FalkorDB.connect({
@@ -17,6 +17,7 @@ const db = await FalkorDB.connect({
 const store = new GraphStore(db, process.env.GRAPH_NAME ?? "graph");
 await store.initialize();
 await store.backfillNativeProperties();
+await new ScenarioService(store).initialize();
 const app = createApp(store, {
   logger: true,
   serveWeb: true,

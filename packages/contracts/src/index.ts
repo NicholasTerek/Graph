@@ -156,6 +156,46 @@ export type Scenario = Omit<
   createdAt: string;
   updatedAt: string;
   overlay: Overlay;
+  storage?: "falkordb";
+  graphKey?: string;
+  baseGraphKey?: string;
+};
+export const algorithmInput = z
+  .object({
+    algorithm: z.enum(["shortest-path", "pagerank", "betweenness", "degree"]),
+    scenario: identifier.optional(),
+    source: identifier.optional(),
+    target: identifier.optional(),
+    direction: z.enum(["out", "in", "both"]).default("out"),
+    maxDepth: z.number().int().min(1).max(20).default(10),
+    limit: z.number().int().min(1).max(100).default(20),
+    samplingSize: z.number().int().min(1).max(128).default(32),
+    samplingSeed: z.number().int().min(1).max(2147483647).default(42),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.algorithm === "shortest-path" && (!value.source || !value.target))
+      ctx.addIssue({
+        code: "custom",
+        message: "Shortest path requires source and target IDs",
+      });
+  });
+export type AlgorithmInput = z.input<typeof algorithmInput>;
+export type AlgorithmResult = {
+  algorithm: AlgorithmInput["algorithm"];
+  engine: "falkordb";
+  ontology: string;
+  revision: number;
+  scenario: string | null;
+  scenarioVersion: number | null;
+  rows: { id: string; score: number }[];
+  path: { objects: string[]; relationships: string[]; hops: number } | null;
+  parameters: {
+    maxDepth: number;
+    direction: "out" | "in" | "both";
+    samplingSize: number;
+    samplingSeed: number;
+  };
 };
 export type Change<T> = {
   id: string;

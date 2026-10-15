@@ -5,16 +5,22 @@ The source SDK is in `packages/sdk`. The platform runs at `http://127.0.0.1:3001
 ## Read, query, and edit
 
 ```ts
-import { GraphClient, GraphApiError } from '@graph/sdk';
+import { GraphClient, GraphApiError } from "@graph/sdk";
 
-const client = new GraphClient('http://127.0.0.1:3001');
-const schema = await client.ontology('semiconductor');
-const page = await client.objects(schema.id, { type: 'Supplier', limit: 20 });
+const client = new GraphClient("http://127.0.0.1:3001");
+const schema = await client.ontology("semiconductor");
+const page = await client.objects(schema.id, { type: "Supplier", limit: 20 });
 const next = page.nextCursor
-  ? await client.objects(schema.id, { type: 'Supplier', limit: 20, after: page.nextCursor })
+  ? await client.objects(schema.id, {
+      type: "Supplier",
+      limit: 20,
+      after: page.nextCursor,
+    })
   : null;
-const dependencies = await client.traverse(schema.id, 'aquila-x900', 3, 'out');
-const supplyEdges = await client.relationships(schema.id, { type: 'SUPPLIED_BY' });
+const dependencies = await client.traverse(schema.id, "aquila-x900", 3, "out");
+const supplyEdges = await client.relationships(schema.id, {
+  type: "SUPPLIED_BY",
+});
 ```
 
 Collections return `{ items, nextCursor, limit }`, ordered by ID. Limits are 1â€“100 (default 50); `after` is exclusive. Object lists support `type` and case-insensitive `q` search across IDs, types, and property values. Relationship lists support `type`, `from`, and `to`.
@@ -23,7 +29,7 @@ Collections return `{ items, nextCursor, limit }`, ordered by ID. Limits are 1â€
 
 ```ts
 const graph = await client.snapshot(schema.id);
-await client.patchObject(schema.id, 'meridian', {
+await client.patchObject(schema.id, "meridian", {
   properties: { leadDays: 8 },
   expectedRevision: graph.revision,
 });
@@ -32,25 +38,35 @@ await client.patchObject(schema.id, 'meridian', {
 ## Branch and evaluate
 
 ```ts
-const graph = await client.snapshot('semiconductor');
-let branch = await client.createScenario('semiconductor', {
-  id: 'investigate-packaging',
-  name: 'Alternative supplier takes 14 days',
+const graph = await client.snapshot("semiconductor");
+let branch = await client.createScenario("semiconductor", {
+  id: "investigate-packaging",
+  name: "Alternative supplier takes 14 days",
   expectedRevision: graph.revision,
 });
-branch = await client.patchScenarioObject('semiconductor', branch.id, 'meridian', {
-  properties: { leadDays: 14 },
-  expectedVersion: branch.version,
-});
-const run = await client.runFunction('semiconductor', 'launch-readiness', {
-  productId: 'aquila-x900',
-}, branch.id);
-const diff = await client.scenarioDiff('semiconductor', branch.id);
+branch = await client.patchScenarioObject(
+  "semiconductor",
+  branch.id,
+  "meridian",
+  {
+    properties: { leadDays: 14 },
+    expectedVersion: branch.version,
+  },
+);
+const run = await client.runFunction(
+  "semiconductor",
+  "launch-readiness",
+  {
+    productId: "aquila-x900",
+  },
+  branch.id,
+);
+const diff = await client.scenarioDiff("semiconductor", branch.id);
 ```
 
-`runFunction` without a scenario reads a consistent live view. With a scenario, it evaluates the pinned base plus its overlay. Run records retain the revision, scenario ID/version, timestamp, input, and validated output. Function input and output JSON schemas are returned by `client.functions(ontology)`.
+`runFunction` without a scenario reads a consistent live view. With a scenario, it reads the native graph selected by the scenario version. Run records retain the revision, scenario ID/version, timestamp, input, and validated output. Function input and output JSON schemas are returned by `client.functions(ontology)`.
 
-Use `editScenario` for generic batches: `objects`, `relationships`, `removeObjects`, and `removeRelationships`, plus `expectedVersion`. Upserts merge into the overlay; removed IDs become tombstones. An upsert clears the corresponding tombstone. Removing an object while leaving attached relationships is rejected. Removing and upserting the same ID in one edit is rejected. The entire resulting graph is validated before saving one new overlay version.
+Use `editScenario` for generic batches: `objects`, `relationships`, `removeObjects`, and `removeRelationships`, plus `expectedVersion`. Edits prepare an independent native graph candidate and publish its pointer after validation. Removing an object while leaving attached relationships is rejected. Removing and upserting the same ID in one edit is rejected. The entire resulting graph is validated before publishing one new branch version.
 
 Use `scenarioGraph` to inspect the materialized graph and `discardScenario` to remove a branch. Live changes require an explicit promotion review and selected-change confirmation; see the promotion endpoints below. A stale branch remains readable and evaluable; its diff reports `stale: true` and the current live revision.
 
@@ -59,13 +75,17 @@ Use `scenarioGraph` to inspect the materialized graph and `discardScenario` to r
 Domain logic runs in a trusted server extension, not as uploaded source code. It receives a generic read-only graph interface (`object`, `objects`, and `related`). Register the definition in the server's `functions` option at composition time.
 
 ```ts
-import { z } from 'zod';
-import { defineFunction } from '@graph/core';
+import { z } from "zod";
+import { defineFunction } from "@graph/core";
 
 const countBooks = defineFunction({
-  id: 'count-books', name: 'Count books', description: 'Library inventory',
-  ontology: 'library', input: z.object({}), output: z.object({ count: z.number() }),
-  execute: ({ graph }) => ({ count: graph.objects('Book').length }),
+  id: "count-books",
+  name: "Count books",
+  description: "Library inventory",
+  ontology: "library",
+  input: z.object({}),
+  output: z.object({ count: z.number() }),
+  execute: ({ graph }) => ({ count: graph.objects("Book").length }),
 });
 ```
 
@@ -73,33 +93,42 @@ The same extension mechanism runs the semiconductor recovery planner and an unre
 
 ## Errors
 
-| HTTP status | Code | Meaning |
-|---|---|---|
-| 400 | `VALIDATION_ERROR` | Invalid request schema; inspect `issues` |
-| 400 | `BAD_REQUEST` | An invalid operation, such as mismatched IDs |
-| 404 | `NOT_FOUND` | Missing ontology, object, scenario, or function |
-| 409 | `CONFLICT` | Stale revision/version, duplicate branch, or incompatible schema |
-| 422 | `DOMAIN_VALIDATION_ERROR` | Property, endpoint, or function constraint violation |
-| 500 | `INTERNAL_ERROR` | Database or server implementation failure |
+| HTTP status | Code                      | Meaning                                                          |
+| ----------- | ------------------------- | ---------------------------------------------------------------- |
+| 400         | `VALIDATION_ERROR`        | Invalid request schema; inspect `issues`                         |
+| 400         | `BAD_REQUEST`             | An invalid operation, such as mismatched IDs                     |
+| 404         | `NOT_FOUND`               | Missing ontology, object, scenario, or function                  |
+| 409         | `CONFLICT`                | Stale revision/version, duplicate branch, or incompatible schema |
+| 422         | `DOMAIN_VALIDATION_ERROR` | Property, endpoint, or function constraint violation             |
+| 500         | `INTERNAL_ERROR`          | Database or server implementation failure                        |
 
 Responses include `requestId`; the `x-request-id` header carries the same ID. `GraphApiError` preserves status, code, request ID, and validation issues. The initial platform is a trusted local single-process service; it does not claim multi-replica transactional semantics, automatic entity resolution, or production authorization.
 
 ## Source synchronization
 
 ```ts
-await client.registerSource('semiconductor', {
-  id: 'packaging-feed', name: 'Packaging CSV', connector: 'csv',
+await client.registerSource("semiconductor", {
+  id: "packaging-feed",
+  name: "Packaging CSV",
+  connector: "csv",
   mapping: {
-    type: 'Supplier', idField: 'id', objectIdField: 'id',
-    properties: { leadDays: { field: 'leadDays' }, dailyCapacity: { field: 'capacity' } },
+    type: "Supplier",
+    idField: "id",
+    objectIdField: "id",
+    properties: {
+      leadDays: { field: "leadDays" },
+      dailyCapacity: { field: "capacity" },
+    },
   },
 });
-const preview = await client.syncSource('semiconductor', 'packaging-feed', {
-  content: csv, dryRun: true,
+const preview = await client.syncSource("semiconductor", "packaging-feed", {
+  content: csv,
+  dryRun: true,
 });
-await client.syncSource('semiconductor', 'packaging-feed', {
-  content: csv, expectedCheckpoint: preview.checkpoint,
-  expectedRevision: (await client.snapshot('semiconductor')).revision,
+await client.syncSource("semiconductor", "packaging-feed", {
+  content: csv,
+  expectedCheckpoint: preview.checkpoint,
+  expectedRevision: (await client.snapshot("semiconductor")).revision,
 });
 ```
 
@@ -110,12 +139,15 @@ For existing objects, mapped fields merge with existing properties. Newly create
 ## Typed property queries and indexes
 
 ```ts
-await client.createPropertyIndex('semiconductor', 'Supplier', 'leadDays');
-const suppliers = await client.queryObjects('semiconductor', {
-  type: 'Supplier', filters: [{ property: 'leadDays', operator: 'gte', value: 14 }],
+await client.createPropertyIndex("semiconductor", "Supplier", "leadDays");
+const suppliers = await client.queryObjects("semiconductor", {
+  type: "Supplier",
+  filters: [{ property: "leadDays", operator: "gte", value: 14 }],
 });
-const capacity = await client.aggregate('semiconductor', {
-  type: 'Supplier', property: 'dailyCapacity', operation: 'sum',
+const capacity = await client.aggregate("semiconductor", {
+  type: "Supplier",
+  property: "dailyCapacity",
+  operation: "sum",
 });
 ```
 
@@ -124,11 +156,13 @@ Predicates support `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, and string `contains`. 
 ## Selective scenario promotion
 
 ```ts
-const review = await client.reviewScenario('semiconductor', scenario.id);
-await client.promoteScenario('semiconductor', scenario.id, {
+const review = await client.reviewScenario("semiconductor", scenario.id);
+await client.promoteScenario("semiconductor", scenario.id, {
   expectedVersion: review.version,
   expectedRevision: review.liveRevision,
-  objects: ['meridian'], relationships: [], confirm: true,
+  objects: ["meridian"],
+  relationships: [],
+  confirm: true,
 });
 ```
 
@@ -137,9 +171,11 @@ Promotion requires `write` and `approve` scopes. The three-way comparison detect
 ## Reviewed actions
 
 ```ts
-const proposal = await client.proposeAction('semiconductor', {
-  type: 'github-recovery-issue', input: { runId: run.id },
-  idempotencyKey: 'recovery-task-for-this-run', scenario: scenario.id,
+const proposal = await client.proposeAction("semiconductor", {
+  type: "github-recovery-issue",
+  input: { runId: run.id },
+  idempotencyKey: "recovery-task-for-this-run",
+  scenario: scenario.id,
 });
 ```
 
@@ -158,3 +194,7 @@ Pass a static token or callback as the SDK's third constructor argument: `new Gr
 Additional errors: HTTP 401 `UNAUTHORIZED` for missing/invalid credentials; HTTP 403 `FORBIDDEN` for scope, ontology, Host, or Origin violations. Read, write, approval, execution and admin capabilities are separate; a broad `write` grant does not authorize external execution.
 
 `pnpm build:sdk` emits JS/declarations, and `pnpm --dir packages/contracts pack` / `pnpm --dir packages/sdk pack` create local installable packages. `node scripts/verify-packages.mjs` verifies them in an independent consumer. No npm publication has been performed.
+
+## Native graphs and algorithms
+
+Scenarios now use native FalkorDB graphs, with a compatibility overlay derived on individual metadata reads. See [native storage and recovery](native-graphs.md) for publication, migration and portable backup behavior. `client.algorithms(ontology)` discovers bounded native operations; `client.runAlgorithm(ontology, {algorithm: "pagerank", scenario: "my-scenario"})` runs one. Supported IDs: `shortest-path`, `pagerank`, `betweenness`, `degree`. Algorithm routes require read scope and enforce ontology restrictions. Results include live/base revision, scenario version, parameters and algorithm evidence.

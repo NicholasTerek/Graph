@@ -1,5 +1,6 @@
 import { canonical, recordChanges, validateUniqueState } from "./state.js";
 import { FalkorDB } from "falkordb";
+import { NativeGraphs } from "./native-graphs.js";
 import type {
   Ontology,
   GraphObject,
@@ -27,6 +28,7 @@ type QueryValue =
   | { [key: string]: QueryValue };
 
 export class GraphStore {
+  readonly nativeGraphs: NativeGraphs;
   private graph;
   private pending: Promise<unknown> = Promise.resolve();
   constructor(
@@ -34,6 +36,7 @@ export class GraphStore {
     name: string,
   ) {
     this.graph = db.selectGraph(name);
+    this.nativeGraphs = new NativeGraphs(db, name);
   }
 
   private async rows(
