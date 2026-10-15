@@ -53,8 +53,8 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [x] Alternative recovery plans, costs, explicit ordinal risk and source evidence.
 - [x] Interactive scenario assumptions, timeline and recommendation changes.
 - [ ] Replace one bundled input with connected operational/demo data through existing source APIs.
-- [ ] Make every relevant recommendation assumption navigable to its evidence and model rule.
-- [ ] Explain failures and infeasible plans in the UI with the exact blocking constraints.
+- [x] Link model assumptions to captured contributing inputs and named rules in the GPU planner and explanation view; label synthetic limits as declarations.
+- [x] Show exact failed qualification/capacity/driver constraints, rule IDs and captured record links per blocked alternative; distinguish eligible late plans by modeled delay.
 - [ ] Model competing orders/yield/stochastic lead times only if the chosen demo requires them.
 
 ### Actions and agent loop
@@ -213,7 +213,7 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 
 - [x] Draft the first concrete aggregate performance article with bottleneck, native plans, actual before/after results and limits. Broader dependency-query article remains work.
 - [x] Draft the versioning article around implemented visibility, branch publication, conflicts, tested failure cases and GC, with the measured two-backend comparison.
-- [ ] Include actual Cypher, invariant examples, one discovered bug/fix and reproducible benchmark links.
+- [x] Include actual Cypher, visibility invariants, the local-patch legacy-baseline hazard/fix, regression links and reproducible measurements in [the versioning article](versioning-notes.md).
 - [x] State single-writer concurrency control rather than distribution in both drafts.
 - [x] Label fixture, end-to-end HTTP, separate native PROFILE and unavailable live-model results in the current drafts.
 

@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { GraphView } from "@graph/core";
-import { calculateLaunch } from "../examples/semiconductor/functions/launch-readiness.js";
+import {
+  calculateLaunch,
+  launchReadiness,
+} from "../examples/semiconductor/functions/launch-readiness.js";
 import { ingestionSchema } from "@graph/contracts";
 const fixture = ingestionSchema.parse(
   JSON.parse(readFileSync("examples/semiconductor/data.json", "utf8")),
@@ -78,4 +81,26 @@ it("rejects unqualified suppliers and insufficient driver features as hard const
       .filter((p) => p.releaseId === "driver-26-09")
       .every((p) => !p.eligible),
   ).toBe(true);
+});
+
+it("binds assumption rules to captured input identities without treating fixture limits as measurements", () => {
+  const result = evaluate();
+  const claims = launchReadiness.explain!(result).filter(
+    (c) => c.kind === "assumption",
+  );
+  expect(claims).toHaveLength(result.assumptions.length);
+  expect(claims.every((c) => !!c.ruleId)).toBe(true);
+  const ids = new Set(result.evidence.map((o) => o.id));
+  expect(claims.every((c) => c.recordIds.every((id) => ids.has(id)))).toBe(
+    true,
+  );
+  expect(
+    claims.find((c) => c.ruleId === "launch.inventory.v1")?.recordIds,
+  ).toEqual(expect.arrayContaining(["aquila-x900", "meridian"]));
+  expect(
+    claims.find((c) => c.ruleId === "launch.validation.v1")?.recordIds,
+  ).toContain("driver-26-10");
+  expect(
+    claims.find((c) => c.ruleId === "launch.synthetic.v1")?.recordIds,
+  ).toEqual([]);
 });

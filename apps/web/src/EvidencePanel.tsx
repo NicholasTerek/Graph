@@ -239,7 +239,17 @@ export default function EvidencePanel({
               {evidence.claims
                 .filter((c) => c.kind === "assumption")
                 .map((claim) => (
-                  <li key={claim.id}>{claim.text}</li>
+                  <li key={claim.id}>
+                    {claim.text}
+                    <small>Rule {claim.ruleId ?? "unspecified"}</small>
+                    <div className="decision-paths">
+                      {claim.recordIds.map((id) => (
+                        <button key={id} onClick={() => setSelected(id)}>
+                          {name(id)}
+                        </button>
+                      ))}
+                    </div>
+                  </li>
                 ))}
             </ul>
           </details>

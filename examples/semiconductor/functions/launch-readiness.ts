@@ -1,3 +1,4 @@
+import { launchAssumptionRules } from "../model-rules.js";
 import { z } from "zod";
 import { defineFunction, type FunctionContext } from "@graph/core";
 import type { GraphObject } from "@graph/contracts";
@@ -488,8 +489,15 @@ export const launchReadiness = defineFunction({
       ...output.assumptions.map((text, index) => ({
         id: `assumption:${index}`,
         kind: "assumption" as const,
+        ruleId: launchAssumptionRules[index].id,
         text,
-        recordIds: [],
+        recordIds: output.evidence
+          .filter((record) =>
+            (launchAssumptionRules[index].types as readonly string[]).includes(
+              record.type,
+            ),
+          )
+          .map((record) => record.id),
       })),
     ];
   },

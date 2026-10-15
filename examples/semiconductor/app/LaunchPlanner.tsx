@@ -1,3 +1,4 @@
+import { launchAssumptionRules } from "../model-rules.js";
 import RecoveryWorkflow from "./RecoveryWorkflow.js";
 import HistoryTimeline from "../../../apps/web/src/HistoryTimeline.js";
 import { useEffect, useRef, useState } from "react";
@@ -662,6 +663,48 @@ export default function LaunchPlanner({
                             {plan.softwareReadyDays}d + {plan.integrationDays}d
                             integration
                           </small>
+                          {!plan.eligible && (
+                            <details className="plan-blockers">
+                              <summary>Blocking constraints</summary>
+                              <ul>
+                                {plan.constraints
+                                  .filter((c) => !c.passed)
+                                  .map((c) => (
+                                    <li key={c.code}>
+                                      <strong>{c.code}</strong>: {c.message}
+                                      <small>
+                                        Rule launch.constraint.
+                                        {c.code.split(":")[0]}.v1
+                                      </small>
+                                      <div className="evidence-chips">
+                                        {[
+                                          ...new Set(
+                                            c.code.includes(":")
+                                              ? [
+                                                  c.code.split(":")[1],
+                                                  ...plan.hardware.map(
+                                                    (h) => h.componentId,
+                                                  ),
+                                                ]
+                                              : [
+                                                  result.productId,
+                                                  plan.releaseId,
+                                                ],
+                                          ),
+                                        ].map((id) => (
+                                          <button
+                                            key={id}
+                                            onClick={() => setEvidence(id)}
+                                          >
+                                            {id}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </li>
+                                  ))}
+                              </ul>
+                            </details>
+                          )}
                         </td>
                         <td>{plan.readyDays}d</td>
                         <td>{usd(plan.costUSD)}</td>
@@ -818,8 +861,30 @@ export default function LaunchPlanner({
               <ChevronDown size={14} />
             </summary>
             <ul>
-              {result.assumptions.map((a) => (
-                <li key={a}>{a}</li>
+              {result.assumptions.map((a, index) => (
+                <li key={a}>
+                  {a}
+                  <small>Rule {launchAssumptionRules[index].id}</small>
+                  <div className="evidence-chips">
+                    {result.evidence
+                      .filter((o) =>
+                        (
+                          launchAssumptionRules[index]
+                            .types as readonly string[]
+                        ).includes(o.type),
+                      )
+                      .map((o) => (
+                        <button key={o.id} onClick={() => setEvidence(o.id)}>
+                          {o.id}
+                        </button>
+                      ))}
+                  </div>
+                  {index === 0 && (
+                    <small>
+                      Declared fixture limitation; no measured source.
+                    </small>
+                  )}
+                </li>
               ))}
             </ul>
             <p>

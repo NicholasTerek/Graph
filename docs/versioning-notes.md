@@ -22,6 +22,12 @@ Relationship versions carry the same interval fields, between stable identity an
 
 The current graph remains a fast view for ordinary CRUD. Historical queries filter native versions in Cypher rather than replaying a JSON audit log in TypeScript. Restoring a logical backup starts a new generation. Default v1 archives restore an operational baseline; optional [v2 archives](temporal-backups.md) preserve retained versions and commits, then append a restore commit above both heads. Neither reconstructs pruned history, old schemas or historical executable code.
 
+## A small write can corrupt a migration baseline
+
+While replacing whole-graph scalar validation with a local patch path, we caught a correctness hazard: the new planner had only the target object's before/after images. Using that delta to initialize history for a legacy ontology would record an incomplete baseline. Current reads could look correct while an as-of read silently lost every untouched record and edge.
+
+The fix initializes temporal metadata from the full legacy state before accepting the small delta; already-versioned ontologies keep the fast path. The regression starts with two objects and one edge at revision 7, removes temporal metadata to model a legacy installation, patches one object, then requires all three identities at the old snapshot and both old values. The [scalar mutation tests](../tests/local-patch.integration.test.ts) also inject native runtime failure and a lost acknowledgment. This is the useful boundary for the optimization: local property validation can replace whole-state planning after migration, but cannot replace the migration baseline itself. The [measured trials](local-patches.md) compare equivalent guarded writes with the same history publication.
+
 ## Several reads need one pin
 
 An agent may read the graph and then run a calculation. Two independently resolved “latest” calls could observe different revisions. The SDK can acquire a short-lived, principal-owned read snapshot and pass it to both calls. A snapshot fixes an ontology, generation and revision; it is not a mutable transaction.

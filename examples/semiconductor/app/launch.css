@@ -668,3 +668,23 @@
     font-size: 10px;
   }
 }
+
+.model-assumptions li > small,
+.plan-blockers li > small {
+  display: block;
+  margin: 6px 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.plan-blockers {
+  margin-top: 8px;
+  max-width: 420px;
+  white-space: normal;
+}
+.plan-blockers ul {
+  padding-left: 18px;
+}
+.plan-blockers .evidence-chips {
+  display: flex;
+  flex-wrap: wrap;
+}

@@ -12,14 +12,12 @@ test("reviews source identity evidence, promotes canonical references and explic
     .click();
   await expect(page.locator(".identity-alias")).toHaveCount(4);
   await expect(
-    page
-      .locator(".identity-alias")
-      .filter({
-        has: page.getByRole("heading", {
-          name: "Meridian Services",
-          exact: true,
-        }),
+    page.locator(".identity-alias").filter({
+      has: page.getByRole("heading", {
+        name: "Meridian Services",
+        exact: true,
       }),
+    }),
   ).toContainText("Equal top scores");
   await expect(
     page.getByLabel("Select Meridian Services", { exact: true }),
@@ -120,7 +118,9 @@ test("explains a recovery with captured source records and native dependency pat
     evidence.getByText("Captured calculation inputs", { exact: true }),
   ).toBeVisible();
   await expect(
-    evidence.getByText("Rule launch.rank.v1", { exact: true }),
+    evidence
+      .locator(".decision-claims")
+      .getByText("Rule launch.rank.v1", { exact: true }),
   ).toBeVisible();
   await evidence
     .locator(".decision-targets button")
@@ -689,4 +689,41 @@ test("shows connection setup guidance and refreshes the recorded failure without
     path: "/tmp/graph-source-status.png",
     fullPage: true,
   });
+});
+
+test("links model assumptions and blocked alternatives to captured GPU evidence", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Launch operations" }).click();
+  const assumptions = page.locator(".model-assumptions");
+  await assumptions.locator("summary").click();
+  await expect(assumptions).toContainText("Rule launch.inventory.v1");
+  await expect(assumptions).toContainText("Declared fixture limitation");
+  await assumptions
+    .getByRole("button", { name: "meridian", exact: true })
+    .first()
+    .click();
+  await expect(page.locator(".evidence-record")).toContainText(
+    "meridian · Supplier",
+  );
+  await page.locator(".hard-constraints summary").click();
+  await page.getByLabel("Meridian qualification", { exact: true }).uncheck();
+  await page.getByRole("button", { name: "Evaluate scenario" }).click();
+  const blocked = page.locator(".plan-blockers").first();
+  await expect(blocked).toBeVisible();
+  await blocked.locator("summary").click();
+  await expect(blocked).toContainText("qualification:meridian");
+  await expect(blocked).toContainText("launch.constraint.qualification.v1");
+  await blocked.getByRole("button", { name: "meridian", exact: true }).click();
+  await expect(page.locator(".evidence-record")).toContainText(
+    '"qualified": false',
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.getByRole("button", { name: "Reset to live" }).click();
 });
