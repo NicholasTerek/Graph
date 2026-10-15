@@ -45,7 +45,7 @@ The equivalence integration test covers more than one old page of records, optio
 
 The same harness records full native branch creation and a one-record edit. It keeps the first branch alive so sibling creation really reuses the stored base, then discards all five branches. The first measurement includes base projection plus copy; sibling measurements include a full copy. Every edit currently copies its candidate graph before pointer publication.
 
-See the [raw branch timings](evidence/aggregate-after/1000-branches.json). Five samples are descriptive observations, not a tail-latency distribution. They expose a remaining cost worth tackling: a one-record edit still pays for an independent full graph. We have not yet measured or shipped the cheaper native revision/overlay alternative, so this report does not imply constant-time branching.
+See the [raw branch timings](evidence/aggregate-after/1000-branches.json). Five samples are descriptive observations, not a tail-latency distribution. They expose a remaining cost worth tackling: a one-record edit still pays for an independent full graph. The follow-up [copy/overlay study](branch-study.md) now measures that alternative. Copy remains the default because overlay creation improves but native algorithms pay for projection; neither report implies constant-time evaluation.
 
 ## Reproduction and limits
 

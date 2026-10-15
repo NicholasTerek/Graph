@@ -118,8 +118,8 @@ This is planned work. The native-copy implementation is the functional baseline,
 - [x] Define commit records, timestamp-to-revision mapping, failed-write allocation policy and no-op revision policy.
 - [x] Define restore generations/epochs so old snapshot tokens cannot accidentally refer to unrelated restored history.
 - [x] Define object AND relationship version visibility, including deletes, endpoint existence and relationship/property updates.
-- [ ] Choose branch-base and overlay precedence rules, including tombstones, new objects, changed relationships and inherited values.
-- [ ] State unsupported anomalies/operations: cross-ontology atomicity, direct database writes, multiple API writers and distributed serializability.
+- [x] Choose branch-base and overlay precedence rules, including tombstones, new objects, changed relationships and inherited values.
+- [x] State unsupported anomalies/operations: cross-ontology atomicity, direct database writes, multiple API writers and distributed serializability.
 
 ### Native version persistence
 
@@ -134,23 +134,25 @@ This is planned work. The native-copy implementation is the functional baseline,
 
 ### Historical reads and branches
 
+Implemented opt-in [native overlays](native-overlays.md), with [creation/edit/read/function/algorithm measurements](branch-study.md). Both backends stay explicit; metadata-only creation does not imply cheap evaluation.
+
 - [x] Add read-at-revision and read-at-time endpoints and SDK methods.
 - [x] Push `valid_from <= revision AND (valid_to IS NULL OR valid_to > revision)` into Cypher.
 - [x] Return one consistent visibility context for objects, relationships, traversals and deterministic functions.
 - [x] Support pinned multi-read snapshot tokens/leases if claiming snapshot isolation across API calls.
 - [x] Define missing/out-of-retention/future revision errors; don't silently return the current graph.
-- [ ] Add cheap branch metadata at a pinned revision with native overlay versions and explicit shadow/tombstone rules.
-- [ ] Make algorithms consume a correctly scoped effective graph; account for any projection needed by whole-graph procedures.
-- [ ] Benchmark the version/overlay approach against native graph copies before replacing the working default.
-- [ ] Retain selected promotion; document how write-set conflict checks differ from existing property-level three-way merge.
+- [x] Add cheap branch metadata at a pinned revision, native deltas, guarded branch-version publication and explicit shadow/tombstone rules. Old editable branch versions are not retained.
+- [x] Make algorithms consume a correctly scoped effective graph; measure temporary projection for overlay branches.
+- [x] Benchmark revision/overlay versus native copies at 1k/5k objects. Keep copy as default because creation/edit improve but whole-graph algorithm projection regresses.
+- [x] Retain selected promotion and document property-level three-way merge versus read-set/first-committer-wins semantics.
 - [ ] If using first-committer-wins, test overlapping writes and decide whether independent properties of one record conflict.
-- [ ] Validate cross-record business invariants/read dependencies or explicitly document possible write skew.
+- [x] Explicitly document possible cross-record write skew; generic business-invariant/read-set validation remains unsupported.
 - [x] Add an as-of UI scrubber with exact revision/time and read-only historical views.
 - [x] Show branch base, divergence and merge conflicts next to the agent alternatives.
 
 ### Vacuum and retention
 
-- [ ] Compute a watermark from retention policy, active snapshot pins and every live branch base.
+- [x] Compute a reviewed watermark from the requested boundary, active snapshot pins and every native overlay base; independent copy bases do not require temporal pins.
 - [x] Keep the version visible at the watermark even if its valid_from is older.
 - [x] Remove only versions invisible to all supported/pinned reads; coordinate edge-version cleanup with endpoints.
 - [x] Expire/release snapshot leases safely; don't drop active branch bases because an agent went idle.
@@ -210,7 +212,7 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 ### Two articles
 
 - [x] Draft the first concrete aggregate performance article with bottleneck, native plans, actual before/after results and limits. Broader dependency-query article remains work.
-- [x] Draft the versioning article around implemented visibility, branch publication, conflicts, tested failure cases and GC; leave overlay comparison explicitly pending.
+- [x] Draft the versioning article around implemented visibility, branch publication, conflicts, tested failure cases and GC, with the measured two-backend comparison.
 - [ ] Include actual Cypher, invariant examples, one discovered bug/fix and reproducible benchmark links.
 - [x] State single-writer concurrency control rather than distribution in both drafts.
 - [x] Label fixture, end-to-end HTTP, separate native PROFILE and unavailable live-model results in the current drafts.

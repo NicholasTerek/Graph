@@ -210,3 +210,7 @@ Scenarios now use native FalkorDB graphs, with a compatibility overlay derived o
 ### Retention status and reviewed vacuum
 
 `client.historyStatus(ontology)` (`GET /history`) returns the generation, current revision, oldest retained revision and active snapshot count/oldest pin. `client.vacuum(ontology, input)` (`POST /vacuum`) requires admin scope. Preview with `generation`, `expectedRevision`, `retainFrom` and optional bounded `batchSize`. Its watermark accounts for active read pins. Apply requires the returned `digest`, `dryRun: false` and `confirm: true`; a changed plan returns 409. Each batch requires a fresh preview. See [the vacuum contract](vacuum.md) for exact eligibility and restore/branch limits.
+
+### Branch backend choice
+
+`client.createScenario(ontology, {id, name, strategy?: "copy" | "overlay"})` defaults to copy. Overlay branches store a native history-generation/base pin and native deltas. Existing graph/edit/diff/function/explain/review/promote/discard routes work with either. Whole-graph overlay algorithms include temporary projection cost; restored portable branches use copy storage. See [semantics](native-overlays.md) and [measurements](branch-study.md).

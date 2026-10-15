@@ -20,7 +20,7 @@ await client.vacuum("semiconductor", {
 });
 ```
 
-The effective watermark is the minimum of the requested retained revision and the active, unexpired pins in this history generation. The implementation also has a dependency hook for a future native overlay branch; existing full-copy branches need no temporal pin because their base graphs are independent. A plan with a dependency below already-retired history fails rather than attempting to resurrect deleted versions.
+The effective watermark is the minimum of the requested retained revision and the active, unexpired pins in this history generation. Every persisted native overlay branch contributes a non-expiring base-revision dependency. Existing full-copy branches need no temporal pin because their base graphs are independent. A plan with a dependency below already-retired history fails rather than attempting to resurrect deleted versions.
 
 Suppose object versions are A1 `[1,2)`, A2 `[2,3)`, and A3 `[3,∞)`. Retention requests revision 3 but a reader pins revision 2. The watermark is 2: A1 can be removed; A2 must remain even though its valid_from is older than the requested retention boundary. After the pin releases, watermark 3 permits removing A2. A3 remains current. Relationships follow the same interval rule.
 

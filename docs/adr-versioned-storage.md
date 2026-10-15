@@ -30,7 +30,7 @@ Restore starts a new history generation and establishes a new baseline above cur
 
 Existing promotion is a property-level three-way merge. First-committer-wins on an overlapping record write set is a different policy; it may reject independent edits that currently merge. Compare and document both before changing the contract. Cross-record business invariants require validation of the combined state or read dependencies; a visibility filter cannot prevent write skew by itself.
 
-The revision/overlay prototype should pin a base generation/revision and store branch versions/tombstones natively. Reads resolve overlay entries before inherited base records. Relationships and endpoints follow the same rule. Native ranking algorithms may still require an effective-graph projection; include its cost in the benchmark. An O(1) metadata insert does not make scenario evaluation O(1).
+The opt-in revision/overlay backend now pins a base generation/revision and stores native deltas/tombstones with a guarded current branch version. Reads resolve overlay entries before inherited base records. Relationships and endpoints follow the same rule. Native ranking algorithms may still require an effective-graph projection; include its cost in the benchmark. An O(1) metadata insert does not make scenario evaluation O(1).
 
 ## Retention
 
@@ -39,3 +39,7 @@ Vacuum must respect a watermark derived from retained history, active snapshot l
 ## Required evidence
 
 As-of updates/deletes, edge/property changes, pinned repeatable reads, missing/future/expired/generation-mismatched contexts, schema commits, no-op replay, restore boundaries and migration baselines need integration tests. A seeded concurrent-history checker should inspect lost updates, skew, dangling edges and publication failures. Benchmark copy, JSON and revision/overlay designs at equal semantics, with raw data and query plans. Claim only the isolation and performance properties actually tested.
+
+## Measured implementation follow-up
+
+The [native overlay backend](native-overlays.md) now implements this opt-in path, pins retention, supports selected merge and exports portable branches. [1k/5k measurements](branch-study.md) show lower creation/edit costs but higher effective-read and algorithm-projection costs. Copy remains the default. Historical editable branch versions, full temporal backup and a fair JSON-backend comparison remain incomplete.

@@ -88,7 +88,7 @@ For another compatible provider, configure its HTTPS base URL, model, and server
 
 ## Historical reads
 
-Launch operations includes a revision scrubber that recalculates the GPU plan from a pinned read-only snapshot. Native object and relationship visibility runs in Cypher; snapshot leases preserve one generation/revision across reads. Restores establish a new history generation. See [temporal semantics and limits](docs/temporal.md). Reviewed watermark-based vacuum is available in Operations → History & retention. Full-history backup and cheap revision/overlay branches remain separate work.
+Launch operations includes a revision scrubber that recalculates the GPU plan from a pinned read-only snapshot. Native object and relationship visibility runs in Cypher; snapshot leases preserve one generation/revision across reads. Restores establish a new history generation. See [temporal semantics and limits](docs/temporal.md). Reviewed watermark-based vacuum is available in Operations → History & retention. Opt-in revision/overlay branches pin their base and store native deltas; full-history backup remains separate work. See the [branch strategy measurements](docs/branch-study.md).
 
 ## Explain decisions
 
@@ -178,7 +178,7 @@ FalkorDB is the operational source of truth. `Ontology` nodes store schemas and 
 
 A live change, its before/after history, and associated checkpoint/audit documents are submitted in one Cypher write query. Mutations and consistent-state capture are serialized within one API process. Direct database writes, multiple API replicas, and distributed transactions are unsupported.
 
-Scenarios use isolated native FalkorDB graphs. The first branch projects an ontology-only immutable base; siblings fork it with `GRAPH.COPY`. Edits prepare a copied candidate, apply native graph changes and publish a versioned pointer after validation. Promotion still merges selected changes against live state and rejects conflicts. This is a full-copy design with single-writer publication, not zero-copy branching or database-native MVCC. [Native storage, algorithms, migration and recovery](docs/native-graphs.md) describes exact costs and guarantees.
+Scenarios default to isolated native FalkorDB graphs. Set `strategy: "overlay"` when creating a scenario to use native revision/overlay storage instead. The first branch projects an ontology-only immutable base; siblings fork it with `GRAPH.COPY`. Edits prepare a copied candidate, apply native graph changes and publish a versioned pointer after validation. Promotion still merges selected changes against live state and rejects conflicts. This is a full-copy design with single-writer publication, not zero-copy branching or database-native MVCC. [Native storage, algorithms, migration and recovery](docs/native-graphs.md) describes exact costs and guarantees.
 
 Shortest path, PageRank, sampled betweenness centrality and degree are exposed through the API, SDK and agent tools. Scenario algorithms run directly against the native graph; live algorithms currently build a temporary ontology projection. Scores describe topology, not GPU launch risk.
 
@@ -215,3 +215,5 @@ AI coding assistance (OpenAI Codex) is used for implementation and verification.
 All included business data is synthetic. No confidential employer information is used. Operational ontology concepts are established ideas, not a claim of conceptual novelty. Project code is MIT licensed; dependencies retain their own licenses. FalkorDB server is distributed separately under SSPLv1.
 
 For measured engineering evidence, see the [aggregate before/after study](docs/performance-study.md), [concurrent-history checker](docs/concurrency-checker.md) and [versioning implementation draft](docs/versioning-notes.md).
+
+[Native overlay semantics](docs/native-overlays.md) and the [copy/overlay study](docs/branch-study.md) describe the explicit backend choice. Creation is cheaper with overlays; whole-graph algorithms currently pay for temporary projection.

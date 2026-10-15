@@ -4,7 +4,7 @@ Engineering draft, based on the implementation and tests in this repository. The
 
 A launch planner needs to ask two different questions. What was true when this recommendation was made? What would happen if an agent changed the supplier lead time? The first needs stable historical reads. The second needs an isolated working branch and a deliberate way to bring selected changes back.
 
-We implemented those as separate mechanisms. Historical state uses native object and edge versions in the main FalkorDB graph. Editable scenarios use independent native graphs. This gives us a working isolation model, and it makes the remaining cost visible: native graph copying is much more expensive than adding a branch pointer.
+Historical state uses native object and edge versions in the main FalkorDB graph. Editable scenarios default to independent native graphs, with an explicit native revision/overlay alternative. This gives us a working isolation model, and it makes the remaining cost visible: native graph copying is much more expensive than adding a branch pointer.
 
 ## A revision names a state
 
@@ -65,12 +65,12 @@ For a requested retention boundary, vacuum lowers its watermark to the oldest ac
 
 The operator previews eligible versions, edge versions, commits and protected pins. Apply requires an explicit confirmation and a digest of the reviewed plan. A changed pin, live revision or prior batch invalidates that digest. Each bounded batch advances the retained boundary and records an audit entry atomically with its removals. Another preview is required before continuing.
 
-Current copy-based branches have independent base graphs and do not depend on temporal versions. A future native overlay branch would need to protect its base revision for its entire lifetime, including generation/restore handling. We have not shipped that alternative. Reclaiming unreferenced identity anchors and exporting full temporal backups also remain separate work.
+Current copy-based branches have independent base graphs and do not depend on temporal versions. Opt-in native overlay branches protect their base generation/revision for their entire lifetime. Logical restore exports their base/deltas and rematerializes copy branches rather than retaining invalid old-generation references. Reclaiming unreferenced identity anchors and exporting full temporal backups also remain separate work.
 
 ## The cost we have not hidden
 
 Our [performance study](performance-study.md) records first versus sibling creation and one-record edits. `GRAPH.COPY` makes an independent graph; it is not a persistent-tree pointer or zero-copy snapshot. A small edit therefore still incurs full candidate copy, effective-state validation and pointer publication. Current functions/diffs also materialize full graphs.
 
-The next storage experiment should compare this working default with the former portable JSON representation and a native base-revision-plus-overlay design. It must measure creation, edit, read/projection, promotion, cleanup and retained storage at equal semantics. Cheap branch creation alone would be misleading if every algorithm call then materializes the entire base.
+The [two-native-backend experiment](branch-study.md) now compares this default with a native base-revision-plus-overlay design. At 5k objects, overlay creation improves substantially but shortest-path requests pay about 27× more because input projection moves to read time. Edits still materialize and validate state. A fair former-JSON-backend comparison remains work. Future experiments must measure creation, edit, read/projection, promotion, cleanup and retained storage at equal semantics. Cheap branch creation alone would be misleading if every algorithm call then materializes the entire base.
 
-That experiment, larger mixed-load trials and a configured live model/source demonstration remain in the [complete TODO](TODO.md). The work already supports historical explanations and isolated alternatives. The next claim needs another measurement, not a stronger adjective.
+The historical JSON-backend comparison, larger mixed-load trials and a configured live model/source demonstration remain in the [complete TODO](TODO.md). The work already supports historical explanations and isolated alternatives. The next claim needs another measurement, not a stronger adjective.

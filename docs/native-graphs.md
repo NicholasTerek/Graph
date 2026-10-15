@@ -72,3 +72,7 @@ docker compose exec app node --import tsx scripts/native-demo.ts verify restart-
 The verification checks persisted branch content/version, unchanged live state and native algorithm queries after restart. This is a **graceful stop/start** check, not a power-loss or network-partition experiment. CI runs this on the real Compose stack. The script leaves the scenario for inspection and refuses to overwrite an existing ID.
 
 References: [copy source pinned to v4.18.3](https://github.com/FalkorDB/FalkorDB/blob/v4.18.3/src/commands/cmd_copy.c), [PageRank](https://docs.falkordb.com/algorithms/pagerank), [betweenness](https://docs.falkordb.com/algorithms/betweenness-centrality), [path functions](https://docs.falkordb.com/cypher/functions#shortestpath).
+
+## Alternative backend
+
+This document describes the default copy backend. `strategy: "overlay"` selects the [native revision/overlay backend](native-overlays.md), which pins history and publishes native deltas in the main graph. [Measured costs](branch-study.md) include the temporary projection required for overlay algorithms.
