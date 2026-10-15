@@ -7,6 +7,7 @@ import type {
 } from "@graph/contracts";
 import { GraphClient } from "@graph/sdk";
 import { GitBranch, ShieldCheck, Search, ExternalLink } from "lucide-react";
+import EvidencePanel from "../../../apps/web/src/EvidencePanel.js";
 export default function RecoveryWorkflow({
   client,
   run,
@@ -109,6 +110,13 @@ export default function RecoveryWorkflow({
   }
   return (
     <section className="recovery-workflow">
+      <EvidencePanel
+        client={client}
+        ontology="semiconductor"
+        root="aquila-x900"
+        runId={run.id}
+        scenario={scenario}
+      />
       <div className="workflow-grid">
         <article className="operation-card">
           <div className="section-kicker">

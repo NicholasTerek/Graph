@@ -82,10 +82,10 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [x] Link recommendation → required tasks/constraints → graph records → source rows/checkpoints.
 - [x] Bind explanations to the same revision/scenario version as the calculation; show stale/current context explicitly.
 - [x] Show why one recovery beat alternatives and why an alternative failed, without equating centrality to business risk.
-- [ ] Add an evidence panel with selectable path, source/history links and calculation/agent steps.
+- [x] Add an evidence panel with selectable path, source/history links and calculation/agent steps.
 - [x] Add a model tool that answers “why” from the typed evidence; include uncertainty/missing evidence.
 - [x] Test missing sources, deleted records, cross-ontology access, stale runs, incomplete paths and misleading source text.
-- [ ] Record a browser workflow: change one supplier assumption → recommendation changes → inspect exact evidence.
+- [x] Record a browser workflow: change one supplier assumption → recommendation changes → inspect exact evidence.
 
 ## C. Native branching baseline — implementation milestone
 

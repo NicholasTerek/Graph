@@ -1,5 +1,66 @@
 import { test, expect } from "@playwright/test";
 
+test("explains a recovery with captured source records and native dependency paths", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Launch operations" }).click();
+  const evidence = page.locator(".decision-evidence");
+  await evidence
+    .getByRole("button", { name: "Explain this recommendation" })
+    .click();
+  await expect(
+    evidence.getByText("Captured calculation inputs", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    evidence.getByText("Rule launch.rank.v1", { exact: true }),
+  ).toBeVisible();
+  await evidence
+    .locator(".decision-targets button")
+    .filter({ hasText: "Meridian Packaging" })
+    .click();
+  await expect(
+    evidence.getByRole("list", { name: "Evidence dependency path" }),
+  ).toContainText("REQUIRES");
+  await expect(evidence.locator(".decision-record")).toContainText("meridian");
+  await expect(
+    evidence
+      .locator(".decision-record dl>div")
+      .filter({ has: page.locator("dt", { hasText: "leadDays" }) }),
+  ).toContainText("7");
+  await page.getByLabel("Meridian lead days").fill("14");
+  await page.getByRole("button", { name: "Evaluate scenario" }).click();
+  await expect(page.getByTestId("recommendation")).toContainText(
+    "Expedite Northstar Packaging",
+  );
+  await evidence
+    .getByRole("button", { name: "Explain this recommendation" })
+    .click();
+  await evidence
+    .locator(".decision-targets button")
+    .filter({ hasText: "Meridian Packaging" })
+    .click();
+  await expect(
+    evidence
+      .locator(".decision-record dl>div")
+      .filter({ has: page.locator("dt", { hasText: "leadDays" }) }),
+  ).toContainText("14");
+  await expect(
+    evidence.getByText("Scenario v1", { exact: true }),
+  ).toBeVisible();
+  await evidence.screenshot({ path: "/tmp/graph-decision-desktop.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    evidence.getByRole("heading", { name: "Why this recovery?" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await evidence.screenshot({ path: "/tmp/graph-decision-mobile.png" });
+});
+
 test("explores persisted graph evidence and bounded dependencies", async ({
   page,
 }) => {

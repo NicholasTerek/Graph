@@ -86,6 +86,10 @@ docker compose --profile local-ai up --build -d app
 
 For another compatible provider, configure its HTTPS base URL, model, and server-side key. Ollama's compatibility reference is https://docs.ollama.com/api/openai-compatibility. The adapter and tool loop are tested with controlled model responses; a live language model was not available during verification. Calls are bounded by a 60-second investigation timeout and at most 16 tool invocations. Models must support the supplied tool schemas; model quality is not guaranteed.
 
+## Explain decisions
+
+Launch operations includes **Explain this recommendation**: saved calculation rules, native dependency paths, record provenance, source checkpoints and overridden values. Evidence retains its original context after live or branch changes. See [explainability semantics](docs/explainability.md).
+
 ## Access control
 
 By default, loopback requests act as `local-owner`. To require credentials, configure `GRAPH_API_TOKENS` as a JSON array in the server environment. Each entry contains `name`, a secret `token` of at least 24 characters, `scopes`, and optional `ontologies`.

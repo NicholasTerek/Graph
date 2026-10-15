@@ -24,3 +24,5 @@ The response distinguishes calculation revision/scenario version from current co
 This is immutable calculation evidence, not general temporal MVCC. Full arbitrary as-of reads remain separate backlog work. Native projection, JSON archival payload and full-state function capture costs remain real and must be included in end-to-end performance measurements.
 
 Integration tests exercise native paths, saved source checkpoints, rule claims, current/source-value mismatches, stale live/branch contexts, deleted branches, missing paths, legacy runs, invalid inputs and read-only/cross-ontology access.
+
+The GPU workspace includes a reusable evidence panel. It shows the selected/baseline claims, selectable native paths with edge IDs, captured record properties and source mappings, eligibility checks, assumptions and evidence limitations. Desktop and mobile browser verification covers the recommendation-to-supplier path and recorded input values. The panel is reusable UI; domain claims still come from the registered function extension.
