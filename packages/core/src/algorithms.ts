@@ -10,7 +10,7 @@ export const graphAlgorithms = [
   {
     id: "shortest-path",
     description:
-      "Unweighted native shortest path, bounded to at most 20 hops. Returns one path, not scheduling criticality.",
+      "Unweighted native shortest path, directed out/in only, bounded to at most 20 hops. Returns one path, not scheduling criticality.",
   },
   {
     id: "pagerank",

@@ -127,6 +127,24 @@ suite("native graphs and algorithm tools", () => {
         })
       ).path?.hops,
     ).toBe(0);
+    expect(
+      (
+        await client.runAlgorithm("network", {
+          algorithm: "shortest-path",
+          source: "d",
+          target: "a",
+          direction: "in",
+        })
+      ).path?.hops,
+    ).toBe(2);
+    await expect(
+      client.runAlgorithm("network", {
+        algorithm: "shortest-path",
+        source: "a",
+        target: "d",
+        direction: "both",
+      }),
+    ).rejects.toMatchObject({ status: 400 });
     const rank = await client.runAlgorithm("network", {
       algorithm: "pagerank",
       limit: 100,

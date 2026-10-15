@@ -62,7 +62,7 @@ if (phase === "prepare") {
     algorithm: "shortest-path",
     source: "aquila-x900",
     target: "northstar",
-    direction: "both",
+    direction: "out",
     scenario: id,
   });
   assert.ok(rank.rows.length > 0);

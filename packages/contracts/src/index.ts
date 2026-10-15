@@ -174,6 +174,11 @@ export const algorithmInput = z
   })
   .strict()
   .superRefine((value, ctx) => {
+    if (value.algorithm === "shortest-path" && value.direction === "both")
+      ctx.addIssue({
+        code: "custom",
+        message: "FalkorDB shortestPath supports only out or in direction",
+      });
     if (value.algorithm === "shortest-path" && (!value.source || !value.target))
       ctx.addIssue({
         code: "custom",

@@ -28,7 +28,7 @@ const evidence = await client.runAlgorithm("semiconductor", {
   algorithm: "shortest-path",
   source: "aquila-x900",
   target: "northstar",
-  direction: "both",
+  direction: "out",
   maxDepth: 10,
   scenario: "my-scenario",
 });
@@ -45,12 +45,12 @@ const ranking = await client.runAlgorithm("semiconductor", {
 
 | Algorithm       | Native operation                                                      | Interpretation                                                                                |
 | --------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `shortest-path` | `shortestPath` in Cypher, 1–20 hops, out/in/both                      | One unweighted route; null if no route within the bound; identical endpoints have zero hops   |
+| `shortest-path` | `shortestPath` in Cypher, 1–20 hops, out/in only                      | One unweighted route; null if no route within the bound; identical endpoints have zero hops   |
 | `pagerank`      | `algo.pageRank('Object','LINK')`                                      | Relative directed topological importance; not business risk                                   |
 | `betweenness`   | `algo.betweenness` with fixed labels/types, explicit seed and samples | Approximate bridge score; up to 128 sampled sources; engine direction/normalization semantics |
 | `degree`        | `indegree`/`outdegree`                                                | Number of matching native edges; includes parallel business relationships                     |
 
-All algorithms currently consider every business relationship type together through native `LINK` edges; domain type lives in the edge's `type` property. Type-specific projections and weighted paths are future work. `direction` affects shortest path and degree; PageRank remains directed and betweenness uses the native procedure's semantics. Parameters are echoed for reproducibility; unused parameters do not change a procedure's semantics. Scores cannot substitute for GPU scheduling or launch-risk calculations.
+All algorithms currently consider every business relationship type together through native `LINK` edges; domain type lives in the edge's `type` property. Type-specific projections and weighted paths are future work. `direction` affects shortest path and degree; undirected shortest path is rejected because the pinned engine does not support it; PageRank remains directed and betweenness uses the native procedure's semantics. Parameters are echoed for reproducibility; unused parameters do not change a procedure's semantics. Scores cannot substitute for GPU scheduling or launch-risk calculations.
 
 Each query has a 3-second engine timeout. Graphs are capped at 10,000 objects and 50,000 edges and rankings return at most 100 rows. Scenario calls query their isolated graph directly. Live calls build a temporary ontology-only projection of a consistent captured live state and remove it afterward. That projection/serialization cost is real and must be included in end-to-end measurements; it is not a zero-copy live analytics path. Native ranking procedures receive graph-wide budgets, so a result limit alone is not treated as a compute limit.
 
