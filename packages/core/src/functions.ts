@@ -18,13 +18,35 @@ import { SnapshotService } from "./snapshots.js";
 
 export class GraphView {
   private graph: GraphSnapshot;
+  private byId = new Map<string, GraphObject>();
+  private byType = new Map<string, GraphObject[]>();
+  private outgoing = new Map<string, Map<string, GraphRelationship[]>>();
+  private incoming = new Map<string, Map<string, GraphRelationship[]>>();
   private readObjects = new Map<string, GraphObject>();
   private readRelationships = new Map<string, GraphRelationship>();
   constructor(graph: GraphSnapshot) {
     this.graph = structuredClone(graph);
+    for (const object of this.graph.objects) {
+      this.byId.set(object.id, object);
+      const objects = this.byType.get(object.type) ?? [];
+      objects.push(object);
+      this.byType.set(object.type, objects);
+    }
+    for (const edge of this.graph.relationships) {
+      for (const [index, id] of [
+        [this.outgoing, edge.from],
+        [this.incoming, edge.to],
+      ] as const) {
+        const types = index.get(id) ?? new Map<string, GraphRelationship[]>();
+        const edges = types.get(edge.type) ?? [];
+        edges.push(edge);
+        types.set(edge.type, edges);
+        index.set(id, types);
+      }
+    }
   }
   object(id: string): GraphObject {
-    const object = this.graph.objects.find((o) => o.id === id);
+    const object = this.byId.get(id);
     if (!object)
       throw new PlatformError(422, `Required object not found: ${id}`);
     this.readObjects.set(object.id, object);
@@ -35,18 +57,19 @@ export class GraphView {
     type: string,
     direction: "out" | "in" = "out",
   ): GraphObject[] {
-    const matched = this.graph.relationships.filter(
-      (r) => r.type === type && (direction === "out" ? r.from : r.to) === id,
-    );
+    const matched =
+      (direction === "out" ? this.outgoing : this.incoming)
+        .get(id)
+        ?.get(type) ?? [];
     for (const relationship of matched)
       this.readRelationships.set(relationship.id, relationship);
-    const origin = this.graph.objects.find((o) => o.id === id);
+    const origin = this.byId.get(id);
     if (origin) this.readObjects.set(origin.id, origin);
     const ids = matched.map((r) => (direction === "out" ? r.to : r.from));
     return ids.map((id) => this.object(id));
   }
   objects(type?: string): GraphObject[] {
-    const records = this.graph.objects.filter((o) => !type || o.type === type);
+    const records = type ? (this.byType.get(type) ?? []) : this.graph.objects;
     for (const object of records) this.readObjects.set(object.id, object);
     return structuredClone(records);
   }

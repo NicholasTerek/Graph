@@ -184,7 +184,7 @@ Implemented: `pnpm check:history` and [its exact workload/checks](concurrency-ch
 Recorded now: [aggregate before/after study](performance-study.md), exact plans, 4,800 requests per implementation, 250/1,000 objects and concurrency 1/8. Fixed request counts, warm local fixtures and three repeats; this is not the entire matrix below.
 
 - [x] Small HTTP baseline command and explicit benchmark limitations.
-- [ ] Generate deterministic GPU dependency graphs: chain, bounded degree and hubs, with known answer cardinality.
+- [x] Generate deterministic synthetic task dependency DAGs: chain, bounded degree and hubs, with known edge/answer cardinality for the [graph-view study](graph-view-study.md).
 - [ ] Separate database-only fixtures from end-to-end platform ingestion so setup shortcuts aren't presented as platform capacity.
 - [ ] Measure increasing graph sizes (1k/10k/100k only where actually supported), branch counts and changed-record fractions.
 - [ ] Compare native copy, previous JSON-base/overlay implementation and native version/overlay implementation at equal semantics.
@@ -201,7 +201,7 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 
 - [x] Identify a concrete first aggregate bottleneck before changing storage or caching.
 - [x] Push aggregates into native Cypher instead of paging all values through TypeScript.
-- [ ] Replace repeated GraphView array scans with indexed lookups or a bounded native graph-view contract.
+- [x] Replace repeated GraphView array scans with indexed lookups; preserve ordering/evidence and record equivalent before/after trials.
 - [ ] Bound function dependency slices instead of always loading the full ontology, while preserving a consistent snapshot.
 - [ ] Reduce full-state mutation planning/validation where local constraints permit it.
 - [ ] Measure projection/copy overhead separately from native algorithm execution.
