@@ -237,7 +237,7 @@ Implemented and verified in [the supplier identity lab](entity-resolution.md).
 - [x] Smaller reviewable milestone commits, authored as Nicholas with no co-author trailer.
 - [x] Full CI on pull requests/manual dispatch/ci/verify milestones rather than every main commit.
 - [ ] Improve setup so missing credentials/model/permissions lead to clear UI guidance.
-- [ ] Add tested backup retention, restore drills, interruption recovery and version-migration rollback instructions.
+- [x] Add tested [local backup retention](temporal-backups.md), native restore drills, graceful interruption recovery and version-migration rollback instructions. Abrupt power-loss recovery and off-host retention remain unverified.
 - [ ] Display source freshness, branch staleness and job recovery status in the UI.
 - [ ] Run the final scripted GPU story from a clean installation and record a demo.
 - [ ] Keep secrets, employer data and private operational records out of the synthetic demonstration and artifacts.

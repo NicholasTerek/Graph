@@ -20,7 +20,7 @@ AND (v.valid_to IS NULL OR v.valid_to > $r)
 
 Relationship versions carry the same interval fields, between stable identity anchors. Historical traversal filters every edge and the visible endpoint versions. Keeping old vertices alone would not be enough: a current edge could otherwise connect a historical object to something that did not exist at that revision.
 
-The current graph remains a fast view for ordinary CRUD. Historical queries filter native versions in Cypher rather than replaying a JSON audit log in TypeScript. Restoring a logical backup starts a new generation and baseline. We intentionally do not claim that the current logical backup preserves all temporal history.
+The current graph remains a fast view for ordinary CRUD. Historical queries filter native versions in Cypher rather than replaying a JSON audit log in TypeScript. Restoring a logical backup starts a new generation. Default v1 archives restore an operational baseline; optional [v2 archives](temporal-backups.md) preserve retained versions and commits, then append a restore commit above both heads. Neither reconstructs pruned history, old schemas or historical executable code.
 
 ## Several reads need one pin
 
@@ -69,7 +69,7 @@ Current copy-based branches have independent base graphs and do not depend on te
 
 ## The cost we have not hidden
 
-Our [performance study](performance-study.md) records first versus sibling creation and one-record edits. `GRAPH.COPY` makes an independent graph; it is not a persistent-tree pointer or zero-copy snapshot. A small edit therefore still incurs full candidate copy, effective-state validation and pointer publication. Current functions/diffs also materialize full graphs.
+Our [performance study](performance-study.md) records first versus sibling creation and one-record edits. `GRAPH.COPY` makes an independent graph; it is not a persistent-tree pointer or zero-copy snapshot. A small edit therefore still incurs full candidate copy, effective-state validation and pointer publication. Diffs still materialize effective graphs. Functions with declared dependency scopes now capture bounded native traversals on live, historical and copy branches; native overlays still materialize their effective input before applying the same scope. The [scope study](function-scopes.md) records exact plans, equality checks and sustained HTTP trials.
 
 The [two-native-backend experiment](branch-study.md) now compares this default with a native base-revision-plus-overlay design. At 5k objects, overlay creation improves substantially but shortest-path requests pay about 27× more because input projection moves to read time. Edits still materialize and validate state. A fair former-JSON-backend comparison remains work. Future experiments must measure creation, edit, read/projection, promotion, cleanup and retained storage at equal semantics. Cheap branch creation alone would be misleading if every algorithm call then materializes the entire base.
 

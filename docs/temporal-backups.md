@@ -17,3 +17,13 @@ Before upgrading, save both a v2 export and a protected database volume copy out
 Observed local drill: Node 24.19.0, FalkorDB 4.18.3/Redis 8.6.2, AOF enabled with default fsync policy, graceful API then database shutdown/restart. The prepared v2 archive retained revision 0 onward; verification returned `persistedPinRecovered`, `restoredRetainedHistory` and `oldPinInvalidated` as true. This demonstrates that exact graceful sequence, not abrupt crash or power-loss durability.
 
 Compose may recreate the API container during `up`, so the CI drill copies its prepared archive to the runner before stopping and copies it into the new container before verification. A writable container directory does not make an archive durable. Keep real backup exports outside the application container and database volume.
+
+## Local retention
+
+Use a dedicated directory owned by one operator process. Name exports `TIMESTAMP.graph-backup.json`, for example `pnpm backup gpu-planning /backups/2026-10-15.graph-backup.json --history`. Give concurrent ontologies distinct filenames. Save exports outside the API container and database volume, with restrictive filesystem permissions and an independent off-host copy.
+
+`pnpm backup:retain /backups 3` prints a dry-run plan that keeps the three newest archive timestamps **per ontology**. It considers only regular single-link files ending in `.graph-backup.json`, checks the typed archive envelope and SHA-256 payload checksum, and refuses malformed archives or symlinks. Unrelated files remain untouched. At least two copies per ontology must remain. Ties use filename order. Archive timestamps are supplied by the exporter, not inferred from file modification times.
+
+Inspect the names and actions, then repeat with `--confirm=HASH` from that exact plan. A newly arrived or changed archive invalidates confirmation. Before each deletion the command rechecks identity and bytes. Run it with exclusive access to the directory: it is not a locking service or an atomic multi-file transaction, and an interruption can leave a partially applied deletion list. Re-run the dry run after interruption. Checksum validity is not proof of successful restoration; rehearse a v2 restore in an isolated matching-code deployment before retiring older verified copies. No scheduling, encryption, remote replication or guaranteed disk durability is implied.
+
+Five filesystem tests cover per-ontology retention, no-write previews, corruption, changed plans, symlinks, unsafe counts and missing confirmation. The separate native restore tests and CI restart drill exercise archive recovery; retention itself does not test power-loss recovery.
