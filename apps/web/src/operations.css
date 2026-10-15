@@ -317,3 +317,22 @@
 .job-record code {
   overflow-wrap: anywhere;
 }
+.identity-candidates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+  margin-block: 20px;
+}
+.identity-alias li {
+  overflow-wrap: anywhere;
+  margin-block: 6px;
+}
+.identity-alias label,
+.identity-review label {
+  display: block;
+  margin-block: 14px;
+}
+.identity-review pre {
+  max-height: 320px;
+  overflow: auto;
+}

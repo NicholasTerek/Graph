@@ -217,16 +217,18 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 - [x] State single-writer concurrency control rather than distribution in both drafts.
 - [x] Label fixture, end-to-end HTTP, separate native PROFILE and unavailable live-model results in the current drafts.
 
-## G. One bounded entity-resolution demo — stretch
+## G. One bounded entity-resolution demo
 
-- [ ] Plant one supplier under three messy spellings across CSV, JSON and GitHub issue fixtures.
-- [ ] Materialize shared-neighbor evidence (component, product, issue references) as native relationships.
-- [ ] Define candidate generation and a transparent shared-neighbor score with deterministic tie handling.
-- [ ] Include a plausible non-match so the demo can reject an ambiguous merge.
-- [ ] Show the scored evidence and require explicit review before applying a canonical identity.
-- [ ] Preserve aliases, contributing source IDs, history and reversible merge metadata.
-- [ ] Update references atomically; test no dangling edges and replay-stable source mappings.
-- [ ] Label the synthetic bounded example; don't claim general fuzzy entity resolution.
+Implemented and verified in [the supplier identity lab](entity-resolution.md).
+
+- [x] Plant one supplier under three messy spellings across CSV, JSON and GitHub issue fixtures.
+- [x] Materialize shared-neighbor evidence (component, product, issue references) as native relationships.
+- [x] Define candidate generation and a transparent shared-neighbor score with deterministic tie handling.
+- [x] Include a plausible non-match so the demo can reject an ambiguous merge.
+- [x] Show the scored evidence and require explicit review before applying a canonical identity.
+- [x] Preserve aliases, contributing source IDs, history and reversible merge metadata.
+- [x] Update references atomically; test no dangling edges and replay-stable source mappings.
+- [x] Label the synthetic bounded example; don't claim general fuzzy entity resolution.
 
 ## H. Delivery, access and reliability
 

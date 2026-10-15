@@ -1,5 +1,74 @@
 import { test, expect } from "@playwright/test";
 
+test("reviews source identity evidence, promotes canonical references and explicitly reverses them", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Supplier identity lab", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Supplier identity review", exact: true })
+    .click();
+  await expect(page.locator(".identity-alias")).toHaveCount(4);
+  await expect(
+    page
+      .locator(".identity-alias")
+      .filter({
+        has: page.getByRole("heading", {
+          name: "Meridian Services",
+          exact: true,
+        }),
+      }),
+  ).toContainText("Equal top scores");
+  await expect(
+    page.getByLabel("Select Meridian Services", { exact: true }),
+  ).toBeDisabled();
+  for (const name of [
+    "Meridian Pkg",
+    "MERIDIAN Packaging Ltd.",
+    "Meridan Packaging",
+  ])
+    await page.getByLabel(`Select ${name}`, { exact: true }).check();
+  await page
+    .getByRole("button", { name: "Prepare identity review", exact: true })
+    .click();
+  const promote = page.getByRole("button", {
+    name: "Promote reviewed resolution",
+    exact: true,
+  });
+  await expect(promote).toBeDisabled();
+  await expect(page.locator(".identity-review")).toContainText(
+    "3 operational references",
+  );
+  await page
+    .getByLabel("Confirm supplier identity promotion", { exact: true })
+    .check();
+  await promote.click();
+  await expect(page.getByRole("status")).toContainText("Resolution applied");
+  const merged = await (
+    await page.request.get("/api/ontologies/supplier-resolution/graph")
+  ).json();
+  expect(
+    merged.relationships.filter(
+      (r: { type: string; to: string }) =>
+        r.type === "ORDERED_FROM" && r.to === "canonical-packaging",
+    ),
+  ).toHaveLength(3);
+  await page
+    .getByRole("button", { name: "Prepare identity reversal", exact: true })
+    .click();
+  await page
+    .getByLabel("Confirm supplier identity promotion", { exact: true })
+    .check();
+  await page
+    .getByRole("button", { name: "Promote reviewed reversal", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText(
+    "Original references restored",
+  );
+});
+
 test("runs a separately registered library workspace without GPU assumptions", async ({
   page,
 }) => {
@@ -209,13 +278,11 @@ test("previews history retention and requires explicit confirmation while protec
     await panel.getByLabel("Confirm history pruning").uncheck();
     await page.getByRole("button", { name: "Preview orphan graphs" }).click();
     await expect(
-      page
-        .locator(".operation-card")
-        .filter({
-          has: page.getByRole("heading", {
-            name: "Native branch graph retention",
-          }),
+      page.locator(".operation-card").filter({
+        has: page.getByRole("heading", {
+          name: "Native branch graph retention",
         }),
+      }),
     ).toContainText("unreferenced");
     await panel.screenshot({ path: "/tmp/graph-retention.png" });
     expect(

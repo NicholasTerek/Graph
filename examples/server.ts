@@ -6,6 +6,11 @@ import { launchReadiness } from "./semiconductor/functions/launch-readiness.js";
 import { githubRecoveryAction } from "./semiconductor/actions/github.js";
 import { semiconductorSources } from "./semiconductor/sources.js";
 import { libraryAvailability } from "./library/functions.js";
+import {
+  resolutionSchema,
+  resolutionSources,
+} from "./entity-resolution/model.js";
+import { supplierCandidates } from "./entity-resolution/functions.js";
 
 export function exampleExtensions(env: NodeJS.ProcessEnv = {}) {
   const available = [
@@ -28,6 +33,15 @@ export function exampleExtensions(env: NodeJS.ProcessEnv = {}) {
       id: "library",
       ontologies: [ontologySchema.parse(library)],
       functions: [libraryAvailability],
+    },
+    {
+      id: "supplier-resolution",
+      ontologies: [resolutionSchema],
+      functions: [supplierCandidates],
+      sources: resolutionSources.map((source) => ({
+        ontology: resolutionSchema.id,
+        source,
+      })),
     },
   ];
   const selected = env.GRAPH_EXTENSIONS?.split(",")

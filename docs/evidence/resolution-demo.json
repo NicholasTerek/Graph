@@ -1,0 +1,218 @@
+{
+  "fixture": "Synthetic bounded example; GitHub responses intercepted",
+  "reviewMode": "scripted-reviewer",
+  "scoreRun": {
+    "id": "run-d424bb4d-39a8-4e2e-b483-36131b5c019f",
+    "revision": 5,
+    "ruleId": "resolution.shared-neighbors.v1",
+    "threshold": 0.75,
+    "aliases": [
+      {
+        "id": "entity-b0e70eb03b65ecd19bf5ca9e",
+        "name": "Meridan Packaging",
+        "sourceId": "supplier-github",
+        "externalId": "142",
+        "status": "matched",
+        "canonicalId": "canonical-packaging",
+        "candidates": [
+          {
+            "canonicalId": "canonical-packaging",
+            "name": "Meridian Packaging",
+            "score": 1,
+            "unionCount": 3,
+            "shared": [
+              {
+                "id": "advanced-package",
+                "name": "Advanced package",
+                "type": "Component"
+              },
+              {
+                "id": "aquila",
+                "name": "Aquila GPU",
+                "type": "Product"
+              },
+              {
+                "id": "issue-142",
+                "name": "Packaging qualification",
+                "type": "Issue"
+              }
+            ]
+          },
+          {
+            "canonicalId": "canonical-logistics",
+            "name": "Meridian Logistics",
+            "score": 0.5,
+            "unionCount": 4,
+            "shared": [
+              {
+                "id": "advanced-package",
+                "name": "Advanced package",
+                "type": "Component"
+              },
+              {
+                "id": "aquila",
+                "name": "Aquila GPU",
+                "type": "Product"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "supplier-ambiguous",
+        "name": "Meridian Services",
+        "sourceId": "supplier-csv",
+        "externalId": "supplier-ambiguous",
+        "status": "ambiguous",
+        "canonicalId": null,
+        "candidates": [
+          {
+            "canonicalId": "canonical-logistics",
+            "name": "Meridian Logistics",
+            "score": 0.6666666666666666,
+            "unionCount": 3,
+            "shared": [
+              {
+                "id": "advanced-package",
+                "name": "Advanced package",
+                "type": "Component"
+              },
+              {
+                "id": "aquila",
+                "name": "Aquila GPU",
+                "type": "Product"
+              }
+            ]
+          },
+          {
+            "canonicalId": "canonical-packaging",
+            "name": "Meridian Packaging",
+            "score": 0.6666666666666666,
+            "unionCount": 3,
+            "shared": [
+              {
+                "id": "advanced-package",
+                "name": "Advanced package",
+                "type": "Component"
+              },
+              {
+                "id": "aquila",
+                "name": "Aquila GPU",
+                "type": "Product"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "supplier-csv-row",
+        "name": "Meridian Pkg",
+        "sourceId": "supplier-csv",
+        "externalId": "supplier-csv-row",
+        "status": "matched",
+        "canonicalId": "canonical-packaging",
+        "candidates": [
+          {
+            "canonicalId": "canonical-packaging",
+            "name": "Meridian Packaging",
+            "score": 1,
+            "unionCount": 3,
+            "shared": [
+              {
+                "id": "advanced-package",
+                "name": "Advanced package",
+                "type": "Component"
+              },
+              {
+                "id": "aquila",
+                "name": "Aquila GPU",
+                "type": "Product"
+              },
+              {
+                "id": "issue-142",
+                "name": "Packaging qualification",
+                "type": "Issue"
+              }
+            ]
+          },
+          {
+            "canonicalId": "canonical-logistics",
+            "name": "Meridian Logistics",
+            "score": 0.5,
+            "unionCount": 4,
+            "shared": [
+              {
+                "id": "advanced-package",
+                "name": "Advanced package",
+                "type": "Component"
+              },
+              {
+                "id": "aquila",
+                "name": "Aquila GPU",
+                "type": "Product"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "supplier-json-row",
+        "name": "MERIDIAN Packaging Ltd.",
+        "sourceId": "supplier-json",
+        "externalId": "supplier-json-row",
+        "status": "matched",
+        "canonicalId": "canonical-packaging",
+        "candidates": [
+          {
+            "canonicalId": "canonical-packaging",
+            "name": "Meridian Packaging",
+            "score": 0.75,
+            "unionCount": 4,
+            "shared": [
+              {
+                "id": "advanced-package",
+                "name": "Advanced package",
+                "type": "Component"
+              },
+              {
+                "id": "aquila",
+                "name": "Aquila GPU",
+                "type": "Product"
+              },
+              {
+                "id": "issue-142",
+                "name": "Packaging qualification",
+                "type": "Issue"
+              }
+            ]
+          },
+          {
+            "canonicalId": "canonical-logistics",
+            "name": "Meridian Logistics",
+            "score": 0.4,
+            "unionCount": 5,
+            "shared": [
+              {
+                "id": "advanced-package",
+                "name": "Advanced package",
+                "type": "Component"
+              },
+              {
+                "id": "aquila",
+                "name": "Aquila GPU",
+                "type": "Product"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "resolutionId": "resolution-db7365ec",
+  "reviewedBranch": "resolve-db7365ec",
+  "mergedRevision": 6,
+  "sourceReplayNoOp": true,
+  "reversed": true,
+  "auditRetained": true,
+  "noDanglingReferences": true
+}
