@@ -1,0 +1,18 @@
+{
+  "metadata": {
+    "seed": 42,
+    "rounds": 12,
+    "writers": 4,
+    "ontology": "history-1792041260420",
+    "model": "one API writer; SDK callers; no injected process/network faults"
+  },
+  "summary": {
+    "ok": true,
+    "operations": 161,
+    "successfulIncrements": 7,
+    "expectedConflicts": 46,
+    "liveReads": 78,
+    "pinnedReads": 12,
+    "violations": []
+  }
+}

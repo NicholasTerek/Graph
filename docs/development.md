@@ -1,4 +1,6 @@
-# Development log
+# Development
+
+This is a chronological milestone log. Earlier sections describe earlier implementations and test counts. Use [current status](status.md), [the complete TODO](TODO.md), [temporal semantics](temporal.md) and [native branch semantics](native-graphs.md) for the present contract.
 
 ## Foundation — October 15, 2026
 
@@ -127,3 +129,13 @@ Implemented explicit admin vacuum with generation/revision preconditions, a dige
 Local checks: 94 unit/integration and 12 browser tests pass, plus production build and independent SDK package verification. A one-entry-batch integration test holds a pin, verifies its data, releases it, resumes cleanup and checks current state after each batch; changed-pin previews fail. The operator preview was visually inspected. The previous temporal milestone (`0c037a4913e5924c0a864b2841803deaccd27fd5`) passed both CI jobs; retention needs its own milestone run.
 
 Run `pnpm check:history` against a disposable running API for a recorded concurrent-client workload. See [the checker contract](concurrency-checker.md) for invariants, configuration and limitations.
+
+## Systems and evidence milestone — October 15, 2026
+
+Implemented native object/edge revision intervals, generation-bound historical reads, expiring read pins, the GPU historical recalculation UI, retained explanation evidence, and reviewed bounded vacuum with an operator preview. Native scenario copies remain the working editable branch design; cheap revision/overlay branches and full temporal backups remain separate work.
+
+The concurrent-history checker now has eight injected-anomaly unit tests and a real FalkorDB integration workload with two seeds. Its standalone real-HTTP run recorded 161 operations, seven successful guarded increments/promotions, 46 expected conflicts and 12 pinned reads, with zero detected invariant violations. The [observed summary](evidence/history-seed42-summary.json) records the seed and exact workload parameters; the command generates its full JSONL journal locally. Delays are seeded, but scheduling is not deterministic. A global live-revision precondition also rejects writes after unrelated pair updates; the conflict count is not a throughput result.
+
+Native aggregate pushdown preserves the public contract and removes multi-page live reads. The [before/after report](performance-study.md) includes actual query plans, 4,800 HTTP requests per implementation, trial samples, CPU/memory and a chart. The [versioning draft](versioning-notes.md) documents visibility, publication, conflict and retention boundaries.
+
+Observed local verification: **104 unit/integration tests, 12 Chromium browser tests, strict TypeScript, SDK declarations, production web build and independent packed-package consumer verification all pass**. [Milestone CI](https://github.com/NicholasTerek/Graph/actions/runs/38685667186) passed both verification and Compose jobs at commit `87a35a2`, including real persistent database/API restart and native branch verification. The final documentation-only correction reconciles the status table and vacuum API guide with that tested implementation. No live Notion/Discord/model credentials or real external issue creation were used.

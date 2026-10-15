@@ -205,4 +205,8 @@ Scenarios now use native FalkorDB graphs, with a compatibility overlay derived o
 
 ## Historical state and read pins
 
-`client.stateAt(ontology, {revision? , at?, snapshot?, generation?})` selects one committed native visibility context. `client.commits` lists commit metadata; `createReadSnapshot`/`releaseReadSnapshot` manage principal-owned leases for repeatable reads. Routes require read scope. Restores invalidate old generation contexts; version vacuum and full-history backup are not implemented. See [temporal semantics](temporal.md).
+`client.stateAt(ontology, {revision? , at?, snapshot?, generation?})` selects one committed native visibility context. `client.commits` lists commit metadata; `createReadSnapshot`/`releaseReadSnapshot` manage principal-owned leases for repeatable reads. Routes require read scope. Restores invalidate old generation contexts; reviewed version vacuum protects active pins, while full-history backup remains unimplemented. See [temporal semantics](temporal.md).
+
+### Retention status and reviewed vacuum
+
+`client.historyStatus(ontology)` (`GET /history`) returns the generation, current revision, oldest retained revision and active snapshot count/oldest pin. `client.vacuum(ontology, input)` (`POST /vacuum`) requires admin scope. Preview with `generation`, `expectedRevision`, `retainFrom` and optional bounded `batchSize`. Its watermark accounts for active read pins. Apply requires the returned `digest`, `dryRun: false` and `confirm: true`; a changed plan returns 409. Each batch requires a fresh preview. See [the vacuum contract](vacuum.md) for exact eligibility and restore/branch limits.

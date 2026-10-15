@@ -188,7 +188,7 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 - [ ] Compare native copy, previous JSON-base/overlay implementation and native version/overlay implementation at equal semantics.
 - [ ] Measure first/sibling branch creation, edit, evaluation, promotion, cleanup and storage bytes.
 - [ ] Measure ingestion: row-by-row versus batched UNWIND, with equal validation/history/durability semantics.
-- [ ] Capture GRAPH.EXPLAIN and read-only GRAPH.PROFILE for actual queries and indexes.
+- [x] Capture GRAPH.EXPLAIN and read-only GRAPH.PROFILE for the actual aggregate/reference-page queries and range index; broader dependency queries remain work.
 - [ ] Measure warmup and repeated sustained trials; latency p50/p95/p99, achieved throughput, errors and timeouts.
 - [ ] Vary reader concurrency (1/8/32) and read/write mixtures; declare open/closed-loop load and queueing behavior.
 - [ ] Record per-process CPU/RSS, database memory, serialized bytes and disk/temp copy costs.
@@ -212,8 +212,8 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 - [x] Draft the first concrete aggregate performance article with bottleneck, native plans, actual before/after results and limits. Broader dependency-query article remains work.
 - [x] Draft the versioning article around implemented visibility, branch publication, conflicts, tested failure cases and GC; leave overlay comparison explicitly pending.
 - [ ] Include actual Cypher, invariant examples, one discovered bug/fix and reproducible benchmark links.
-- [ ] State concurrency control rather than distribution unless distributed behavior was implemented and verified.
-- [ ] Say whether a result is a fixture, real model run, native engine measurement or end-to-end measurement.
+- [x] State single-writer concurrency control rather than distribution in both drafts.
+- [x] Label fixture, end-to-end HTTP, separate native PROFILE and unavailable live-model results in the current drafts.
 
 ## G. One bounded entity-resolution demo — stretch
 
