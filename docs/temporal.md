@@ -33,8 +33,8 @@ Time resolution uses indexed numeric epoch milliseconds and selects the latest r
 
 - Existing installations establish a native baseline at their current revision before serving requests. Earlier revisions fail with 410; their contents are not invented from source timestamps or partial history documents.
 - Future revisions fail with 409, missing revisions with 404, expired leases with 410 and cross-principal/ontology access with 403.
-- Restore creates a new history generation and baseline above previous/current revision counters. Old pins/generation selectors fail with 409. A revision before the new baseline fails with 410.
-- Logical backups currently restore operational state and portable scenarios, **not the full temporal version history**. Restoring establishes a new baseline. Lease tokens are excluded. Full history backup/import is a separate backlog item.
+- Restore creates a new history generation and head above previous/current revision counters. Old pins/generation selectors fail with 409. V1 starts a new baseline; v2 preserves the archived retained boundary.
+- Optional v2 [temporal backups](temporal-backups.md) preserve retained versions/commits and portable branch dependencies in a fresh generation. Default v1 backups establish a new baseline. Lease tokens are excluded.
 - Versions are retained until explicit admin vacuum. Reviewed watermark-based cleanup protects active snapshots, preserves open versions, and prunes bounded batches; see [vacuum](vacuum.md). Full-copy branches remain independent. Opt-in native overlays register their base dependencies and protect them until explicit discard.
 - Copy-based native scenarios continue to use their independent base graphs. Revision/overlay branching is available explicitly through `strategy: "overlay"`; copy remains the default. See the [measured tradeoffs](branch-study.md).
 - No general serializable write transactions, replica reads, power-loss guarantee or protection from direct database/multiple API writers is claimed. General multi-query traversal endpoints do not automatically inherit a pin; clients must use the version-aware read API.

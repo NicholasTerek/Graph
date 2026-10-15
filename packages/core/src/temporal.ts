@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import type { GraphSnapshot, GraphObject } from "@graph/contracts";
+import type {
+  GraphSnapshot,
+  GraphObject,
+  TemporalBackup,
+} from "@graph/contracts";
 import { recordChanges, validateUniqueState } from "./state.js";
 import { PlatformError } from "./validation.js";
 type Value =
@@ -28,6 +32,48 @@ const native = (ontology: string, o: GraphObject) => ({
 });
 export class TemporalStorage {
   constructor(private query: Query) {}
+  async export(ontology: string): Promise<TemporalBackup> {
+    const context = await this.ensure(ontology);
+    const params = { ontology, generation: context.generation };
+    const commits = await this.query(
+      "MATCH (c:Commit {ontology:$ontology,generation:$generation}) WHERE c.revision>=$start RETURN c.revision AS revision,c.committedAt AS committedAt ORDER BY c.revision LIMIT 20001",
+      { ...params, start: context.startRevision },
+    );
+    const objects = await this.query(
+      "MATCH (v:ObjectVersion {ontology:$ontology,generation:$generation}) WHERE v.valid_to IS NULL OR v.valid_to>$start RETURN v.record AS record,v.valid_from AS validFrom,v.valid_to AS validTo ORDER BY v.id,v.valid_from LIMIT 20001",
+      { ...params, start: context.startRevision },
+    );
+    const relationships = await this.query(
+      "MATCH (:Identity {ontology:$ontology})-[r:HISTORICAL_LINK]->(:Identity {ontology:$ontology}) WHERE r.generation=$generation AND (r.valid_to IS NULL OR r.valid_to>$start) RETURN r.record AS record,r.valid_from AS validFrom,r.valid_to AS validTo ORDER BY r.id,r.valid_from LIMIT 50001",
+      { ...params, start: context.startRevision },
+    );
+    if (
+      commits.length > 20000 ||
+      objects.length > 20000 ||
+      relationships.length > 50000
+    )
+      throw new PlatformError(
+        422,
+        "Temporal backup exceeds the bounded archive budget; use a volume backup",
+      );
+    const versions = (rows: Row[]) =>
+      rows.map((r) => ({
+        record: JSON.parse(String(r.record)),
+        validFrom: Number(r.validFrom),
+        validTo: r.validTo == null ? null : Number(r.validTo),
+      }));
+    return {
+      generation: context.generation,
+      retainedFrom: context.startRevision,
+      revision: context.revision,
+      commits: commits.map((c) => ({
+        revision: Number(c.revision),
+        committedAt: String(c.committedAt),
+      })),
+      objects: versions(objects),
+      relationships: versions(relationships),
+    };
+  }
   async vacuumCounts(ontology: string, generation: string, watermark: number) {
     const params = { ontology, generation, watermark };
     const [objects] = await this.query(

@@ -10,6 +10,7 @@ import { canonical } from "./state.js";
 import { PlatformError, isAdditiveSchema } from "./validation.js";
 import { ScenarioService } from "./scenarios.js";
 import type { Scenario } from "@graph/contracts";
+import { validateTemporalBackup } from "./temporal-backup.js";
 const kinds = [
   "source",
   "sync",
@@ -26,7 +27,10 @@ const digest = (value: unknown) =>
   createHash("sha256").update(canonical(value)).digest("hex");
 export class BackupService {
   constructor(private store: GraphStore) {}
-  async export(ontology: string): Promise<BackupArchive> {
+  async export(
+    ontology: string,
+    includeHistory = false,
+  ): Promise<BackupArchive> {
     return this.store.exclusive(async () => {
       const schema = await this.store.ontology(ontology);
       const state = await this.store.snapshot(ontology);
@@ -96,14 +100,28 @@ export class BackupService {
           documents.push({ kind, id: document.id, value });
         }
       const payload = {
-        format: "graph-backup-v1" as const,
+        format: includeHistory
+          ? ("graph-backup-v2" as const)
+          : ("graph-backup-v1" as const),
+        ...(includeHistory
+          ? { temporal: await this.store.temporal.export(ontology) }
+          : {}),
         createdAt: new Date().toISOString(),
         ontology: schema,
         revision,
         state,
         documents,
       };
-      return { ...payload, digest: digest(payload) };
+      const archive = { ...payload, digest: digest(payload) };
+      if (
+        includeHistory &&
+        Buffer.byteLength(JSON.stringify(archive)) > 3900000
+      )
+        throw new PlatformError(
+          422,
+          "Full-history archive exceeds the HTTP restore budget; use a volume backup",
+        );
+      return archive;
     });
   }
   async restore(
@@ -119,6 +137,18 @@ export class BackupService {
     const { digest: checksum, ...payload } = archive;
     if (checksum !== digest(payload))
       throw new PlatformError(422, "Backup checksum mismatch");
+    if ((archive.format === "graph-backup-v2") !== !!archive.temporal)
+      throw new PlatformError(
+        422,
+        "Only v2 archives must include temporal history",
+      );
+    if (archive.temporal)
+      validateTemporalBackup(
+        archive.temporal,
+        archive.ontology,
+        archive.state,
+        archive.revision,
+      );
     if (
       archive.documents.some(
         (d) =>
@@ -196,6 +226,7 @@ export class BackupService {
         return {
           state: archive.state,
           revisionFloor: Math.max(state.revision, archive.revision) + 1,
+          temporalImport: archive.temporal,
           documents: [
             ...restoredDocuments,
             { kind: "restore", id: result.id, value: result },

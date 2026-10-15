@@ -42,11 +42,13 @@ jobs:
       - run: docker compose exec -T app node --import tsx scripts/native-demo.ts prepare ci-native-branch
       - run: docker compose exec -T app node --import tsx scripts/native-demo.ts prepare ci-overlay-branch overlay
       - run: docker compose exec -T app node --import tsx scripts/job-demo.ts prepare
+      - run: docker compose exec -T app node --import tsx scripts/history-demo.ts prepare
       - run: docker compose stop app falkordb
       - run: docker compose up -d --wait
       - run: docker compose exec -T app node --import tsx scripts/native-demo.ts verify ci-native-branch
       - run: docker compose exec -T app node --import tsx scripts/native-demo.ts verify ci-overlay-branch overlay
       - run: docker compose exec -T app node --import tsx scripts/job-demo.ts verify
+      - run: docker compose exec -T app node --import tsx scripts/history-demo.ts verify
       - run: node -e "fetch('http://127.0.0.1:3001/api/ontologies/semiconductor/graph').then(r=>r.json()).then(g=>{if(g.objects.length!==14||g.relationships.length!==17)process.exit(1)})"
       - if: always()
         run: docker compose logs --no-color

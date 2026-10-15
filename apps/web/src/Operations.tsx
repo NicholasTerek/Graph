@@ -39,6 +39,7 @@ export default function Operations({
   );
   const [confirmation, setConfirmation] = useState("");
   const [archive, setArchive] = useState<BackupArchive | null>(null);
+  const [includeHistory, setIncludeHistory] = useState(false);
   const file = useRef<HTMLInputElement>(null);
   const [uploadFor, setUploadFor] = useState("");
   async function refresh() {
@@ -149,7 +150,7 @@ export default function Operations({
   }
   async function download() {
     await task(async () => {
-      const data = await client.backup(ontology);
+      const data = await client.backup(ontology, { includeHistory });
       const url = URL.createObjectURL(
         new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
       );
@@ -559,6 +560,14 @@ export default function Operations({
         <div className="backup-grid">
           <article className="operation-card">
             <h2>Save the operational workspace.</h2>
+            <label>
+              <input
+                type="checkbox"
+                checked={includeHistory}
+                onChange={(e) => setIncludeHistory(e.target.checked)}
+              />{" "}
+              Include retained temporal versions and commits (v2)
+            </label>
             <p>
               Export objects, relationships, source checkpoints, history,
               scenarios, and investigation results as checksummed JSON.

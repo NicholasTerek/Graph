@@ -114,7 +114,7 @@ This is planned work. The native-copy implementation is the functional baseline,
 
 - [x] Write an ADR comparing full native copies, previous JSON shared bases and a native revision/overlay model, including migration, read path and GC complexity.
 - [x] Specify per-ontology monotonically increasing commit revisions and stable logical IDs separately from physical version IDs.
-- [ ] Define transaction/read-snapshot boundaries explicitly. A visibility predicate alone does not establish multi-call snapshot isolation.
+- [x] Define single-call captured reads, version-aware leased multi-read snapshots and unsupported generic multi-call transactions explicitly in the temporal contract.
 - [x] Define commit records, timestamp-to-revision mapping, failed-write allocation policy and no-op revision policy.
 - [x] Define restore generations/epochs so old snapshot tokens cannot accidentally refer to unrelated restored history.
 - [x] Define object AND relationship version visibility, including deletes, endpoint existence and relationship/property updates.
@@ -130,7 +130,7 @@ This is planned work. The native-copy implementation is the functional baseline,
 - [ ] Create visibility-related indexes supported by the pinned engine, then inspect real query plans.
 - [x] Backfill an initial version baseline without inventing historical timestamps or provenance that was never stored.
 - [x] Preserve source checkpoint/history atomicity and action approval invalidation across the migration.
-- [ ] Export/restore versions, commit records and branch dependencies with validation and generation safety.
+- [x] Export/restore bounded retained versions, commit records and portable branch dependencies with validation, atomic rollback and generation safety; see [v2 backups](temporal-backups.md).
 
 ### Historical reads and branches
 

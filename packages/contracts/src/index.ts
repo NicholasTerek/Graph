@@ -698,9 +698,51 @@ export type Investigation = {
   error?: string;
 };
 
+export const temporalBackupSchema = z
+  .object({
+    generation: z.string().min(1).max(100),
+    retainedFrom: z.number().int().nonnegative(),
+    revision: z.number().int().nonnegative(),
+    commits: z
+      .array(
+        z
+          .object({
+            revision: z.number().int().nonnegative(),
+            committedAt: z.iso.datetime(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(20000),
+    objects: z
+      .array(
+        z
+          .object({
+            record: objectInput,
+            validFrom: z.number().int().nonnegative(),
+            validTo: z.number().int().nonnegative().nullable(),
+          })
+          .strict(),
+      )
+      .max(20000),
+    relationships: z
+      .array(
+        z
+          .object({
+            record: relationshipInput,
+            validFrom: z.number().int().nonnegative(),
+            validTo: z.number().int().nonnegative().nullable(),
+          })
+          .strict(),
+      )
+      .max(50000),
+  })
+  .strict();
+export type TemporalBackup = z.infer<typeof temporalBackupSchema>;
 export const backupPayloadSchema = z
   .object({
-    format: z.literal("graph-backup-v1"),
+    format: z.enum(["graph-backup-v1", "graph-backup-v2"]),
+    temporal: temporalBackupSchema.optional(),
     createdAt: z.iso.datetime(),
     ontology: ontologySchema,
     revision: z.number().int().nonnegative(),

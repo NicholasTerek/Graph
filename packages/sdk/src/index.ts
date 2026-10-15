@@ -590,8 +590,10 @@ export class GraphClient {
     return this.call<Investigation[]>(`${this.path(ontology)}/investigations`);
   }
 
-  backup(ontology: string) {
-    return this.call<BackupArchive>(`${this.path(ontology)}/backup`);
+  backup(ontology: string, options: { includeHistory?: boolean } = {}) {
+    return this.call<BackupArchive>(
+      `${this.path(ontology)}/backup${options.includeHistory ? "?includeHistory=true" : ""}`,
+    );
   }
   restore(ontology: string, archive: BackupArchive, expectedRevision: number) {
     return this.call<{ revision: number; result: { id: string } }>(

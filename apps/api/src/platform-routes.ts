@@ -368,8 +368,19 @@ export function platformRoutes(
   );
   app.get(
     "/api/ontologies/:ontology/backup",
-    { schema: { tags: ["Operations"], params } },
-    (req) => backup.export(req.params.ontology),
+    {
+      schema: {
+        tags: ["Operations"],
+        params,
+        querystring: z
+          .object({
+            includeHistory: z.enum(["true", "false"]).default("false"),
+          })
+          .strict(),
+      },
+    },
+    (req) =>
+      backup.export(req.params.ontology, req.query.includeHistory === "true"),
   );
   app.post(
     "/api/ontologies/:ontology/restore",

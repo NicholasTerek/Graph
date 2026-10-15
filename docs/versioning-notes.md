@@ -65,7 +65,7 @@ For a requested retention boundary, vacuum lowers its watermark to the oldest ac
 
 The operator previews eligible versions, edge versions, commits and protected pins. Apply requires an explicit confirmation and a digest of the reviewed plan. A changed pin, live revision or prior batch invalidates that digest. Each bounded batch advances the retained boundary and records an audit entry atomically with its removals. Another preview is required before continuing.
 
-Current copy-based branches have independent base graphs and do not depend on temporal versions. Opt-in native overlay branches protect their base generation/revision for their entire lifetime. Logical restore exports their base/deltas and rematerializes copy branches rather than retaining invalid old-generation references. Reclaiming unreferenced identity anchors and exporting full temporal backups also remain separate work.
+Current copy-based branches have independent base graphs and do not depend on temporal versions. Opt-in native overlay branches protect their base generation/revision for their entire lifetime. Logical restore exports their base/deltas and rematerializes copy branches rather than retaining invalid old-generation references. Optional [v2 temporal backups](temporal-backups.md) now preserve retained versions and commits in a fresh generation. Reclaiming unreferenced identity anchors remains separate work.
 
 ## The cost we have not hidden
 

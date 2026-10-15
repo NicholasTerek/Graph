@@ -4,6 +4,7 @@ import { NativeOverlays } from "./native-overlays.js";
 import { NativeGraphs } from "./native-graphs.js";
 import { evidencePathQuery } from "./explanations.js";
 import { TemporalStorage } from "./temporal.js";
+import { importTemporalPlan } from "./temporal-backup.js";
 import type {
   Ontology,
   GraphObject,
@@ -14,6 +15,7 @@ import type {
   GraphState,
   Page,
   ObjectQuery,
+  TemporalBackup,
 } from "@graph/contracts";
 import {
   PlatformError,
@@ -233,6 +235,7 @@ export class GraphStore {
           documents?: DocumentWrite[];
           removeDocuments?: DocumentKey[];
           revisionFloor?: number;
+          temporalImport?: TemporalBackup;
           result: T;
         }>
       | {
@@ -240,6 +243,7 @@ export class GraphStore {
           documents?: DocumentWrite[];
           removeDocuments?: DocumentKey[];
           revisionFloor?: number;
+          temporalImport?: TemporalBackup;
           result: T;
         },
   ) {
@@ -265,6 +269,7 @@ export class GraphStore {
         plan.documents,
         plan.removeDocuments,
         plan.revisionFloor,
+        plan.temporalImport,
       );
       return { revision: nextRevision, result: plan.result };
     });
@@ -295,6 +300,7 @@ export class GraphStore {
     documents: DocumentWrite[] = [],
     removeDocuments: DocumentKey[] = [],
     revisionFloor?: number,
+    temporalImport?: TemporalBackup,
   ) {
     const objects = recordChanges(before.objects, after.objects);
     const relationships = recordChanges(
@@ -356,8 +362,9 @@ export class GraphStore {
       revisionFloor === undefined
     )
       return revision;
-    const versioned =
-      objects.length || relationships.length || revisionFloor !== undefined
+    const versioned = temporalImport
+      ? importTemporalPlan(ontology, temporalImport, next)
+      : objects.length || relationships.length || revisionFloor !== undefined
         ? await this.temporal.plan(
             ontology,
             before,
