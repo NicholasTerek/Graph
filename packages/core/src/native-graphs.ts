@@ -3,6 +3,10 @@ import type { FalkorDB } from "falkordb";
 import type { GraphSnapshot, GraphObject } from "@graph/contracts";
 import { recordChanges } from "./state.js";
 import { PlatformError } from "./validation.js";
+import {
+  dependencyScopeSchema,
+  type DependencyScope,
+} from "./dependency-slice.js";
 type Value =
   | string
   | number
@@ -89,6 +93,54 @@ export class NativeGraphs {
     return {
       objects: objects.map((r) => JSON.parse(String(r.record))),
       relationships: relationships.map((r) => JSON.parse(String(r.record))),
+    };
+  }
+  async traverse(
+    ontology: string,
+    key: string,
+    scope: DependencyScope,
+  ): Promise<GraphSnapshot> {
+    scope = dependencyScopeSchema.parse(scope);
+    const [root] = await this.query(
+      ontology,
+      key,
+      "MATCH (o:Object {id:$root}) RETURN o.record AS record",
+      { root: scope.root },
+    );
+    if (!root) throw new PlatformError(404, "Dependency root not found");
+    const pattern =
+      scope.direction === "out"
+        ? `-[:LINK*1..${scope.depth}]->`
+        : scope.direction === "in"
+          ? `<-[:LINK*1..${scope.depth}]-`
+          : `-[:LINK*1..${scope.depth}]-`;
+    const rows = await this.query(
+      ontology,
+      key,
+      `MATCH p=(o:Object {id:$root})${pattern}(target:Object) UNWIND nodes(p) AS n WITH DISTINCT n RETURN n.record AS record ORDER BY n.id LIMIT 2001`,
+      { root: scope.root },
+    );
+    const objects: GraphSnapshot["objects"] = rows.map((r) =>
+      JSON.parse(String(r.record)),
+    );
+    if (!objects.some((o) => o.id === scope.root))
+      objects.unshift(JSON.parse(String(root.record)));
+    if (objects.length > 2000)
+      throw new PlatformError(422, "Dependency slice exceeds 2000 objects");
+    const edges = await this.query(
+      ontology,
+      key,
+      "MATCH (a:Object)-[r:LINK]->(b:Object) WHERE a.id IN $ids AND b.id IN $ids RETURN r.record AS record ORDER BY r.id LIMIT 5001",
+      { ids: objects.map((o) => o.id) },
+    );
+    if (edges.length > 5000)
+      throw new PlatformError(
+        422,
+        "Dependency slice exceeds 5000 relationships",
+      );
+    return {
+      objects,
+      relationships: edges.map((r) => JSON.parse(String(r.record))),
     };
   }
   private native(o: GraphObject) {

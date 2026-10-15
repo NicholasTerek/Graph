@@ -246,6 +246,14 @@ export type FunctionRun = {
   executedAt: string;
   input: unknown;
   output: unknown;
+  inputScope?: {
+    root: string;
+    depth: number;
+    direction: "out" | "in" | "both";
+    materialization: "native-slice" | "overlay-full-read";
+    objects: number;
+    relationships: number;
+  };
   explanation?: ExplanationClaim[];
   history?: { generation: string; revision: number; committedAt: string };
   evidence?: {

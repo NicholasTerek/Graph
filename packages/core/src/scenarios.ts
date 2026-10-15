@@ -10,6 +10,7 @@ import type {
   Change,
 } from "@graph/contracts";
 import { createHash } from "node:crypto";
+import { dependencySlice, type DependencyScope } from "./dependency-slice.js";
 import { GraphStore } from "./store.js";
 import { PlatformError, validateIngestion } from "./validation.js";
 
@@ -157,12 +158,28 @@ export class ScenarioService {
       ? this.store.nativeOverlays.read(branch)
       : this.store.nativeGraphs.snapshot(branch.ontology, branch.graphKey!);
   }
-  async readState(ontology: string, id: string) {
+  async readState(ontology: string, id: string, scope?: DependencyScope) {
     const scenario = await this.reference(ontology, id);
     return {
-      ...(await this.effective(scenario)),
+      ...(scope
+        ? scenario.storage === "falkordb-overlay"
+          ? dependencySlice(await this.effective(scenario), scope)
+          : await this.store.nativeGraphs.traverse(
+              ontology,
+              scenario.graphKey!,
+              scope,
+            )
+        : await this.effective(scenario)),
       revision: scenario.baseRevision,
       scenarioVersion: scenario.version,
+      ...(scope
+        ? {
+            materialization:
+              scenario.storage === "falkordb-overlay"
+                ? ("overlay-full-read" as const)
+                : ("native-slice" as const),
+          }
+        : {}),
     };
   }
   async get(ontology: string, id: string): Promise<Scenario> {

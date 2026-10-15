@@ -127,7 +127,7 @@ This is planned work. The native-copy implementation is the functional baseline,
 - [x] Version relationships natively too; preserve stable relationship IDs and provenance.
 - [x] Close old versions, create new versions/edges and advance commit revision in one guarded Cypher write.
 - [x] Enforce at most one visible version per logical identity at a chosen revision.
-- [ ] Create visibility-related indexes supported by the pinned engine, then inspect real query plans.
+- [x] Create native visibility/identity/commit indexes and inspect ObjectVersion root/full-visibility plans in the [dependency-scope study](function-scopes.md).
 - [x] Backfill an initial version baseline without inventing historical timestamps or provenance that was never stored.
 - [x] Preserve source checkpoint/history atomicity and action approval invalidation across the migration.
 - [x] Export/restore bounded retained versions, commit records and portable branch dependencies with validation, atomic rollback and generation safety; see [v2 backups](temporal-backups.md).
@@ -191,8 +191,8 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 - [ ] Measure first/sibling branch creation, edit, evaluation, promotion, cleanup and storage bytes.
 - [ ] Measure ingestion: row-by-row versus batched UNWIND, with equal validation/history/durability semantics.
 - [x] Capture GRAPH.EXPLAIN and read-only GRAPH.PROFILE for the actual aggregate/reference-page queries and range index; broader dependency queries remain work.
-- [ ] Measure warmup and repeated sustained trials; latency p50/p95/p99, achieved throughput, errors and timeouts.
-- [ ] Vary reader concurrency (1/8/32) and read/write mixtures; declare open/closed-loop load and queueing behavior.
+- [x] Record warmups and repeated fixed-duration function trials with p50/p95/p99, achieved completions, errors and CPU/memory; short-trial limits are explicit.
+- [ ] Extend the measured closed-loop function readers (1/8/32) with business read/write mixtures; declare queueing and achieved load.
 - [ ] Record per-process CPU/RSS, database memory, serialized bytes and disk/temp copy costs.
 - [x] Record hardware, versions, persistence, indexes, network placement and warm/cold state for the aggregate study.
 - [x] Commit raw samples, scripts and reproduction commands; build the aggregate chart directly from recorded trials.
@@ -202,7 +202,7 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 - [x] Identify a concrete first aggregate bottleneck before changing storage or caching.
 - [x] Push aggregates into native Cypher instead of paging all values through TypeScript.
 - [x] Replace repeated GraphView array scans with indexed lookups; preserve ordering/evidence and record equivalent before/after trials.
-- [ ] Bound function dependency slices instead of always loading the full ontology, while preserving a consistent snapshot.
+- [x] Add declared native dependency slices for live/history/copy functions with bounded results and captured context; overlay uses an explicitly reported full-read fallback.
 - [ ] Reduce full-state mutation planning/validation where local constraints permit it.
 - [ ] Measure projection/copy overhead separately from native algorithm execution.
 - [x] Preserve aggregate output equivalence and existing conflict tests for the first optimization; require equivalent checks for subsequent changes.

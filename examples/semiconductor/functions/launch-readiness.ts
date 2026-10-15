@@ -494,4 +494,5 @@ export const launchReadiness = defineFunction({
     ];
   },
   execute: calculateLaunch,
+  scope: (input) => ({ root: input.productId, depth: 5, direction: "out" }),
 });

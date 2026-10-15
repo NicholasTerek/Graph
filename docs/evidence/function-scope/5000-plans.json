@@ -1,0 +1,61 @@
+{
+  "dependencySlice": {
+    "query": "CYPHER ontology='semiconductor' root='aquila-x900' MATCH p=(root:Object {ontology:$ontology,id:$root})-[:LINK*1..5]->(target:Object {ontology:$ontology}) UNWIND nodes(p) AS n WITH DISTINCT n RETURN n.record AS record ORDER BY n.id LIMIT 2001",
+    "explain": [
+      "Results",
+      "    Limit",
+      "        Sort",
+      "            Project",
+      "                Distinct",
+      "                    Project",
+      "                        Unwind",
+      "                            Conditional Traverse | (target:Object)->(target:Object)",
+      "                                Filter",
+      "                                    Conditional Variable Length Traverse | (root)-[@anon_0:LINK*1..5]->(target)",
+      "                                        Node By Index Scan | (root:Object)"
+    ],
+    "profile": [
+      "Results | Records produced: 13, Execution time: 0.001051 ms",
+      "    Limit | Records produced: 13, Execution time: 0.002883 ms",
+      "        Sort | Records produced: 13, Execution time: 0.003229 ms",
+      "            Project | Records produced: 13, Execution time: 0.003755 ms",
+      "                Distinct | Records produced: 13, Execution time: 0.009642 ms",
+      "                    Project | Records produced: 52, Execution time: 0.035985 ms",
+      "                        Unwind | Records produced: 52, Execution time: 0.022543 ms",
+      "                            Conditional Traverse | (target)->(target) | Records produced: 15, Execution time: 0.053952 ms",
+      "                                Filter | Records produced: 15, Execution time: 0.005559 ms",
+      "                                    Conditional Variable Length Traverse | (root)-[@anon_0:LINK*1..5]->(target) | Records produced: 15, Execution time: 0.021381 ms",
+      "                                        Node By Index Scan | (root:Object) | Records produced: 1, Execution time: 0.013451 ms"
+    ]
+  },
+  "historicalRoot": {
+    "query": "CYPHER ontology='semiconductor' generation='68380b39-036f-422e-849f-644c78aedf91' root='aquila-x900' revision=6 MATCH (v:ObjectVersion {ontology:$ontology,generation:$generation,id:$root}) WHERE v.valid_from<=$revision AND (v.valid_to IS NULL OR v.valid_to>$revision) RETURN v.record AS record",
+    "explain": [
+      "Results",
+      "    Project",
+      "        Filter",
+      "            Node By Index Scan | (v:ObjectVersion)"
+    ],
+    "profile": [
+      "Results | Records produced: 1, Execution time: 0.000181 ms",
+      "    Project | Records produced: 1, Execution time: 0.000580 ms",
+      "        Filter | Records produced: 1, Execution time: 0.001562 ms",
+      "            Node By Index Scan | (v:ObjectVersion) | Records produced: 1, Execution time: 0.026390 ms"
+    ]
+  },
+  "historicalVisibility": {
+    "query": "CYPHER ontology='semiconductor' generation='68380b39-036f-422e-849f-644c78aedf91' revision=6 MATCH (v:ObjectVersion {ontology:$ontology,generation:$generation}) WHERE v.valid_from<=$revision AND (v.valid_to IS NULL OR v.valid_to>$revision) RETURN count(v) AS visible",
+    "explain": [
+      "Results",
+      "    Aggregate",
+      "        Filter",
+      "            Node By Index Scan | (v:ObjectVersion)"
+    ],
+    "profile": [
+      "Results | Records produced: 1, Execution time: 0.000391 ms",
+      "    Aggregate | Records produced: 1, Execution time: 0.434368 ms",
+      "        Filter | Records produced: 5000, Execution time: 0.771406 ms",
+      "            Node By Index Scan | (v:ObjectVersion) | Records produced: 5000, Execution time: 1.570639 ms"
+    ]
+  }
+}

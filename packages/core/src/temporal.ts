@@ -394,7 +394,7 @@ export class TemporalStorage {
     const rows = await this.query(
       `MATCH p=(root:Identity {ontology:$ontology,id:$root})${pattern}(target:Identity {ontology:$ontology})
       WHERE all(r IN relationships(p) WHERE r.generation=$generation AND r.valid_from<=$revision AND (r.valid_to IS NULL OR r.valid_to>$revision))
-      UNWIND nodes(p) AS identity WITH DISTINCT identity MATCH (v:ObjectVersion {ontology:$ontology,generation:$generation,id:identity.id}) WHERE ${visible} RETURN v.record AS record ORDER BY v.id`,
+      UNWIND nodes(p) AS identity WITH DISTINCT identity MATCH (v:ObjectVersion {ontology:$ontology,generation:$generation,id:identity.id}) WHERE ${visible} RETURN v.record AS record ORDER BY v.id LIMIT 2001`,
       params,
     );
     const objects: GraphObject[] = rows.map((r) =>
@@ -402,12 +402,19 @@ export class TemporalStorage {
     );
     if (!objects.some((o) => o.id === root))
       objects.unshift(JSON.parse(String(origin.record)));
+    if (objects.length > 2000)
+      throw new PlatformError(422, "Dependency slice exceeds 2000 objects");
     const relationships = (
       await this.query(
-        "MATCH (a:Identity {ontology:$ontology})-[r:HISTORICAL_LINK]->(b:Identity {ontology:$ontology}) WHERE a.id IN $ids AND b.id IN $ids AND r.generation=$generation AND r.valid_from<=$revision AND (r.valid_to IS NULL OR r.valid_to>$revision) RETURN r.record AS record ORDER BY r.id",
+        "MATCH (a:Identity {ontology:$ontology})-[r:HISTORICAL_LINK]->(b:Identity {ontology:$ontology}) WHERE a.id IN $ids AND b.id IN $ids AND r.generation=$generation AND r.valid_from<=$revision AND (r.valid_to IS NULL OR r.valid_to>$revision) RETURN r.record AS record ORDER BY r.id LIMIT 5001",
         { ...params, ids: objects.map((o) => o.id) },
       )
     ).map((r) => JSON.parse(String(r.record)));
+    if (relationships.length > 5000)
+      throw new PlatformError(
+        422,
+        "Dependency slice exceeds 5000 relationships",
+      );
     return {
       objects,
       relationships,

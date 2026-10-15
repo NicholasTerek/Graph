@@ -806,22 +806,29 @@ export class GraphStore {
           : `-[:LINK*1..${depth}]-`;
     const rows = await this.rows(
       `MATCH p=(root:Object {ontology: $ontology, id: $root})${pattern}(target:Object {ontology: $ontology})
-      UNWIND nodes(p) AS n WITH DISTINCT n RETURN n.record AS record ORDER BY n.id`,
+      UNWIND nodes(p) AS n WITH DISTINCT n RETURN n.record AS record ORDER BY n.id LIMIT 2001`,
       { ontology, root },
     );
     const objects: GraphObject[] = rows.map((r) =>
       JSON.parse(String(r.record)),
     );
     if (!objects.some((o) => o.id === root)) objects.unshift(origin);
+    if (objects.length > 2000)
+      throw new PlatformError(422, "Dependency slice exceeds 2000 objects");
     const ids = objects.map((o) => o.id);
     const relRows = await this.rows(
       `MATCH (a:Object {ontology: $ontology})-[r:LINK]->(b:Object {ontology: $ontology})
-      WHERE a.id IN $ids AND b.id IN $ids RETURN r.record AS record ORDER BY r.id`,
+      WHERE a.id IN $ids AND b.id IN $ids RETURN r.record AS record ORDER BY r.id LIMIT 5001`,
       { ontology, ids },
     );
     const relationships: GraphRelationship[] = relRows.map((r) =>
       JSON.parse(String(r.record)),
     );
+    if (relationships.length > 5000)
+      throw new PlatformError(
+        422,
+        "Dependency slice exceeds 5000 relationships",
+      );
     return { objects, relationships, root, depth, direction };
   }
 }

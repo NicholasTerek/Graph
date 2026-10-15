@@ -7,6 +7,7 @@ export {
 export { ScenarioService, applyOverlay } from "./scenarios.js";
 export { FunctionRuntime, GraphView, defineFunction } from "./functions.js";
 export type { FunctionDefinition, FunctionContext } from "./functions.js";
+export type { DependencyScope } from "./dependency-slice.js";
 export { SourceService } from "./ingestion.js";
 export { connectionsSchema } from "./connectors.js";
 export type { SourceConnections } from "./connectors.js";

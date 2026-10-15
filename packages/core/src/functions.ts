@@ -15,6 +15,10 @@ import { ScenarioService } from "./scenarios.js";
 import { PlatformError } from "./validation.js";
 import { canonical } from "./state.js";
 import { SnapshotService } from "./snapshots.js";
+import {
+  dependencyScopeSchema,
+  type DependencyScope,
+} from "./dependency-slice.js";
 
 export class GraphView {
   private graph: GraphSnapshot;
@@ -94,6 +98,7 @@ export type FunctionDefinition<I = unknown, O = unknown> = {
   ontology: string;
   input: z.ZodType<I>;
   output: z.ZodType<O>;
+  scope?: (input: I) => DependencyScope;
   execute: (context: FunctionContext, input: I) => O | Promise<O>;
   explain?: (output: O) => ExplanationClaim[];
 };
@@ -104,6 +109,9 @@ export function defineFunction<I, O>(
     ...definition,
     execute: (context, input) =>
       definition.execute(context, definition.input.parse(input)),
+    scope: definition.scope
+      ? (input) => definition.scope!(definition.input.parse(input))
+      : undefined,
     explain: definition.explain
       ? (output) => definition.explain!(definition.output.parse(output))
       : undefined,
@@ -155,6 +163,9 @@ export class FunctionRuntime {
     const definition = this.definitions.get(`${ontology}/${id}`);
     if (!definition) throw new PlatformError(404, `Function not found: ${id}`);
     const parsed = definition.input.parse(input);
+    const scope = definition.scope
+      ? dependencyScopeSchema.parse(definition.scope(parsed))
+      : undefined;
     if (scenarioId && history)
       throw new PlatformError(
         400,
@@ -162,19 +173,34 @@ export class FunctionRuntime {
       );
     const { state, sources, capturedAt } = await this.store.exclusive(
       async () => {
-        const state = history
-          ? await this.store.temporal.read(
+        const context = history
+          ? await new SnapshotService(this.store).resolve(
               ontology,
-              await new SnapshotService(this.store).resolve(
-                ontology,
-                history,
-                principal,
-              ),
+              history,
+              principal,
             )
+          : undefined;
+        const state = context
+          ? scope
+            ? await this.store.temporal.traverse(
+                ontology,
+                context,
+                scope.root,
+                scope.depth,
+                scope.direction,
+              )
+            : await this.store.temporal.read(ontology, context)
           : scenarioId
-            ? await this.scenarios.readState(ontology, scenarioId)
+            ? await this.scenarios.readState(ontology, scenarioId, scope)
             : {
-                ...(await this.store.snapshot(ontology)),
+                ...(scope
+                  ? await this.store.traverse(
+                      ontology,
+                      scope.root,
+                      scope.depth,
+                      scope.direction,
+                    )
+                  : await this.store.snapshot(ontology)),
                 revision: await this.store.revision(ontology),
               };
         const current = history
@@ -233,6 +259,20 @@ export class FunctionRuntime {
         "scenarioVersion" in state ? Number(state.scenarioVersion) : null,
       executedAt: new Date().toISOString(),
       input: parsed,
+      ...(scope
+        ? {
+            inputScope: {
+              ...scope,
+              materialization:
+                "materialization" in state &&
+                state.materialization === "overlay-full-read"
+                  ? ("overlay-full-read" as const)
+                  : ("native-slice" as const),
+              objects: state.objects.length,
+              relationships: state.relationships.length,
+            },
+          }
+        : {}),
       output,
       explanation: definition.explain?.(output),
       ...("generation" in state
