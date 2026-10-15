@@ -161,17 +161,19 @@ This is planned work. The native-copy implementation is the functional baseline,
 
 Call this a small concurrent-history checker, inspired by Jepsen's approach. Do not claim a full Jepsen test or distributed failure coverage.
 
+Implemented: `pnpm check:history` and [its exact workload/checks](concurrency-checker.md). Seeded clients cover read/patch/atomic ingestion/branch/edit/promote/discard and stable pins; the broader function/sync/fault matrix below remains incomplete. Eight injected-anomaly unit tests validate the checker itself.
+
 - [ ] Generate seeded concurrent clients performing read, patch, branch, calculate, promote, sync and discard operations.
 - [ ] Record invocation/completion times, input/output, revision/version and success/conflict/unknown outcome in JSONL.
 - [ ] Check no lost updates when preconditions are supplied; deliberately test omitted-precondition last-write behavior too.
-- [ ] Check repeatable pinned reads, object/edge read skew and zero dangling visible edges.
+- [x] Check repeatable pinned reads, object/edge read skew and zero dangling visible edges.
 - [ ] Check branch isolation, no partial candidate publication and no stale promotion/action execution.
 - [ ] Check temporal visibility intervals and commit/restore generation monotonicity.
 - [ ] Test same-record conflicts, independent changes, deletes with links and cross-record write-skew examples.
 - [ ] Inject failures before native write, after candidate write, before/after pointer publication and before acknowledgment.
 - [ ] Restart API/database and verify persisted histories, pins and cleanup within the documented durability mode.
 - [ ] Save seeds, minimized counterexamples and a human-readable failure report.
-- [ ] Run a small deterministic suite in milestone CI; put long randomized/fault runs behind an explicit command.
+- [x] Run a small seeded suite in milestone CI; put longer concurrent schedules behind `pnpm check:history`. Scheduling itself is nondeterministic.
 
 ## F. Performance engineering and blog evidence
 

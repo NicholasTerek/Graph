@@ -43,3 +43,6 @@ test-results/
 playwright-report/
 
 *.tgz
+
+# Local load-test journals and raw measurements (publish selected evidence under docs/)
+/artifacts/
