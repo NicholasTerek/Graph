@@ -125,6 +125,7 @@ export const scenarioCreate = z
     id: identifier,
     name: z.string().min(1).max(100),
     description: z.string().max(1000).default(""),
+    strategy: z.enum(["copy", "overlay"]).optional(),
     expectedRevision: z.number().int().nonnegative().optional(),
   })
   .strict();
@@ -156,7 +157,8 @@ export type Scenario = Omit<
   createdAt: string;
   updatedAt: string;
   overlay: Overlay;
-  storage?: "falkordb";
+  storage?: "falkordb" | "falkordb-overlay";
+  historyGeneration?: string;
   graphKey?: string;
   baseGraphKey?: string;
 };

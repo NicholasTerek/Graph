@@ -58,7 +58,7 @@ export class ExplanationService {
         } catch (error) {
           if (
             !(error instanceof PlatformError) ||
-            error.statusCode !== 404 ||
+            ![404, 409, 410].includes(error.statusCode) ||
             !run
           )
             throw error;
@@ -104,6 +104,7 @@ export class ExplanationService {
         warnings: [],
       };
       let key: string | undefined;
+      let temporary = false;
       const records = new Map<string, GraphObject>(),
         relationships = new Map<string, GraphRelationship>();
       try {
@@ -143,7 +144,13 @@ export class ExplanationService {
             result.warnings.push(
               "This older run has no captured read set; paths are from its still-matching current context.",
             );
-          if (branch) key = branch.graphKey;
+          if (branch?.storage === "falkordb-overlay") {
+            key = await this.store.nativeGraphs.create(
+              ontology,
+              await this.scenarios.readState(ontology, branch.id),
+            );
+            temporary = true;
+          } else if (branch) key = branch.graphKey;
           const roots = key
             ? await this.store.nativeGraphs.query(
                 ontology,
@@ -230,7 +237,7 @@ export class ExplanationService {
           );
         return result;
       } finally {
-        if (run?.evidence && key)
+        if ((run?.evidence || temporary) && key)
           await this.store.nativeGraphs.remove(ontology, key);
       }
     });

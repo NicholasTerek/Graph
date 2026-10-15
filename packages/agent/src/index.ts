@@ -267,12 +267,14 @@ export class GraphAgent {
             id: identifier,
             name: z.string().min(1).max(100),
             expectedRevision: z.number().int().nonnegative(),
+            strategy: z.enum(["copy", "overlay"]).optional(),
           })
           .strict(),
         execute: (args: {
           id: string;
           name: string;
           expectedRevision: number;
+          strategy?: "copy" | "overlay";
         }) => this.client.createScenario(ontology, args),
       },
       change_assumption: {

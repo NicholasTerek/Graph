@@ -421,3 +421,42 @@ test("reviews and selectively promotes a hypothetical change into live data", as
     data: { properties: { leadDays: 7 } },
   });
 });
+
+test("reopens an SDK-created revision overlay and recalculates its recovery independently", async ({
+  page,
+}) => {
+  const id = "browser-overlay";
+  const created = await page.request.post(
+    "/api/ontologies/semiconductor/scenarios",
+    { data: { id, name: "Pinned overlay test", strategy: "overlay" } },
+  );
+  expect(created.ok()).toBe(true);
+  try {
+    const patched = await page.request.patch(
+      `/api/ontologies/semiconductor/scenarios/${id}/objects/meridian`,
+      { data: { expectedVersion: 0, properties: { leadDays: 14 } } },
+    );
+    expect(patched.ok()).toBe(true);
+    await page.goto("/");
+    await page.getByRole("button", { name: "Launch operations" }).click();
+    await page.getByLabel("Saved scenario").selectOption(id);
+    await expect(page.getByTestId("recommendation")).toContainText(
+      "Expedite Northstar Packaging",
+    );
+    await page
+      .locator(".decision-evidence")
+      .getByRole("button", { name: "Explain this recommendation" })
+      .click();
+    await expect(
+      page
+        .locator(".decision-evidence")
+        .getByText("Captured calculation inputs", { exact: true }),
+    ).toBeVisible();
+    await page.getByLabel("Saved scenario").selectOption("");
+    await expect(page.getByTestId("recommendation")).toContainText(
+      "Meridian Packaging",
+    );
+  } finally {
+    await page.request.delete(`/api/ontologies/semiconductor/scenarios/${id}`);
+  }
+});

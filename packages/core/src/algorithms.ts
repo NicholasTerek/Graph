@@ -37,12 +37,25 @@ export class AlgorithmService {
     const args = algorithmInput.parse(input);
     return this.store.exclusive(async () => {
       let graphKey: string;
+      let temporary = false;
       let revision: number;
       let scenarioVersion: number | null = null;
       let generation: string | undefined;
       if (args.scenario) {
         const branch = await this.scenarios.reference(ontology, args.scenario);
-        graphKey = branch.graphKey!;
+        if (branch.storage === "falkordb-overlay") {
+          const state = await this.scenarios.readState(ontology, args.scenario);
+          if (
+            state.objects.length > 10000 ||
+            state.relationships.length > 50000
+          )
+            throw new PlatformError(
+              422,
+              "Algorithm graph exceeds the 10k-object/50k-edge budget",
+            );
+          graphKey = await this.store.nativeGraphs.create(ontology, state);
+          temporary = true;
+        } else graphKey = branch.graphKey!;
         revision = branch.baseRevision;
         scenarioVersion = branch.version;
       } else {
@@ -151,7 +164,7 @@ export class AlgorithmService {
         }
         return result;
       } finally {
-        if (!args.scenario)
+        if (!args.scenario || temporary)
           await this.store.nativeGraphs.remove(ontology, graphKey);
       }
     });

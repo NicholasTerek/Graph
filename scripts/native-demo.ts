@@ -6,10 +6,15 @@ const client = new GraphClient(
   { token: process.env.GRAPH_API_TOKEN },
 );
 const phase = process.argv[2],
-  id = process.argv[3];
-if (!id || !["prepare", "verify"].includes(phase))
+  id = process.argv[3],
+  strategy = process.argv[4] ?? "copy";
+if (
+  !id ||
+  !["prepare", "verify"].includes(phase) ||
+  !["copy", "overlay"].includes(strategy)
+)
   throw new Error(
-    "Usage: node --import tsx scripts/native-demo.ts prepare|verify UNIQUE_SCENARIO_ID",
+    "Usage: node --import tsx scripts/native-demo.ts prepare|verify UNIQUE_SCENARIO_ID [copy|overlay]",
   );
 if (phase === "prepare") {
   const live = await client.snapshot("semiconductor");
@@ -22,6 +27,7 @@ if (phase === "prepare") {
     id,
     name: "Native graph restart check",
     expectedRevision: live.revision,
+    strategy: strategy as "copy" | "overlay",
   });
   await client.patchScenarioObject("semiconductor", id, "meridian", {
     properties: { leadDays: 14 },
@@ -37,7 +43,10 @@ if (phase === "prepare") {
   );
 } else {
   const branch = await client.scenario("semiconductor", id);
-  assert.equal(branch.storage, "falkordb");
+  assert.equal(
+    branch.storage,
+    strategy === "overlay" ? "falkordb-overlay" : "falkordb",
+  );
   assert.equal(branch.version, 1);
   const state = await client.scenarioGraph("semiconductor", id);
   assert.equal(

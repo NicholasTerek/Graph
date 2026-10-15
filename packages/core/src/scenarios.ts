@@ -72,6 +72,10 @@ export class ScenarioService {
     return this.store.documents<Scenario>("scenario", ontology);
   }
   async base(scenario: Scenario): Promise<GraphState> {
+    if (scenario.storage === "falkordb-overlay") {
+      const context = await this.overlayContext(scenario);
+      return this.store.temporal.read(scenario.ontology, context);
+    }
     const value = await this.store.document<
       GraphState | import("./native-graphs.js").NativeBase
     >("base", scenario.ontology, String(scenario.baseRevision));
@@ -91,6 +95,10 @@ export class ScenarioService {
     await this.store.ontology(ontology);
     const value = await this.store.document<Scenario>("scenario", ontology, id);
     if (!value) throw new PlatformError(404, `Scenario not found: ${id}`);
+    if (value.storage === "falkordb-overlay") {
+      await this.overlayContext(value);
+      return value;
+    }
     if (value.storage === "falkordb") {
       if (!value.graphKey || !value.baseGraphKey)
         throw new PlatformError(500, "Incomplete native scenario metadata");
@@ -132,10 +140,26 @@ export class ScenarioService {
     await this.store.saveDocument("scenario", ontology, id, migrated);
     return migrated;
   }
+  private async overlayContext(branch: Scenario) {
+    const current = await this.store.temporal.ensure(branch.ontology);
+    if (current.generation !== branch.historyGeneration)
+      throw new PlatformError(
+        409,
+        "Overlay history generation changed; restore a portable branch backup",
+      );
+    return this.store.temporal.resolve(branch.ontology, {
+      revision: branch.baseRevision,
+    });
+  }
+  private effective(branch: Scenario) {
+    return branch.storage === "falkordb-overlay"
+      ? this.store.nativeOverlays.read(branch)
+      : this.store.nativeGraphs.snapshot(branch.ontology, branch.graphKey!);
+  }
   async readState(ontology: string, id: string) {
     const scenario = await this.reference(ontology, id);
     return {
-      ...(await this.store.nativeGraphs.snapshot(ontology, scenario.graphKey!)),
+      ...(await this.effective(scenario)),
       revision: scenario.baseRevision,
       scenarioVersion: scenario.version,
     };
@@ -143,10 +167,7 @@ export class ScenarioService {
   async get(ontology: string, id: string): Promise<Scenario> {
     const scenario = await this.reference(ontology, id);
     const base = await this.base(scenario);
-    const state = await this.store.nativeGraphs.snapshot(
-      ontology,
-      scenario.graphKey!,
-    );
+    const state = await this.effective(scenario);
     return { ...scenario, overlay: toOverlay(base, state) };
   }
   async create(
@@ -156,6 +177,7 @@ export class ScenarioService {
       name: string;
       description: string;
       expectedRevision?: number;
+      strategy?: "copy" | "overlay";
     },
   ): Promise<Scenario> {
     return this.store.exclusive(async () => {
@@ -171,6 +193,29 @@ export class ScenarioService {
           409,
           `Revision conflict: expected ${input.expectedRevision}, current ${revision}`,
         );
+      if (input.strategy === "overlay") {
+        const context = await this.store.temporal.resolve(ontology, {
+          revision,
+        });
+        const now = new Date().toISOString();
+        const branch: Scenario = {
+          id: input.id,
+          name: input.name,
+          description: input.description,
+          ontology,
+          baseRevision: revision,
+          historyGeneration: context.generation,
+          storage: "falkordb-overlay",
+          strategy: "overlay",
+          version: 0,
+          createdAt: now,
+          updatedAt: now,
+          overlay: emptyOverlay(),
+        };
+        // Creation writes only metadata. The persisted branch is itself a non-expiring base pin.
+        await this.store.saveDocument("scenario", ontology, input.id, branch);
+        return branch;
+      }
       let base = await this.store.document<
         import("./native-graphs.js").NativeBase | GraphState
       >("base", ontology, String(revision));
@@ -237,12 +282,19 @@ export class ScenarioService {
           "Cannot upsert and remove the same ID in one edit",
         );
     }
-    const before = await this.store.nativeGraphs.snapshot(
-      scenario.ontology,
-      scenario.graphKey!,
-    );
+    const before = await this.effective(scenario);
     const state = applyOverlay(before, edit);
     validateIngestion(ontology, { objects: [], relationships: [] }, state);
+    if (scenario.storage === "falkordb-overlay") {
+      const result = {
+        ...scenario,
+        version: scenario.version + 1,
+        updatedAt: new Date().toISOString(),
+        overlay: emptyOverlay(),
+      };
+      await this.store.nativeOverlays.publish(result, before, state);
+      return result;
+    }
     const key = await this.store.nativeGraphs.copy(
       scenario.ontology,
       scenario.graphKey!,
@@ -288,9 +340,9 @@ export class ScenarioService {
   ) {
     return this.store.exclusive(async () => {
       const scenario = await this.reference(ontology, id);
-      const current = (
-        await this.store.nativeGraphs.snapshot(ontology, scenario.graphKey!)
-      ).objects.find((o) => o.id === objectId);
+      const current = (await this.effective(scenario)).objects.find(
+        (o) => o.id === objectId,
+      );
       if (!current)
         throw new PlatformError(
           404,
@@ -317,10 +369,7 @@ export class ScenarioService {
     return this.store.exclusive(async () => {
       const scenario = await this.reference(ontology, id);
       const base = await this.base(scenario);
-      const state = await this.store.nativeGraphs.snapshot(
-        ontology,
-        scenario.graphKey!,
-      );
+      const state = await this.effective(scenario);
       const liveRevision = await this.store.revision(ontology);
       return {
         scenario: id,
@@ -335,8 +384,18 @@ export class ScenarioService {
   }
   async discard(ontology: string, id: string) {
     return this.store.exclusive(async () => {
-      const scenario = await this.reference(ontology, id);
-      await this.store.removeDocument("scenario", ontology, id);
+      const stored = await this.store.document<Scenario>(
+        "scenario",
+        ontology,
+        id,
+      );
+      const scenario =
+        stored?.storage === "falkordb-overlay"
+          ? stored
+          : await this.reference(ontology, id);
+      if (scenario.storage === "falkordb-overlay")
+        await this.store.nativeOverlays.discard(ontology, id);
+      else await this.store.removeDocument("scenario", ontology, id);
       if (
         !(await this.list(ontology)).some(
           (s) => s.baseRevision === scenario.baseRevision,
@@ -357,7 +416,14 @@ export class ScenarioService {
         import("./native-graphs.js").NativeBase
       >("base", ontology.id))
         if (base.storage === "falkordb") references.add(base.graphKey);
-      for (const branch of await this.list(ontology.id)) {
+      const branches = await this.list(ontology.id);
+      await this.store.nativeOverlays.collect(
+        ontology.id,
+        branches
+          .filter((b) => b.storage === "falkordb-overlay")
+          .map((b) => b.id),
+      );
+      for (const branch of branches) {
         if (branch.graphKey) references.add(branch.graphKey);
         if (branch.baseGraphKey) references.add(branch.baseGraphKey);
       }

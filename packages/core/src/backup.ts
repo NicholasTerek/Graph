@@ -46,9 +46,30 @@ export class BackupService {
             };
           }
           if (kind === "scenario") {
-            const { storage, graphKey, baseGraphKey, ...portable } =
-              await scenarios.get(ontology, (value as Scenario).id);
+            const {
+              storage,
+              graphKey,
+              baseGraphKey,
+              historyGeneration,
+              strategy,
+              ...portable
+            } = await scenarios.get(ontology, (value as Scenario).id);
             value = portable;
+            if (
+              storage === "falkordb-overlay" &&
+              !documents.some(
+                (d) =>
+                  d.kind === "base" && d.id === String(portable.baseRevision),
+              )
+            ) {
+              documents.push({
+                kind: "base",
+                id: String(portable.baseRevision),
+                value: await scenarios.base(
+                  await scenarios.reference(ontology, portable.id),
+                ),
+              });
+            }
           }
           documents.push({ kind, id: document.id, value });
         }

@@ -275,6 +275,7 @@ export class GraphClient {
       name: string;
       description?: string;
       expectedRevision?: number;
+      strategy?: "copy" | "overlay";
     },
   ) {
     return this.call<Scenario>(

@@ -1,5 +1,6 @@
 import { canonical, recordChanges, validateUniqueState } from "./state.js";
 import { FalkorDB } from "falkordb";
+import { NativeOverlays } from "./native-overlays.js";
 import { NativeGraphs } from "./native-graphs.js";
 import { evidencePathQuery } from "./explanations.js";
 import { TemporalStorage } from "./temporal.js";
@@ -31,6 +32,7 @@ type QueryValue =
 
 export class GraphStore {
   readonly nativeGraphs: NativeGraphs;
+  readonly nativeOverlays: NativeOverlays;
   readonly temporal: TemporalStorage;
   private graph;
   private pending: Promise<unknown> = Promise.resolve();
@@ -40,6 +42,9 @@ export class GraphStore {
   ) {
     this.graph = db.selectGraph(name);
     this.nativeGraphs = new NativeGraphs(db, name);
+    this.nativeOverlays = new NativeOverlays((query, params) =>
+      this.rows(query, params),
+    );
     this.temporal = new TemporalStorage((query, params) =>
       this.rows(query, params),
     );
@@ -65,6 +70,7 @@ export class GraphStore {
 
   async initialize() {
     await this.temporal.initialize();
+    await this.nativeOverlays.initialize();
     for (const query of [
       "CREATE INDEX FOR (n:Ontology) ON (n.id)",
       "CREATE INDEX FOR (n:Object) ON (n.ontology, n.id)",
