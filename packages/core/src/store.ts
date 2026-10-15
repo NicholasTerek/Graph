@@ -1,6 +1,7 @@
 import { canonical, recordChanges, validateUniqueState } from "./state.js";
 import { FalkorDB } from "falkordb";
 import { NativeGraphs } from "./native-graphs.js";
+import { evidencePathQuery } from "./explanations.js";
 import type {
   Ontology,
   GraphObject,
@@ -353,6 +354,18 @@ export class GraphStore {
     return (await this.documents<RecordHistory>("history", ontology))
       .filter((h) => h.recordId === id && h.kind === kind)
       .sort((a, b) => a.revision - b.revision);
+  }
+  async evidencePaths(
+    ontology: string,
+    root: string,
+    targets: string[],
+    maxDepth: number,
+  ) {
+    return this.rows(evidencePathQuery(maxDepth, true), {
+      ontology,
+      root,
+      targets,
+    });
   }
 
   async object(ontology: string, id: string): Promise<GraphObject> {

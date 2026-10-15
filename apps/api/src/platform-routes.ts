@@ -13,6 +13,7 @@ import {
   objectQuery,
   aggregationInput,
   algorithmInput,
+  explanationInput,
 } from "@graph/contracts";
 import {
   GraphStore,
@@ -24,6 +25,8 @@ import {
   ActionService,
   AlgorithmService,
   graphAlgorithms,
+  ExplanationService,
+  FunctionRuntime,
 } from "@graph/core";
 import type { Security } from "./security.js";
 export function platformRoutes(
@@ -34,12 +37,27 @@ export function platformRoutes(
   request?: typeof fetch,
   actions?: ActionService,
   connections?: import("@graph/core").SourceConnections,
+  functions?: FunctionRuntime,
 ) {
   const app = instance.withTypeProvider<ZodTypeProvider>();
   const sources = new SourceService(store, request, connections);
   const promotion = new PromotionService(store, scenarios);
   const backup = new BackupService(store);
   const algorithms = new AlgorithmService(store, scenarios);
+  if (functions) {
+    const explanations = new ExplanationService(store, scenarios, functions);
+    app.post(
+      "/api/ontologies/:ontology/explain",
+      {
+        schema: {
+          params: z.object({ ontology: identifier }),
+          body: explanationInput,
+          tags: ["Evidence"],
+        },
+      },
+      (req) => explanations.explain(req.params.ontology, req.body),
+    );
+  }
   app.get(
     "/api/ontologies/:ontology/algorithms",
     {

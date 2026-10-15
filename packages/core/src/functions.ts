@@ -5,13 +5,19 @@ import type {
   GraphSnapshot,
   FunctionInfo,
   FunctionRun,
+  GraphRelationship,
+  ExplanationClaim,
+  Source,
 } from "@graph/contracts";
 import { GraphStore } from "./store.js";
 import { ScenarioService } from "./scenarios.js";
 import { PlatformError } from "./validation.js";
+import { canonical } from "./state.js";
 
 export class GraphView {
   private graph: GraphSnapshot;
+  private readObjects = new Map<string, GraphObject>();
+  private readRelationships = new Map<string, GraphRelationship>();
   constructor(graph: GraphSnapshot) {
     this.graph = structuredClone(graph);
   }
@@ -19,6 +25,7 @@ export class GraphView {
     const object = this.graph.objects.find((o) => o.id === id);
     if (!object)
       throw new PlatformError(422, `Required object not found: ${id}`);
+    this.readObjects.set(object.id, object);
     return structuredClone(object);
   }
   related(
@@ -26,17 +33,28 @@ export class GraphView {
     type: string,
     direction: "out" | "in" = "out",
   ): GraphObject[] {
-    const ids = this.graph.relationships
-      .filter(
-        (r) => r.type === type && (direction === "out" ? r.from : r.to) === id,
-      )
-      .map((r) => (direction === "out" ? r.to : r.from));
+    const matched = this.graph.relationships.filter(
+      (r) => r.type === type && (direction === "out" ? r.from : r.to) === id,
+    );
+    for (const relationship of matched)
+      this.readRelationships.set(relationship.id, relationship);
+    const origin = this.graph.objects.find((o) => o.id === id);
+    if (origin) this.readObjects.set(origin.id, origin);
+    const ids = matched.map((r) => (direction === "out" ? r.to : r.from));
     return ids.map((id) => this.object(id));
   }
   objects(type?: string): GraphObject[] {
-    return structuredClone(
-      this.graph.objects.filter((o) => !type || o.type === type),
-    );
+    const records = this.graph.objects.filter((o) => !type || o.type === type);
+    for (const object of records) this.readObjects.set(object.id, object);
+    return structuredClone(records);
+  }
+  evidence() {
+    return structuredClone({
+      objects: [...this.readObjects.values()].slice(0, 2000),
+      relationships: [...this.readRelationships.values()].slice(0, 5000),
+      truncated:
+        this.readObjects.size > 2000 || this.readRelationships.size > 5000,
+    });
   }
 }
 export type FunctionContext = {
@@ -52,6 +70,7 @@ export type FunctionDefinition<I = unknown, O = unknown> = {
   input: z.ZodType<I>;
   output: z.ZodType<O>;
   execute: (context: FunctionContext, input: I) => O | Promise<O>;
+  explain?: (output: O) => ExplanationClaim[];
 };
 export function defineFunction<I, O>(
   definition: FunctionDefinition<I, O>,
@@ -60,6 +79,9 @@ export function defineFunction<I, O>(
     ...definition,
     execute: (context, input) =>
       definition.execute(context, definition.input.parse(input)),
+    explain: definition.explain
+      ? (output) => definition.explain!(definition.output.parse(output))
+      : undefined,
   };
 }
 export class FunctionRuntime {
@@ -88,6 +110,15 @@ export class FunctionRuntime {
         outputSchema: z.toJSONSchema(d.output) as Record<string, unknown>,
       }));
   }
+  explain(run: FunctionRun): ExplanationClaim[] {
+    return (
+      run.explanation ??
+      this.definitions
+        .get(`${run.ontology}/${run.functionId}`)
+        ?.explain?.(run.output) ??
+      []
+    );
+  }
   async run(
     ontology: string,
     id: string,
@@ -97,14 +128,24 @@ export class FunctionRuntime {
     const definition = this.definitions.get(`${ontology}/${id}`);
     if (!definition) throw new PlatformError(404, `Function not found: ${id}`);
     const parsed = definition.input.parse(input);
-    const state = scenarioId
-      ? await this.scenarios.state(ontology, scenarioId)
-      : await this.store.state(ontology);
+    const { state, sources, capturedAt } = await this.store.exclusive(
+      async () => ({
+        state: scenarioId
+          ? await this.scenarios.readState(ontology, scenarioId)
+          : {
+              ...(await this.store.snapshot(ontology)),
+              revision: await this.store.revision(ontology),
+            },
+        sources: await this.store.documents<Source>("source", ontology),
+        capturedAt: new Date().toISOString(),
+      }),
+    );
+    const graph = new GraphView(state);
     let calculated: unknown;
     try {
       calculated = await definition.execute(
         {
-          graph: new GraphView(state),
+          graph,
           revision: state.revision,
           scenarioId: scenarioId ?? null,
         },
@@ -126,6 +167,8 @@ export class FunctionRuntime {
         "Registered function returned an invalid result",
       );
     const output = validated.data;
+    const evidence = graph.evidence();
+    const objectIds = new Set(evidence.objects.map((o) => o.id));
     const run: FunctionRun = {
       id: `run-${randomUUID()}`,
       functionId: id,
@@ -137,6 +180,32 @@ export class FunctionRuntime {
       executedAt: new Date().toISOString(),
       input: parsed,
       output,
+      explanation: definition.explain?.(output),
+      evidence: {
+        ...evidence,
+        capturedAt,
+        contributors: sources.flatMap((source) =>
+          Object.entries(source.managed)
+            .filter(([id]) => objectIds.has(id))
+            .map(([objectId, mapping]) => ({
+              objectId,
+              sourceId: source.id,
+              externalId: mapping.externalId,
+              fields: Object.keys(mapping.fields),
+              checkpoint: source.checkpoint,
+              observedAt: source.lastSyncedAt,
+              values: mapping.fields,
+              matches: Object.entries(mapping.fields).every(
+                ([field, value]) =>
+                  canonical(
+                    evidence.objects.find((o) => o.id === objectId)?.properties[
+                      field
+                    ],
+                  ) === canonical(value),
+              ),
+            })),
+        ),
+      },
     };
     await this.store.exclusive(() =>
       this.store.saveDocument("run", ontology, run.id, run),

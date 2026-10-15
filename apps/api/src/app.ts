@@ -164,6 +164,7 @@ export function createApp(
       options.connectorFetch,
       actions,
       options.sourceConnections,
+      functions,
     );
     app.get("/api/metrics", { schema: { tags: ["Operations"] } }, () => ({
       uptimeSeconds: process.uptime(),

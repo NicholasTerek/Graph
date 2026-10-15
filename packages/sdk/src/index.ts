@@ -10,6 +10,8 @@ import type {
   ObjectQuery,
   AlgorithmInput,
   AlgorithmResult,
+  ExplanationInput,
+  Explanation,
   Ontology,
   GraphState,
   Ingestion,
@@ -36,6 +38,13 @@ export class GraphApiError extends Error {
   }
 }
 export class GraphClient {
+  explain(ontology: string, input: ExplanationInput) {
+    return this.call<Explanation>(
+      `${this.path(ontology)}/explain`,
+      "POST",
+      input,
+    );
+  }
   algorithms(ontology: string) {
     return this.call<{ id: string; description: string }[]>(
       `${this.path(ontology)}/algorithms`,

@@ -75,16 +75,16 @@ No promise of finishing every production gap in one session. Work proceeds auton
 
 ## B. Explainability — next product milestone
 
-- [ ] Define a typed explanation envelope: question/claim, snapshot identity, entities, relationships, source mappings, source checkpoints, rule IDs, calculation run IDs, tool traces and limitations.
-- [ ] Expose a bounded object explanation endpoint through SDK and agent tools, honoring ontology permissions.
-- [ ] Return actual native Cypher dependency paths with stable edge IDs and provenance; don't generate a merely plausible path in model text.
-- [ ] Distinguish direct source evidence, derived model inputs, assumptions and calculated outputs.
-- [ ] Link recommendation → required tasks/constraints → graph records → source rows/checkpoints.
-- [ ] Bind explanations to the same revision/scenario version as the calculation; show stale/current context explicitly.
-- [ ] Show why one recovery beat alternatives and why an alternative failed, without equating centrality to business risk.
+- [x] Define a typed explanation envelope: question/claim, snapshot identity, entities, relationships, source mappings, source checkpoints, rule IDs, calculation run IDs, tool traces and limitations.
+- [x] Expose a bounded object explanation endpoint through SDK and agent tools, honoring ontology permissions.
+- [x] Return actual native Cypher dependency paths with stable edge IDs and provenance; don't generate a merely plausible path in model text.
+- [x] Distinguish direct source evidence, derived model inputs, assumptions and calculated outputs.
+- [x] Link recommendation → required tasks/constraints → graph records → source rows/checkpoints.
+- [x] Bind explanations to the same revision/scenario version as the calculation; show stale/current context explicitly.
+- [x] Show why one recovery beat alternatives and why an alternative failed, without equating centrality to business risk.
 - [ ] Add an evidence panel with selectable path, source/history links and calculation/agent steps.
-- [ ] Add a model tool that answers “why” from the typed evidence; include uncertainty/missing evidence.
-- [ ] Test missing sources, deleted records, cross-ontology access, stale runs, incomplete paths and misleading source text.
+- [x] Add a model tool that answers “why” from the typed evidence; include uncertainty/missing evidence.
+- [x] Test missing sources, deleted records, cross-ontology access, stale runs, incomplete paths and misleading source text.
 - [ ] Record a browser workflow: change one supplier assumption → recommendation changes → inspect exact evidence.
 
 ## C. Native branching baseline — implementation milestone

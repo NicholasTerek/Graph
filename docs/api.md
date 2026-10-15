@@ -198,3 +198,7 @@ Additional errors: HTTP 401 `UNAUTHORIZED` for missing/invalid credentials; HTTP
 ## Native graphs and algorithms
 
 Scenarios now use native FalkorDB graphs, with a compatibility overlay derived on individual metadata reads. See [native storage and recovery](native-graphs.md) for publication, migration and portable backup behavior. `client.algorithms(ontology)` discovers bounded native operations; `client.runAlgorithm(ontology, {algorithm: "pagerank", scenario: "my-scenario"})` runs one. Supported IDs: `shortest-path`, `pagerank`, `betweenness`, `degree`. Algorithm routes require read scope and enforce ontology restrictions. Results include live/base revision, scenario version, parameters and algorithm evidence.
+
+## Explain a calculation
+
+`client.explain(ontology, {root, targets?, runId?, scenario?, maxDepth?})` returns revision-bound claims, native directed paths, object/edge evidence and source checkpoints. New runs retain bounded immutable read sets; old stale runs without captured evidence explicitly omit historical paths. See [evidence semantics](explainability.md). The route uses read scope.

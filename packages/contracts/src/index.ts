@@ -235,6 +235,73 @@ export type FunctionRun = {
   executedAt: string;
   input: unknown;
   output: unknown;
+  explanation?: ExplanationClaim[];
+  evidence?: {
+    objects: GraphObject[];
+    relationships: GraphRelationship[];
+    contributors: EvidenceContributor[];
+    capturedAt: string;
+    truncated: boolean;
+  };
+};
+export type EvidenceContributor = {
+  objectId: string;
+  sourceId: string;
+  externalId: string;
+  fields: string[];
+  checkpoint: string | null;
+  observedAt: string | null;
+  matches: boolean;
+  values: Record<string, string | number | boolean>;
+};
+export type ExplanationClaim = {
+  id: string;
+  kind: "calculated" | "assumption" | "constraint";
+  text: string;
+  recordIds: string[];
+  ruleId?: string;
+  passed?: boolean;
+};
+export const explanationInput = z
+  .object({
+    root: identifier,
+    targets: z.array(identifier).max(16).default([]),
+    runId: identifier.optional(),
+    scenario: identifier.optional(),
+    maxDepth: z.number().int().min(1).max(5).default(4),
+  })
+  .strict();
+export type ExplanationInput = z.input<typeof explanationInput>;
+export type Explanation = {
+  context: {
+    ontology: string;
+    revision: number;
+    scenario: string | null;
+    scenarioVersion: number | null;
+    currentRevision: number;
+    currentScenarioVersion: number | null;
+    stale: boolean;
+    scope: "calculation-readset" | "current-graph" | "unavailable";
+  };
+  root: string;
+  paths: {
+    target: string;
+    objects: string[];
+    relationships: string[];
+    hops: number;
+  }[];
+  records: GraphObject[];
+  relationships: GraphRelationship[];
+  contributors: EvidenceContributor[];
+  claims: ExplanationClaim[];
+  calculation: FunctionRun | null;
+  query: {
+    engine: "falkordb";
+    maxDepth: number;
+    direction: "out";
+    targets: string[];
+  };
+  warnings: string[];
 };
 export const functionInvocation = z
   .object({ input: z.unknown(), scenario: identifier.optional() })

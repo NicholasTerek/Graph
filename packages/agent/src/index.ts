@@ -3,6 +3,8 @@ import { z } from "zod";
 import {
   algorithmInput,
   type AlgorithmInput,
+  explanationInput,
+  type ExplanationInput,
   identifier,
   type Investigation,
   type ToolTrace,
@@ -155,6 +157,16 @@ export class GraphAgent {
       createdAt: new Date().toISOString(),
     };
     const toolDefinitions = {
+      explain_evidence: {
+        description:
+          "Explain why using native directed evidence paths, captured calculation records, source checkpoints and domain rules. Saved calculations retain their original context even after live changes. Missing paths are not proof of no dependency.",
+        schema: explanationInput,
+        execute: (args: ExplanationInput) =>
+          this.client.explain(ontology, {
+            ...args,
+            scenario: args.scenario ?? input.scenario,
+          }),
+      },
       discover_algorithms: {
         description:
           "Discover bounded native FalkorDB graph algorithms and their interpretation limits.",

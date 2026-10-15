@@ -435,5 +435,63 @@ export const launchReadiness = defineFunction({
   ontology: "semiconductor",
   input: z.object({ productId: z.string().min(1) }).strict(),
   output: launchResultSchema,
+  explain: (output) => {
+    const plan = output.recommendation;
+    return [
+      {
+        id: "recommendation",
+        kind: "calculated" as const,
+        ruleId: "launch.rank.v1",
+        text: `${plan.label}: ready in ${plan.readyDays} days against a ${output.deadlineDays}-day deadline; incremental cost USD ${plan.costUSD}; ${plan.riskPoints} ordinal risk points. Eligible on-time plans rank by risk, cost, then readiness.`,
+        recordIds: [
+          output.productId,
+          plan.releaseId,
+          ...plan.hardware.flatMap((h) => [h.supplierId, h.componentId]),
+        ],
+      },
+      {
+        id: "baseline",
+        kind: "calculated" as const,
+        ruleId: "launch.baseline.v1",
+        text: `The current supplier/release path is ready in ${output.baseline.readyDays} days, ${output.baseline.delayDays} days late.`,
+        recordIds: [
+          output.productId,
+          output.baseline.releaseId,
+          ...output.baseline.hardware.flatMap((h) => [
+            h.supplierId,
+            h.componentId,
+          ]),
+        ],
+      },
+      ...plan.tasks.map((task) => ({
+        id: `task:${task.id}`,
+        kind: "calculated" as const,
+        ruleId: "launch.dag.v1",
+        text: `${task.label}: day ${task.start}–${task.end}; dependencies: ${task.dependencies.join(", ") || "none"}${task.critical ? "; critical path" : ""}.`,
+        recordIds: task.evidence,
+      })),
+      ...output.plans.flatMap((alternative) =>
+        alternative.constraints.map((constraint) => ({
+          id: `${alternative.id}:${constraint.code}`,
+          kind: "constraint" as const,
+          ruleId: `launch.constraint.${constraint.code.split(":")[0]}.v1`,
+          passed: constraint.passed,
+          text: `${alternative.label}: ${constraint.message}`,
+          recordIds: constraint.code.includes(":")
+            ? [
+                constraint.code.split(":")[1],
+                ...alternative.hardware.map((h) => h.componentId),
+              ]
+            : [output.productId, alternative.releaseId],
+        })),
+      ),
+      ...output.assumptions.map((text, index) => ({
+        id: `assumption:${index}`,
+        kind: "assumption" as const,
+        text,
+        recordIds: [],
+      })),
+    ];
+  },
   execute: calculateLaunch,
 });
