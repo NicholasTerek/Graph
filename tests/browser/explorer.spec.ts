@@ -61,6 +61,79 @@ test("explains a recovery with captured source records and native dependency pat
   await evidence.screenshot({ path: "/tmp/graph-decision-mobile.png" });
 });
 
+test("recalculates an older graph revision without changing the live recovery", async ({
+  page,
+}) => {
+  const baseline = await (
+    await page.request.get("/api/ontologies/semiconductor/graph")
+  ).json();
+  await page.request.patch("/api/ontologies/semiconductor/objects/meridian", {
+    data: { properties: { leadDays: 14 }, expectedRevision: baseline.revision },
+  });
+  try {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Launch operations" }).click();
+    await expect(page.getByTestId("recommendation")).toContainText(
+      "Expedite Northstar Packaging",
+    );
+    const commits = await (
+      await page.request.get("/api/ontologies/semiconductor/commits")
+    ).json();
+    const index = commits.items.findIndex(
+      (c: { revision: number }) => c.revision === baseline.revision,
+    );
+    expect(index).toBeGreaterThanOrEqual(0);
+    const slider = page.getByLabel("Historical revision");
+    await slider.focus();
+    await slider.press("Home");
+    for (let i = 0; i < index; i++) await slider.press("ArrowRight");
+    await page
+      .getByRole("button", {
+        name: `Inspect revision ${baseline.revision}`,
+        exact: true,
+      })
+      .click();
+    await expect(
+      page.getByText(`Read-only · revision ${baseline.revision}`, {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(page.getByTestId("recommendation")).toContainText(
+      "Meridian Packaging",
+    );
+    await expect(page.getByLabel("Meridian lead days")).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Evaluate scenario" }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Prepare GitHub recovery issue" }),
+    ).toHaveCount(0);
+    expect(
+      (
+        await (
+          await page.request.get(
+            "/api/ontologies/semiconductor/objects/meridian",
+          )
+        ).json()
+      ).properties.leadDays,
+    ).toBe(14);
+    await page
+      .getByRole("button", { name: "Return to live", exact: true })
+      .click();
+    await expect(page.getByTestId("recommendation")).toContainText(
+      "Expedite Northstar Packaging",
+    );
+    await expect(page.getByLabel("Meridian lead days")).toBeEnabled();
+    await page
+      .locator(".history-timeline")
+      .screenshot({ path: "/tmp/graph-history.png" });
+  } finally {
+    await page.request.patch("/api/ontologies/semiconductor/objects/meridian", {
+      data: { properties: { leadDays: 7 } },
+    });
+  }
+});
+
 test("explores persisted graph evidence and bounded dependencies", async ({
   page,
 }) => {

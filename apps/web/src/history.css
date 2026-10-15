@@ -1,0 +1,73 @@
+.history-timeline {
+  border: 1px solid #304149;
+  border-radius: 7px;
+  padding: 18px 20px;
+  margin: 18px 0;
+  background: #142027;
+}
+.history-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: #c8e4df;
+}
+.history-title strong {
+  font-size: 13px;
+}
+.history-title span {
+  margin-left: auto;
+  color: #96ddc8;
+  font-size: 11px;
+}
+.history-timeline p {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #8ca8b2;
+}
+.history-timeline label {
+  display: block;
+  font-size: 11px;
+  color: #bdd0d8;
+  margin-bottom: 8px;
+}
+.history-timeline input[type="range"] {
+  width: 100%;
+  accent-color: #96ddc8;
+  cursor: pointer;
+}
+.history-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.history-actions button {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  background: transparent;
+  border: 1px solid #96ddc866;
+  border-radius: 5px;
+  color: #96ddc8;
+  padding: 8px 11px;
+  font-size: 12px;
+}
+.history-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.history-actions small {
+  color: #8ca8b2;
+  font-size: 10px;
+}
+@media (max-width: 600px) {
+  .history-title span {
+    margin-left: 0;
+    width: 100%;
+  }
+  .history-timeline {
+    padding: 14px;
+  }
+}

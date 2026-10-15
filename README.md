@@ -86,6 +86,10 @@ docker compose --profile local-ai up --build -d app
 
 For another compatible provider, configure its HTTPS base URL, model, and server-side key. Ollama's compatibility reference is https://docs.ollama.com/api/openai-compatibility. The adapter and tool loop are tested with controlled model responses; a live language model was not available during verification. Calls are bounded by a 60-second investigation timeout and at most 16 tool invocations. Models must support the supplied tool schemas; model quality is not guaranteed.
 
+## Historical reads
+
+Launch operations includes a revision scrubber that recalculates the GPU plan from a pinned read-only snapshot. Native object and relationship visibility runs in Cypher; snapshot leases preserve one generation/revision across reads. Restores establish a new history generation. See [temporal semantics and limits](docs/temporal.md). Full-history backup, vacuum and cheap revision/overlay branches remain separate work.
+
 ## Explain decisions
 
 Launch operations includes **Explain this recommendation**: saved calculation rules, native dependency paths, record provenance, source checkpoints and overridden values. Evidence retains its original context after live or branch changes. See [explainability semantics](docs/explainability.md).
@@ -200,7 +204,7 @@ The [complete engineering backlog](docs/TODO.md) tracks every original requireme
 
 The [engineering status](docs/status.md) distinguishes implemented mechanisms, tested evidence, and missing production work, including the exact versioning/multi-agent guarantees. The [article plan](docs/blog-plan.md) defines the performance and versioned-scenario experiments needed before publishing claims.
 
-This implements the six requested next steps at prototype scope. Remaining platform work includes richer ontology types and cardinality, distributed write coordination, production governance, large-source ingestion and resumable workers, richer entity-resolution policies, temporal history queries, nested/rebased branches, approval revocation/expiry, and production-grade backup retention. Model-backed investigation and authenticated GitHub execution still need verification in the operator's configured environment. A complete Foundry or Helix Foundry port is not claimed.
+This implements the six requested next steps at prototype scope. Remaining platform work includes richer ontology types and cardinality, distributed write coordination, production governance, large-source ingestion and resumable workers, richer entity-resolution policies, temporal retention and full-history backups, nested/rebased branches, approval revocation/expiry, and production-grade backup retention. Model-backed investigation and authenticated GitHub execution still need verification in the operator's configured environment. A complete Foundry or Helix Foundry port is not claimed.
 
 ## Graph Hacks 2026
 

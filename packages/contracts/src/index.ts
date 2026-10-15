@@ -164,6 +164,8 @@ export const algorithmInput = z
   .object({
     algorithm: z.enum(["shortest-path", "pagerank", "betweenness", "degree"]),
     scenario: identifier.optional(),
+    revision: z.number().int().nonnegative().optional(),
+    generation: z.uuid().optional(),
     source: identifier.optional(),
     target: identifier.optional(),
     direction: z.enum(["out", "in", "both"]).default("out"),
@@ -174,6 +176,11 @@ export const algorithmInput = z
   })
   .strict()
   .superRefine((value, ctx) => {
+    if (value.scenario && (value.revision !== undefined || value.generation))
+      ctx.addIssue({
+        code: "custom",
+        message: "Select a scenario or a historical revision, not both",
+      });
     if (value.algorithm === "shortest-path" && value.direction === "both")
       ctx.addIssue({
         code: "custom",
@@ -193,6 +200,7 @@ export type AlgorithmResult = {
   revision: number;
   scenario: string | null;
   scenarioVersion: number | null;
+  generation?: string;
   rows: { id: string; score: number }[];
   path: { objects: string[]; relationships: string[]; hops: number } | null;
   parameters: {
@@ -236,6 +244,7 @@ export type FunctionRun = {
   input: unknown;
   output: unknown;
   explanation?: ExplanationClaim[];
+  history?: { generation: string; revision: number; committedAt: string };
   evidence?: {
     objects: GraphObject[];
     relationships: GraphRelationship[];
@@ -324,6 +333,17 @@ export const historicalInput = z
 export const snapshotInput = historicalInput.safeExtend({
   ttlSeconds: z.number().int().min(1).max(3600).default(300),
 });
+export const historicalTraversalInput = historicalInput.safeExtend({
+  root: identifier,
+  depth: z.number().int().min(1).max(5).default(3),
+  direction: z.enum(["out", "in", "both"]).default("both"),
+});
+export type HistoricalTraversalInput = z.input<typeof historicalTraversalInput>;
+export type HistoricalTraversal = HistoricalState & {
+  root: string;
+  depth: number;
+  direction: "out" | "in" | "both";
+};
 export type HistoricalInput = z.input<typeof historicalInput>;
 export type HistoricalState = GraphState & {
   generation: string;
@@ -348,8 +368,19 @@ export type CommitList = {
   items: { revision: number; committedAt: string }[];
 };
 export const functionInvocation = z
-  .object({ input: z.unknown(), scenario: identifier.optional() })
-  .strict();
+  .object({
+    input: z.unknown(),
+    scenario: identifier.optional(),
+    history: historicalInput.optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.scenario && value.history)
+      ctx.addIssue({
+        code: "custom",
+        message: "Select scenario or history context, not both",
+      });
+  });
 
 export const mappingValue = z.union([
   z.object({ field: z.string().min(1).max(100) }).strict(),

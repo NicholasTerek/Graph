@@ -136,7 +136,7 @@ This is planned work. The native-copy implementation is the functional baseline,
 
 - [x] Add read-at-revision and read-at-time endpoints and SDK methods.
 - [x] Push `valid_from <= revision AND (valid_to IS NULL OR valid_to > revision)` into Cypher.
-- [ ] Return one consistent visibility context for objects, relationships, traversals and deterministic functions.
+- [x] Return one consistent visibility context for objects, relationships, traversals and deterministic functions.
 - [x] Support pinned multi-read snapshot tokens/leases if claiming snapshot isolation across API calls.
 - [x] Define missing/out-of-retention/future revision errors; don't silently return the current graph.
 - [ ] Add cheap branch metadata at a pinned revision with native overlay versions and explicit shadow/tombstone rules.
@@ -145,8 +145,8 @@ This is planned work. The native-copy implementation is the functional baseline,
 - [ ] Retain selected promotion; document how write-set conflict checks differ from existing property-level three-way merge.
 - [ ] If using first-committer-wins, test overlapping writes and decide whether independent properties of one record conflict.
 - [ ] Validate cross-record business invariants/read dependencies or explicitly document possible write skew.
-- [ ] Add an as-of UI scrubber with exact revision/time and read-only historical views.
-- [ ] Show branch base, divergence and merge conflicts next to the agent alternatives.
+- [x] Add an as-of UI scrubber with exact revision/time and read-only historical views.
+- [x] Show branch base, divergence and merge conflicts next to the agent alternatives.
 
 ### Vacuum and retention
 

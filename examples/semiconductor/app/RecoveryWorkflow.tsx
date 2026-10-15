@@ -14,12 +14,14 @@ export default function RecoveryWorkflow({
   scenario,
   onChanged,
   onOpenOperations,
+  readOnly = false,
 }: {
   client: GraphClient;
   run: FunctionRun;
   scenario?: string;
   onChanged: () => void;
   onOpenOperations?: () => void;
+  readOnly?: boolean;
 }) {
   const [question, setQuestion] = useState(
     "Can Aquila X900 still launch on schedule? Explain the lowest-risk feasible recovery and its graph evidence.",
@@ -108,6 +110,22 @@ export default function RecoveryWorkflow({
       onChanged();
     });
   }
+  if (readOnly)
+    return (
+      <section className="recovery-workflow">
+        <EvidencePanel
+          client={client}
+          ontology="semiconductor"
+          root="aquila-x900"
+          runId={run.id}
+        />
+        <p className="operation-hint">
+          Historical inspection is read-only. Return to live before
+          investigating a new recovery, proposing an action or promoting
+          changes.
+        </p>
+      </section>
+    );
   return (
     <section className="recovery-workflow">
       <EvidencePanel

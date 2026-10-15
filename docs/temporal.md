@@ -40,3 +40,11 @@ Time resolution uses indexed numeric epoch milliseconds and selects the latest r
 - No general serializable write transactions, replica reads, power-loss guarantee or protection from direct database/multiple API writers is claimed. General multi-query traversal endpoints do not automatically inherit a pin; clients must use the version-aware read API.
 
 Tests cover native scalar visibility, updates/deletes, relationship endpoint validity, schema/no-op commits, timestamp selection, stable pin reads, lease ownership/expiry/release, restore generations, migration baselines, failed combined writes and concurrent multi-object writes/read observations.
+
+## Calculations, traversals and UI
+
+`client.runFunction(ontology, id, input, undefined, {snapshot: pin.id})` or `{revision, generation}` evaluates a function at the selected context. Scenario and historical selectors are mutually exclusive. The saved run records its history context and actual read set. Current source mappings are attached only if the calculation context still matches current data; older historical inputs do not acquire today's source checkpoints.
+
+`client.traverseAt(ontology, {root, depth, direction, revision?, at?, snapshot?, generation?})` filters native HISTORICAL_LINK intervals and endpoint versions in Cypher. The depth is 1–5; ordinary bounded traversal supports out/in/both. This differs from the native shortestPath function, which supports directed out/in only in the pinned engine. Ranking/shortest-path tools also accept an explicit revision/generation and project that effective historical graph before running the native algorithm.
+
+Agents can use read_history and supply history to trace_dependencies/run_function. Results remain revision/generation bound. Launch operations shows recent commit timestamps and a revision scrubber. Historical inspection uses one lease for graph reads and calculation, releases it afterward, and disables edits/proposals/promotion. Live loading also pins graph/calculation together; scenario loading rejects mismatched versions rather than combine concurrently changed responses.

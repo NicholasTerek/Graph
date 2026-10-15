@@ -1,4 +1,5 @@
 import RecoveryWorkflow from "./RecoveryWorkflow.js";
+import HistoryTimeline from "../../../apps/web/src/HistoryTimeline.js";
 import { useEffect, useRef, useState } from "react";
 import {
   Activity,
@@ -53,6 +54,8 @@ export default function LaunchPlanner({
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
   const [evidence, setEvidence] = useState<string | null>(null);
+  const [historical, setHistorical] = useState<number | null>(null);
+  const [liveRevision, setLiveRevision] = useState(0);
   const token = useRef(0);
   const result = run?.output;
   function assumptions(graph: GraphState) {
@@ -91,16 +94,25 @@ export default function LaunchPlanner({
     const current = ++token.current;
     setBusy(true);
     setError("");
+    let pin: string | undefined;
     try {
+      const snapshot = await client.createReadSnapshot(ontology);
+      pin = snapshot.id;
       const [graph, analysis, branches] = await Promise.all([
-        client.snapshot(ontology),
-        client.runFunction<LaunchResult>(ontology, "launch-readiness", {
-          productId: "aquila-x900",
-        }),
+        client.stateAt(ontology, { snapshot: pin }),
+        client.runFunction<LaunchResult>(
+          ontology,
+          "launch-readiness",
+          { productId: "aquila-x900" },
+          undefined,
+          { snapshot: pin },
+        ),
         client.scenarios(ontology),
       ]);
       if (current !== token.current) return;
       setState(graph);
+      setHistorical(null);
+      setLiveRevision(graph.revision);
       setRun(analysis);
       setLive(analysis.output);
       setScenarios(branches);
@@ -110,6 +122,7 @@ export default function LaunchPlanner({
     } catch (e) {
       if (current === token.current) setError((e as Error).message);
     } finally {
+      if (pin) await client.releaseReadSnapshot(ontology, pin).catch(() => {});
       if (current === token.current) setBusy(false);
     }
   }
@@ -140,7 +153,16 @@ export default function LaunchPlanner({
         ),
       ]);
       if (current !== token.current) return;
+      if (
+        branch.version !== graph.scenarioVersion ||
+        branch.version !== analysis.scenarioVersion ||
+        branch.version !== comparison.version
+      )
+        throw new Error(
+          "Scenario changed while loading; select it again to read a consistent version.",
+        );
       setScenario(branch);
+      setHistorical(null);
       setState(graph);
       setDiff(comparison);
       setRun(analysis);
@@ -151,8 +173,43 @@ export default function LaunchPlanner({
       if (current === token.current) setBusy(false);
     }
   }
+  async function inspectHistorical(revision: number) {
+    const current = ++token.current;
+    setBusy(true);
+    setError("");
+    let pin: string | undefined;
+    try {
+      const snapshot = await client.createReadSnapshot(ontology, {
+        revision,
+        ttlSeconds: 300,
+      });
+      pin = snapshot.id;
+      const [graph, analysis] = await Promise.all([
+        client.stateAt(ontology, { snapshot: pin }),
+        client.runFunction<LaunchResult>(
+          ontology,
+          "launch-readiness",
+          { productId: "aquila-x900" },
+          undefined,
+          { snapshot: pin },
+        ),
+      ]);
+      if (current !== token.current) return;
+      setHistorical(graph.revision);
+      setState(graph);
+      setRun(analysis);
+      setScenario(null);
+      setDiff(null);
+      assumptions(graph);
+    } catch (cause) {
+      if (current === token.current) setError((cause as Error).message);
+    } finally {
+      if (pin) await client.releaseReadSnapshot(ontology, pin).catch(() => {});
+      if (current === token.current) setBusy(false);
+    }
+  }
   async function evaluate() {
-    if (!state) return;
+    if (!state || historical !== null) return;
     if (
       [lead, repair, expedite].some(
         (n) => !Number.isFinite(n) || n < 0 || n > 90,
@@ -297,12 +354,25 @@ export default function LaunchPlanner({
             </span>
             <span className="context-pill">
               <GitBranch size={13} />
-              {scenario ? `Scenario · v${scenario.version}` : "Live baseline"}
+              {historical !== null
+                ? "Read-only historical snapshot"
+                : scenario
+                  ? `Scenario · v${scenario.version}`
+                  : "Live baseline"}
             </span>
             <span className="synthetic-tag">
               Synthetic data · deterministic calculations
             </span>
           </div>
+          <HistoryTimeline
+            client={client}
+            ontology={ontology}
+            currentRevision={liveRevision}
+            activeRevision={historical}
+            onInspect={inspectHistorical}
+            onLive={refreshLive}
+            disabled={busy}
+          />
           <div className="launch-summary">
             <div
               className={`decision-card ${result.recommendation.feasible ? "on-track" : "late"}`}
@@ -373,7 +443,7 @@ export default function LaunchPlanner({
                     min="0"
                     max="90"
                     value={Number.isNaN(lead) ? "" : lead}
-                    disabled={busy}
+                    disabled={busy || historical !== null}
                     onChange={(e) =>
                       setLead(
                         e.target.value === "" ? NaN : Number(e.target.value),
@@ -392,7 +462,7 @@ export default function LaunchPlanner({
                     min="0"
                     max="90"
                     value={Number.isNaN(repair) ? "" : repair}
-                    disabled={busy}
+                    disabled={busy || historical !== null}
                     onChange={(e) =>
                       setRepair(
                         e.target.value === "" ? NaN : Number(e.target.value),
@@ -411,7 +481,7 @@ export default function LaunchPlanner({
                     min="0"
                     max="90"
                     value={Number.isNaN(expedite) ? "" : expedite}
-                    disabled={busy}
+                    disabled={busy || historical !== null}
                     onChange={(e) =>
                       setExpedite(
                         e.target.value === "" ? NaN : Number(e.target.value),
@@ -430,7 +500,7 @@ export default function LaunchPlanner({
                     type="number"
                     min="1"
                     value={Number.isNaN(demand) ? "" : demand}
-                    disabled={busy}
+                    disabled={busy || historical !== null}
                     onChange={(e) =>
                       setDemand(
                         e.target.value === "" ? NaN : Number(e.target.value),
@@ -445,7 +515,7 @@ export default function LaunchPlanner({
                     type="number"
                     min="0"
                     value={Number.isNaN(capacity) ? "" : capacity}
-                    disabled={busy}
+                    disabled={busy || historical !== null}
                     onChange={(e) =>
                       setCapacity(
                         e.target.value === "" ? NaN : Number(e.target.value),
@@ -459,14 +529,14 @@ export default function LaunchPlanner({
                     aria-label="Meridian qualification"
                     type="checkbox"
                     checked={qualified}
-                    disabled={busy}
+                    disabled={busy || historical !== null}
                     onChange={(e) => setQualified(e.target.checked)}
                   />
                 </label>
               </details>
               <button
                 className="primary-button evaluate"
-                disabled={busy}
+                disabled={busy || historical !== null}
                 onClick={() => void evaluate()}
               >
                 <Play size={14} />
@@ -476,7 +546,7 @@ export default function LaunchPlanner({
                 <select
                   aria-label="Saved scenario"
                   value={scenario?.id ?? ""}
-                  disabled={busy}
+                  disabled={busy || historical !== null}
                   onChange={(e) => void openScenario(e.target.value)}
                 >
                   <option value="">Live baseline</option>
@@ -497,7 +567,7 @@ export default function LaunchPlanner({
               {scenario && (
                 <button
                   className="discard"
-                  disabled={busy}
+                  disabled={busy || historical !== null}
                   onClick={() => void discard()}
                 >
                   Discard this scenario
@@ -670,6 +740,7 @@ export default function LaunchPlanner({
             scenario={scenario?.id}
             onChanged={() => void refreshLive()}
             onOpenOperations={onOpenOperations}
+            readOnly={historical !== null}
           />
           <section className="evidence-panel">
             <div className="section-kicker">

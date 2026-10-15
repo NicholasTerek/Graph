@@ -551,6 +551,8 @@ export function createApp(
           req.params.id,
           req.body.input,
           req.body.scenario,
+          req.body.history,
+          security.principal(req).name,
         ),
     );
     app.get(

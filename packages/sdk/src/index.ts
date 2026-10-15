@@ -14,6 +14,8 @@ import type {
   Explanation,
   HistoricalInput,
   HistoricalState,
+  HistoricalTraversal,
+  HistoricalTraversalInput,
   ReadSnapshot,
   CommitList,
   Ontology,
@@ -42,6 +44,13 @@ export class GraphApiError extends Error {
   }
 }
 export class GraphClient {
+  traverseAt(ontology: string, input: HistoricalTraversalInput) {
+    return this.call<HistoricalTraversal>(
+      `${this.path(ontology)}/state/at/traverse`,
+      "POST",
+      input,
+    );
+  }
   stateAt(ontology: string, input: HistoricalInput = {}) {
     return this.call<HistoricalState>(
       `${this.path(ontology)}/state/at`,
@@ -313,11 +322,12 @@ export class GraphClient {
     id: string,
     input: unknown,
     scenario?: string,
+    history?: HistoricalInput,
   ) {
     return this.call<FunctionRun & { output: T }>(
       `${this.path(ontology)}/functions/${encodeURIComponent(id)}/run`,
       "POST",
-      { input, scenario },
+      { input, scenario, history },
     );
   }
   runs(ontology: string) {

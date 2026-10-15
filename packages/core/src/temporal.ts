@@ -253,4 +253,65 @@ export class TemporalStorage {
       })),
     };
   }
+  async traverse(
+    ontology: string,
+    context: HistoryContext,
+    root: string,
+    depth: number,
+    direction: "out" | "in" | "both",
+  ) {
+    if (!Number.isInteger(depth) || depth < 1 || depth > 5)
+      throw new PlatformError(400, "Historical traversal depth must be 1–5");
+    const params = {
+      ontology,
+      generation: context.generation,
+      revision: context.revision,
+      root,
+    };
+    const visible =
+      "v.valid_from<=$revision AND (v.valid_to IS NULL OR v.valid_to>$revision)";
+    const [origin] = await this.query(
+      `MATCH (v:ObjectVersion {ontology:$ontology,generation:$generation,id:$root}) WHERE ${visible} RETURN v.record AS record`,
+      params,
+    );
+    if (!origin)
+      throw new PlatformError(
+        404,
+        "Root is not visible at the requested revision",
+      );
+    const pattern =
+      direction === "out"
+        ? `-[:HISTORICAL_LINK*1..${depth}]->`
+        : direction === "in"
+          ? `<-[:HISTORICAL_LINK*1..${depth}]-`
+          : `-[:HISTORICAL_LINK*1..${depth}]-`;
+    const rows = await this.query(
+      `MATCH p=(root:Identity {ontology:$ontology,id:$root})${pattern}(target:Identity {ontology:$ontology})
+      WHERE all(r IN relationships(p) WHERE r.generation=$generation AND r.valid_from<=$revision AND (r.valid_to IS NULL OR r.valid_to>$revision))
+      UNWIND nodes(p) AS identity WITH DISTINCT identity MATCH (v:ObjectVersion {ontology:$ontology,generation:$generation,id:identity.id}) WHERE ${visible} RETURN v.record AS record ORDER BY v.id`,
+      params,
+    );
+    const objects: GraphObject[] = rows.map((r) =>
+      JSON.parse(String(r.record)),
+    );
+    if (!objects.some((o) => o.id === root))
+      objects.unshift(JSON.parse(String(origin.record)));
+    const relationships = (
+      await this.query(
+        "MATCH (a:Identity {ontology:$ontology})-[r:HISTORICAL_LINK]->(b:Identity {ontology:$ontology}) WHERE a.id IN $ids AND b.id IN $ids AND r.generation=$generation AND r.valid_from<=$revision AND (r.valid_to IS NULL OR r.valid_to>$revision) RETURN r.record AS record ORDER BY r.id",
+        { ...params, ids: objects.map((o) => o.id) },
+      )
+    ).map((r) => JSON.parse(String(r.record)));
+    return {
+      objects,
+      relationships,
+      root,
+      depth,
+      direction,
+      revision: context.revision,
+      generation: context.generation,
+      committedAt: context.committedAt,
+      retainedFrom: context.startRevision,
+    };
+  }
 }

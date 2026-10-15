@@ -8,11 +8,13 @@ import type {
   GraphRelationship,
   ExplanationClaim,
   Source,
+  HistoricalInput,
 } from "@graph/contracts";
 import { GraphStore } from "./store.js";
 import { ScenarioService } from "./scenarios.js";
 import { PlatformError } from "./validation.js";
 import { canonical } from "./state.js";
+import { SnapshotService } from "./snapshots.js";
 
 export class GraphView {
   private graph: GraphSnapshot;
@@ -124,21 +126,50 @@ export class FunctionRuntime {
     id: string,
     input: unknown,
     scenarioId?: string,
+    history?: HistoricalInput,
+    principal = "local-owner",
   ): Promise<FunctionRun> {
     const definition = this.definitions.get(`${ontology}/${id}`);
     if (!definition) throw new PlatformError(404, `Function not found: ${id}`);
     const parsed = definition.input.parse(input);
+    if (scenarioId && history)
+      throw new PlatformError(
+        400,
+        "Select scenario or history context, not both",
+      );
     const { state, sources, capturedAt } = await this.store.exclusive(
-      async () => ({
-        state: scenarioId
-          ? await this.scenarios.readState(ontology, scenarioId)
-          : {
-              ...(await this.store.snapshot(ontology)),
-              revision: await this.store.revision(ontology),
-            },
-        sources: await this.store.documents<Source>("source", ontology),
-        capturedAt: new Date().toISOString(),
-      }),
+      async () => {
+        const state = history
+          ? await this.store.temporal.read(
+              ontology,
+              await new SnapshotService(this.store).resolve(
+                ontology,
+                history,
+                principal,
+              ),
+            )
+          : scenarioId
+            ? await this.scenarios.readState(ontology, scenarioId)
+            : {
+                ...(await this.store.snapshot(ontology)),
+                revision: await this.store.revision(ontology),
+              };
+        const current = history
+          ? await this.store.temporal.ensure(ontology)
+          : null;
+        const currentSourceContext =
+          !history ||
+          (current?.revision === state.revision &&
+            "generation" in state &&
+            current.generation === state.generation);
+        return {
+          state,
+          sources: currentSourceContext
+            ? await this.store.documents<Source>("source", ontology)
+            : [],
+          capturedAt: new Date().toISOString(),
+        };
+      },
     );
     const graph = new GraphView(state);
     let calculated: unknown;
@@ -181,6 +212,15 @@ export class FunctionRuntime {
       input: parsed,
       output,
       explanation: definition.explain?.(output),
+      ...("generation" in state
+        ? {
+            history: {
+              generation: state.generation,
+              revision: state.revision,
+              committedAt: state.committedAt,
+            },
+          }
+        : {}),
       evidence: {
         ...evidence,
         capturedAt,

@@ -113,3 +113,9 @@ The explicit evidence milestone at `5fb0e4313c76e95590f7b9cd3e57d4c1ccb17ef2` pa
 ## Native visibility backend
 
 Added native object/relationship version intervals and commit records to the same atomic write as current records/checkpoints/history. Historical state and lease-based repeatable reads filter visibility in Cypher. Schema commits and no-op replay retain explicit revision semantics. Restore establishes a new generation and rejects old read tokens; legacy graphs establish an honest current baseline. Nine temporal integration tests pass, including failed-write atomicity and concurrent paired-object reads/writes. The full local suite now has 92 passing unit/integration tests. Historical calculation/UI wiring, version vacuum, full-history backup and a native overlay comparison remain separate work.
+
+## Historical calculation and inspection UI
+
+Added history selectors to deterministic functions and explicit revision/generation to native algorithms; saved runs retain the selected context. Version-aware dependency traversal filters native edge and endpoint visibility in Cypher. Source checkpoint capture avoids attaching current mappings to older history. Live UI graph/calculation reads now share a lease; separately loaded scenario responses must agree on version. The revision scrubber recalculates old GPU plans in a read-only view and returns to live without mutation.
+
+Observed local verification: 93 unit/integration tests and 11 browser tests pass, plus the production build and independent SDK package consumer. The temporal tests compare old/current function results and PageRank topology, while the browser changes live supplier lead time, inspects the earlier recommendation, confirms live data stayed changed, and returns to live. The timeline was visually inspected. Full temporal retention/backup and native overlay branches remain unfinished.

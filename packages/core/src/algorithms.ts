@@ -39,6 +39,7 @@ export class AlgorithmService {
       let graphKey: string;
       let revision: number;
       let scenarioVersion: number | null = null;
+      let generation: string | undefined;
       if (args.scenario) {
         const branch = await this.scenarios.reference(ontology, args.scenario);
         graphKey = branch.graphKey!;
@@ -46,8 +47,20 @@ export class AlgorithmService {
         scenarioVersion = branch.version;
       } else {
         await this.store.ontology(ontology);
-        revision = await this.store.revision(ontology);
-        const state = await this.store.snapshot(ontology);
+        const context = await this.store.temporal.resolve(ontology, {
+          revision: args.revision,
+        });
+        if (args.generation && args.generation !== context.generation)
+          throw new PlatformError(
+            409,
+            "History generation changed; refresh algorithm context",
+          );
+        revision = context.revision;
+        generation = context.generation;
+        const state =
+          args.revision === undefined
+            ? await this.store.snapshot(ontology)
+            : await this.store.temporal.read(ontology, context);
         if (state.objects.length > 10000 || state.relationships.length > 50000)
           throw new PlatformError(
             422,
@@ -76,6 +89,7 @@ export class AlgorithmService {
           revision,
           scenario: args.scenario ?? null,
           scenarioVersion,
+          generation,
           rows: [],
           path: null,
           parameters: {

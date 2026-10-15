@@ -5,6 +5,8 @@ import {
   type AlgorithmInput,
   explanationInput,
   type ExplanationInput,
+  historicalInput,
+  type HistoricalInput,
   identifier,
   type Investigation,
   type ToolTrace,
@@ -157,6 +159,12 @@ export class GraphAgent {
       createdAt: new Date().toISOString(),
     };
     const toolDefinitions = {
+      read_history: {
+        description:
+          "Read native revision-visible objects and relationships at one committed revision/time/snapshot. Returned generation/revision identifies the read context; old generations and expired leases fail explicitly.",
+        schema: historicalInput,
+        execute: (args: HistoricalInput) => this.client.stateAt(ontology, args),
+      },
       explain_evidence: {
         description:
           "Explain why using native directed evidence paths, captured calculation records, source checkpoints and domain rules. Saved calculations retain their original context even after live changes. Missing paths are not proof of no dependency.",
@@ -180,7 +188,11 @@ export class GraphAgent {
         execute: (args: AlgorithmInput) =>
           this.client.runAlgorithm(ontology, {
             ...args,
-            scenario: args.scenario ?? input.scenario,
+            scenario:
+              args.scenario ??
+              (args.revision === undefined && !args.generation
+                ? input.scenario
+                : undefined),
           }),
       },
       discover_functions: {
@@ -199,15 +211,28 @@ export class GraphAgent {
             : this.client.snapshot(ontology),
       },
       trace_dependencies: {
-        description: "Traverse real graph dependencies in the live ontology.",
+        description:
+          "Traverse real graph dependencies in live or explicitly revision-pinned history. Historical traversal filters versioned native edges and endpoints in Cypher.",
         schema: z
           .object({
             root: identifier,
             depth: z.number().int().min(1).max(5).default(3),
+            history: historicalInput.optional(),
           })
           .strict(),
-        execute: (args: { root: string; depth: number }) =>
-          this.client.traverse(ontology, args.root, args.depth, "both"),
+        execute: (args: {
+          root: string;
+          depth: number;
+          history?: HistoricalInput;
+        }) =>
+          args.history
+            ? this.client.traverseAt(ontology, {
+                ...args.history,
+                root: args.root,
+                depth: args.depth,
+                direction: "both",
+              })
+            : this.client.traverse(ontology, args.root, args.depth, "both"),
       },
       run_function: {
         description:
@@ -217,10 +242,22 @@ export class GraphAgent {
             id: identifier,
             input: z.unknown(),
             scenario: identifier.optional(),
+            history: historicalInput.optional(),
           })
           .strict(),
-        execute: (args: { id: string; input: unknown; scenario?: string }) =>
-          this.client.runFunction(ontology, args.id, args.input, args.scenario),
+        execute: (args: {
+          id: string;
+          input: unknown;
+          scenario?: string;
+          history?: HistoricalInput;
+        }) =>
+          this.client.runFunction(
+            ontology,
+            args.id,
+            args.input,
+            args.scenario ?? (args.history ? undefined : input.scenario),
+            args.history,
+          ),
       },
       create_scenario: {
         description:

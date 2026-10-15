@@ -15,6 +15,7 @@ import {
   algorithmInput,
   explanationInput,
   historicalInput,
+  historicalTraversalInput,
   snapshotInput,
 } from "@graph/contracts";
 import {
@@ -49,6 +50,22 @@ export function platformRoutes(
   const algorithms = new AlgorithmService(store, scenarios);
   const snapshots = new SnapshotService(store);
   const ontologyOnly = z.object({ ontology: identifier });
+  app.post(
+    "/api/ontologies/:ontology/state/at/traverse",
+    {
+      schema: {
+        params: ontologyOnly,
+        body: historicalTraversalInput,
+        tags: ["History"],
+      },
+    },
+    (req) =>
+      snapshots.traverse(
+        req.params.ontology,
+        req.body,
+        security.principal(req).name,
+      ),
+  );
   app.post(
     "/api/ontologies/:ontology/state/at",
     {

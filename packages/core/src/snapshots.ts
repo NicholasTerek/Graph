@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import {
   historicalInput,
+  historicalTraversalInput,
+  type HistoricalTraversalInput,
   snapshotInput,
   type HistoricalInput,
   type HistoricalState,
@@ -10,6 +12,23 @@ import { GraphStore } from "./store.js";
 import { PlatformError } from "./validation.js";
 export class SnapshotService {
   constructor(private store: GraphStore) {}
+  async traverse(
+    ontology: string,
+    input: HistoricalTraversalInput,
+    owner: string,
+  ) {
+    const { root, depth, direction, ...selector } =
+      historicalTraversalInput.parse(input);
+    return this.store.exclusive(async () =>
+      this.store.temporal.traverse(
+        ontology,
+        await this.resolve(ontology, selector, owner),
+        root,
+        depth,
+        direction,
+      ),
+    );
+  }
   async resolve(ontology: string, input: HistoricalInput, owner: string) {
     const args = historicalInput.parse(input);
     const current = await this.store.temporal.ensure(ontology);

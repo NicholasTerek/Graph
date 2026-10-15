@@ -1,6 +1,7 @@
 import { beforeAll, afterAll, describe, it, expect, vi } from "vitest";
 import { FalkorDB } from "falkordb";
-import { GraphStore } from "@graph/core";
+import { GraphStore, defineFunction } from "@graph/core";
+import { z } from "zod";
 import { GraphClient } from "@graph/sdk";
 import { ontologySchema, type ReadSnapshot } from "@graph/contracts";
 import { createApp } from "../apps/api/src/app.js";
@@ -53,7 +54,23 @@ suite("native revision visibility and read snapshots", () => {
     });
     store = new GraphStore(db, name);
     await store.initialize();
-    app = createApp(store);
+    app = createApp(store, {
+      functions: [
+        defineFunction({
+          id: "total",
+          name: "Sum recorded amounts",
+          description: "Test historical function context",
+          ontology: "records",
+          input: z.object({}).strict(),
+          output: z.object({ total: z.number() }),
+          execute: ({ graph }) => ({
+            total: graph
+              .objects("Record")
+              .reduce((sum, o) => sum + Number(o.properties.amount), 0),
+          }),
+        }),
+      ],
+    });
     await app.ready();
     client = new GraphClient("http://localhost", transport(app));
     await client.register(schema);
@@ -120,6 +137,34 @@ suite("native revision visibility and read snapshots", () => {
       client.stateAt("records", { at: "2000-01-01T00:00:00Z" }),
     ).rejects.toMatchObject({ status: 410 });
   });
+  it("evaluates functions against the same pinned historical visibility context", async () => {
+    const pin = await client.createReadSnapshot("records", { revision: 1 });
+    const historical = await client.runFunction<{ total: number }>(
+      "records",
+      "total",
+      {},
+      undefined,
+      { snapshot: pin.id },
+    );
+    const current = await client.runFunction<{ total: number }>(
+      "records",
+      "total",
+      {},
+    );
+    expect(historical.output.total).toBe(3);
+    expect(current.output.total).toBe(4);
+    expect(historical.history).toMatchObject({
+      generation: pin.generation,
+      revision: 1,
+    });
+    expect(
+      historical.evidence?.objects.find((o) => o.id === "a")!.properties.amount,
+    ).toBe(1);
+    await client.releaseReadSnapshot("records", pin.id);
+    await expect(
+      client.runFunction("records", "total", {}, "branch", { revision: 1 }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
   it("versions relationship changes and deletes without dangling historical edges", async () => {
     const before = await client.stateAt("records");
     await client.deleteRelationship("records", "b-c");
@@ -130,6 +175,48 @@ suite("native revision visibility and read snapshots", () => {
     const current = await client.stateAt("records");
     expect(current.objects.map((o) => o.id)).not.toContain("c");
     expect(current.relationships.map((r) => r.id)).not.toContain("b-c");
+    const oldPath = await client.traverseAt("records", {
+      revision: before.revision,
+      root: "a",
+      depth: 2,
+      direction: "out",
+    });
+    expect(oldPath.objects.map((o) => o.id)).toEqual(["a", "b", "c"]);
+    expect(
+      (
+        await client.traverseAt("records", {
+          root: "a",
+          depth: 2,
+          direction: "out",
+        })
+      ).objects.map((o) => o.id),
+    ).toEqual(["a", "b"]);
+    expect(
+      (
+        await client.traverseAt("records", {
+          revision: before.revision,
+          root: "c",
+          depth: 2,
+          direction: "in",
+        })
+      ).objects.map((o) => o.id),
+    ).toEqual(["a", "b", "c"]);
+    await expect(
+      client.traverseAt("records", { root: "c", depth: 2 }),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(
+      (
+        await client.runAlgorithm("records", {
+          algorithm: "pagerank",
+          revision: before.revision,
+          generation: before.generation,
+        })
+      ).rows[0].id,
+    ).toBe("c");
+    expect(
+      (await client.runAlgorithm("records", { algorithm: "pagerank" })).rows[0]
+        .id,
+    ).toBe("b");
     for (const state of [old, current]) {
       const ids = new Set(state.objects.map((o) => o.id));
       expect(
