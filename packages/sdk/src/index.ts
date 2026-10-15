@@ -489,7 +489,10 @@ export class GraphClient {
       confirm: true;
     },
   ) {
-    return this.call<{ revision: number; result: { id: string } }>(
+    return this.call<{
+      revision: number;
+      result: { id: string; actor: string };
+    }>(
       `${this.path(ontology)}/scenarios/${encodeURIComponent(id)}/promote`,
       "POST",
       input,

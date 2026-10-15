@@ -161,6 +161,7 @@ export type Scenario = Omit<
   historyGeneration?: string;
   graphKey?: string;
   baseGraphKey?: string;
+  owner?: string;
 };
 export const algorithmInput = z
   .object({
@@ -686,6 +687,7 @@ export type ToolTrace = {
 export type Investigation = {
   id: string;
   ontology: string;
+  owner?: string;
   question: string;
   mode: "deterministic-tools" | "model-tools";
   status: "running" | "completed" | "failed";
@@ -828,6 +830,8 @@ export type JobRecord = {
   recovered?: boolean;
   scheduleId?: string;
   queuedRevision?: number;
+  retryOf?: string;
+  retriedAs?: string;
   queuedScenarioVersion?: number | null;
 };
 export const scheduleInput = z
@@ -872,6 +876,16 @@ export const jobRecordSchema = z
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
     notBefore: z.iso.datetime(),
+    retryOf: identifier.optional(),
+    retriedAs: identifier.optional(),
+    error: z.string().optional(),
+    recovered: z.boolean().optional(),
+    lease: z.string().optional(),
+    leaseUntil: z.iso.datetime().optional(),
+    cancellationRequestedAt: z.iso.datetime().optional(),
+    scheduleId: identifier.optional(),
+    queuedRevision: z.number().int().nonnegative().optional(),
+    queuedScenarioVersion: z.number().int().nonnegative().nullable().optional(),
   })
   .passthrough();
 export const sourceScheduleSchema = z

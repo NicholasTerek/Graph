@@ -194,6 +194,11 @@ export default function JobsPanel({
             </p>
           )}
           {job.error && <p className="action-error">{job.error}</p>}
+          {job.retriedAs && (
+            <p>
+              Retried as <code>{job.retriedAs}</code>
+            </p>
+          )}
           {job.result !== undefined && (
             <details>
               <summary>Recorded result</summary>
@@ -210,16 +215,19 @@ export default function JobsPanel({
               Cancel job
             </button>
           )}
-          {["failed", "interrupted", "cancelled"].includes(job.status) && (
-            <button
-              disabled={busy}
-              onClick={() =>
-                void task(() => client.retryJob(ontology, job.id, job.version))
-              }
-            >
-              Retry as new job
-            </button>
-          )}
+          {!job.retriedAs &&
+            ["failed", "interrupted", "cancelled"].includes(job.status) && (
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void task(() =>
+                    client.retryJob(ontology, job.id, job.version),
+                  )
+                }
+              >
+                Retry as new job
+              </button>
+            )}
         </article>
       ))}
     </div>

@@ -1,0 +1,50 @@
+{
+  "fixture": "synthetic GPU alternatives",
+  "transport": "real local HTTP, seeded disposable FalkorDB 4.18.3",
+  "liveUnchangedBeforeReview": true,
+  "reviewMode": "awaiting-human-in-UI",
+  "results": [
+    {
+      "role": "Capacity analyst",
+      "branch": {
+        "id": "agents-e4a7a0b9-capacity",
+        "owner": "capacity-agent",
+        "version": 1,
+        "storage": "falkordb-overlay",
+        "baseRevision": 1
+      },
+      "investigation": {
+        "id": "investigation-d270ae3d-4df5-4ef5-9db3-05fbf90a132a",
+        "owner": "capacity-agent",
+        "mode": "deterministic-tools",
+        "status": "completed",
+        "answer": "Investigated aquila-x900 through connected graph data and registered function launch-readiness. Calculation evidence: run-76cdd28d-f730-4318-ab5a-3f33ff67c721. Review the structured result and source records below. This investigation used deterministic tool orchestration; no language model was configured.",
+        "runIds": [
+          "run-76cdd28d-f730-4318-ab5a-3f33ff67c721"
+        ],
+        "actionIds": []
+      }
+    },
+    {
+      "role": "Driver analyst",
+      "branch": {
+        "id": "agents-e4a7a0b9-driver",
+        "owner": "driver-agent",
+        "version": 1,
+        "storage": "falkordb",
+        "baseRevision": 1
+      },
+      "investigation": {
+        "id": "investigation-2a182e70-ea3f-499b-849a-b12f7edbb5d9",
+        "owner": "driver-agent",
+        "mode": "deterministic-tools",
+        "status": "completed",
+        "answer": "Investigated aquila-x900 through connected graph data and registered function launch-readiness. Calculation evidence: run-c8de0d2b-8050-47fd-9c09-cadb58a8aa4f. Review the structured result and source records below. This investigation used deterministic tool orchestration; no language model was configured.",
+        "runIds": [
+          "run-c8de0d2b-8050-47fd-9c09-cadb58a8aa4f"
+        ],
+        "actionIds": []
+      }
+    }
+  ]
+}

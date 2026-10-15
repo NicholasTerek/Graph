@@ -1,18 +1,27 @@
-import { timingSafeEqual, createHash } from "node:crypto";
+import { timingSafeEqual, createHash, randomBytes } from "node:crypto";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { PlatformError } from "@graph/core";
-export const credentialSchema = z.object({
-  name: z.string().min(1),
-  token: z.string().min(24),
-  scopes: z.array(z.enum(["read", "write", "approve", "execute", "admin"])),
-  ontologies: z.array(z.string()).optional(),
-});
+export const credentialSchema = z
+  .object({
+    name: z.string().min(1),
+    token: z.string().min(24),
+    scopes: z.array(z.enum(["read", "write", "approve", "execute", "admin"])),
+    ontologies: z.array(z.string()).optional(),
+    kind: z.enum(["human", "agent"]).optional(),
+  })
+  .refine(
+    (c) =>
+      c.kind !== "agent" ||
+      !c.scopes.some((s) => ["approve", "execute", "admin"].includes(s)),
+    "Agent credentials cannot have approval, execution or admin scopes",
+  );
 export type Credential = z.infer<typeof credentialSchema>;
 export type Principal = {
   name: string;
   scopes: string[];
   ontologies?: string[];
+  kind?: "human" | "agent";
 };
 export type SecurityOptions = {
   tokens?: Credential[];
@@ -27,10 +36,27 @@ function same(a: string, b: string) {
 }
 export class Security {
   private principals = new WeakMap<FastifyRequest, Principal>();
-  constructor(
-    private options: SecurityOptions = {},
-    private internal?: Credential,
-  ) {}
+  private delegated = new Map<string, Credential>();
+  constructor(private options: SecurityOptions = {}) {
+    for (const credential of options.tokens ?? [])
+      credentialSchema.parse(credential);
+  }
+  delegateAgent(name: string, ontology: string) {
+    const credential: Credential = {
+      name,
+      token: randomBytes(32).toString("hex"),
+      scopes: ["read", "write"],
+      ontologies: [ontology],
+      kind: "agent",
+    };
+    this.delegated.set(credential.token, credential);
+    return {
+      token: credential.token,
+      release: () => {
+        this.delegated.delete(credential.token);
+      },
+    };
+  }
   check(request: FastifyRequest) {
     const path = request.url.split("?")[0];
     const host = request.headers.host ?? "localhost";
@@ -70,13 +96,14 @@ export class Security {
         : "";
       const credential = [
         ...(this.options.tokens ?? []),
-        ...(this.internal ? [this.internal] : []),
+        ...this.delegated.values(),
       ].find((t) => same(t.token, value));
       if (!credential) throw new PlatformError(401, "Invalid API credential");
       principal = {
         name: credential.name,
         scopes: credential.scopes,
         ontologies: credential.ontologies,
+        kind: credential.kind,
       };
     } else if (this.options.tokens?.length) {
       if (
@@ -99,6 +126,22 @@ export class Security {
       !principal.ontologies.includes(decodeURIComponent(ontology))
     )
       throw new PlatformError(403, "Credential cannot access this ontology");
+    if (principal.kind === "agent" && request.method !== "GET") {
+      const allowed =
+        request.method === "POST"
+          ? /\/scenarios$|\/investigations$|\/jobs$|\/jobs\/[^/]+\/(cancel|retry)$|\/actions$|\/functions\/[^/]+\/run$|\/objects\/query$|\/aggregate$|\/algorithms\/run$|\/explain$|\/state\/at(?:\/traverse)?$|\/snapshots$/.test(
+              path,
+            )
+          : request.method === "PATCH"
+            ? /\/scenarios\/[^/]+(?:\/objects\/[^/]+)?$/.test(path)
+            : request.method === "DELETE" &&
+              /\/(?:scenarios|snapshots)\/[^/]+$/.test(path);
+      if (!allowed)
+        throw new PlatformError(
+          403,
+          "Agent credentials can investigate and edit their own scenarios, but cannot mutate live data or authorize execution",
+        );
+    }
     const scopes =
       request.method === "GET"
         ? ["read"]

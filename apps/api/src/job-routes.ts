@@ -6,6 +6,7 @@ import {
   GraphStore,
   JobService,
   JobFailure,
+  PlatformError,
   SourceService,
   type SourceConnections,
 } from "@graph/core";
@@ -77,7 +78,12 @@ export function jobRoutes(
             "Scenario changed since this investigation was queued; review and retry as a new job",
           );
       }
-      const result = await investigate(job.ontology, job.input.request, signal);
+      const result = await investigate(
+        job.ontology,
+        job.input.request,
+        signal,
+        job.owner,
+      );
       if (result.status !== "completed")
         throw new JobFailure(result.error ?? "Investigation failed", false, {
           investigationId: result.id,
@@ -109,8 +115,16 @@ export function jobRoutes(
   app.post(
     "/api/ontologies/:ontology/jobs",
     { schema: { tags: ["Jobs"], params, body: jobCreate } },
-    async (req, reply) =>
-      reply
+    async (req, reply) => {
+      if (
+        security.principal(req).kind === "agent" &&
+        req.body.kind !== "investigation"
+      )
+        throw new PlatformError(
+          403,
+          "Agent credentials cannot enqueue live source writes",
+        );
+      return reply
         .code(202)
         .send(
           await jobs.enqueue(
@@ -118,14 +132,25 @@ export function jobRoutes(
             req.body,
             security.principal(req).name,
           ),
-        ),
+        );
+    },
   );
   for (const operation of ["cancel", "retry"] as const)
     app.post(
       `/api/ontologies/:ontology/jobs/:id/${operation}`,
       { schema: { tags: ["Jobs"], params: record, body: precondition } },
-      (req) => {
+      async (req) => {
         const principal = security.principal(req);
+        if (
+          operation === "retry" &&
+          principal.kind === "agent" &&
+          (await jobs.get(req.params.ontology, req.params.id)).input.kind !==
+            "investigation"
+        )
+          throw new PlatformError(
+            403,
+            "Agent credentials cannot retry live source writes",
+          );
         return jobs[operation](
           req.params.ontology,
           req.params.id,

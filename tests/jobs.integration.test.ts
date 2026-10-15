@@ -227,6 +227,11 @@ suite("durable jobs, schedules and recovery", () => {
       "owner",
     );
     expect(retry.id).not.toBe(agent.id);
+    const retried = await jobs.get("recover", agent.id);
+    expect(retried.retriedAs).toBe(retry.id);
+    await expect(
+      jobs.retry("recover", agent.id, retried.version, "owner"),
+    ).rejects.toMatchObject({ statusCode: 409 });
     await jobs.cancel("recover", retry.id, 0, "owner");
     await jobs.stop();
   });

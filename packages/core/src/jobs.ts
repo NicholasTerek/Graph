@@ -159,6 +159,7 @@ export class JobService {
         );
       if (
         job.version !== expectedVersion ||
+        job.retriedAs ||
         !["failed", "interrupted", "cancelled"].includes(job.status)
       )
         throw new PlatformError(
@@ -168,7 +169,25 @@ export class JobService {
       const next = await this.bindContext(
         this.make(ontology, actor, job.input),
       );
-      await this.store.saveDocument("job", ontology, next.id, next);
+      if (
+        (await this.list(ontology)).filter((j) => !terminal.has(j.status))
+          .length >= 100
+      )
+        throw new PlatformError(429, "Ontology has 100 pending jobs");
+      next.retryOf = job.id;
+      await this.store.saveDocuments(ontology, [
+        { kind: "job", id: next.id, value: next },
+        {
+          kind: "job",
+          id: job.id,
+          value: {
+            ...job,
+            version: job.version + 1,
+            retriedAs: next.id,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      ]);
       return next;
     });
   }

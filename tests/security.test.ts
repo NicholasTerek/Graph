@@ -47,4 +47,34 @@ describe("scope checks on request paths", () => {
       security.check(request("/api/ontologies/demo/objects?trace=1")),
     ).not.toThrow();
   });
+  it("limits delegated agent credentials to one ontology and releases them after an investigation", () => {
+    const delegated = security.delegateAgent("capacity-agent", "demo");
+    const scoped = (path: string) =>
+      ({
+        ...request(path),
+        headers: {
+          host: "localhost",
+          authorization: `Bearer ${delegated.token}`,
+        },
+      }) as FastifyRequest;
+    expect(() =>
+      security.check(scoped("/api/ontologies/demo/scenarios")),
+    ).not.toThrow();
+    expect(() =>
+      security.check(scoped("/api/ontologies/demo/ingest?trace=1")),
+    ).toThrow("cannot mutate live data");
+    expect(() =>
+      security.check(scoped("/api/ontologies/foreign/scenarios")),
+    ).toThrow("cannot access");
+    delegated.release();
+    expect(() =>
+      security.check(scoped("/api/ontologies/demo/scenarios")),
+    ).toThrow("Invalid API credential");
+    expect(
+      () =>
+        new Security({
+          tokens: [{ name: "unsafe", token, scopes: ["admin"], kind: "agent" }],
+        }),
+    ).toThrow("cannot have approval");
+  });
 });

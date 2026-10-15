@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import {
   investigationInput,
   identifier,
@@ -13,15 +12,11 @@ import { GraphStore, PlatformError } from "@graph/core";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-export const internalAgentCredential = () => ({
-  name: "graph-agent",
-  token: randomBytes(32).toString("hex"),
-  scopes: ["read", "write"] as ("read" | "write")[],
-});
+import type { Security } from "./security.js";
 export function agentRoutes(
   instance: FastifyInstance,
   store: GraphStore,
-  token: string,
+  security: Security,
   provider?: ModelProvider,
 ) {
   const app = instance.withTypeProvider<ZodTypeProvider>();
@@ -39,8 +34,6 @@ export function agentRoutes(
       headers: response.headers as Record<string, string>,
     });
   };
-  const client = new GraphClient("http://localhost", transport, { token });
-  const agent = new GraphAgent(client, provider);
   app.get(
     "/api/ontologies/:ontology/investigations",
     { schema: { tags: ["Agent"], params } },
@@ -69,29 +62,55 @@ export function agentRoutes(
     ontology: string,
     input: Parameters<GraphAgent["investigate"]>[1],
     signal?: AbortSignal,
+    owner = "local-owner",
   ) => {
     await store.ontology(ontology);
     const memory = (
       await store.documents<Investigation>("investigation", ontology)
     )
-      .filter((r) => r.status === "completed")
+      .filter(
+        (r) => r.status === "completed" && (r.owner ?? "local-owner") === owner,
+      )
       .slice(-3)
       .map((r) => r.answer);
-    return agent.investigate(
-      ontology,
-      input,
-      (record) =>
-        store.exclusive(() =>
-          store.saveDocument("investigation", ontology, record.id, record),
-        ),
-      memory,
-      signal,
+    const credential = security.delegateAgent(owner, ontology);
+    const agent = new GraphAgent(
+      new GraphClient("http://localhost", transport, {
+        token: credential.token,
+      }),
+      provider,
     );
+    try {
+      return {
+        ...(await agent.investigate(
+          ontology,
+          input,
+          (record) =>
+            store.exclusive(() =>
+              store.saveDocument("investigation", ontology, record.id, {
+                ...record,
+                owner,
+              }),
+            ),
+          memory,
+          signal,
+        )),
+        owner,
+      };
+    } finally {
+      credential.release();
+    }
   };
   app.post(
     "/api/ontologies/:ontology/investigations",
     { schema: { tags: ["Agent"], params, body: investigationInput } },
-    (req) => investigate(req.params.ontology, req.body),
+    (req) =>
+      investigate(
+        req.params.ontology,
+        req.body,
+        undefined,
+        security.principal(req).name,
+      ),
   );
   app.get("/api/agent/capabilities", { schema: { tags: ["Agent"] } }, () => ({
     mode: provider ? "model-tools" : "deterministic-tools",

@@ -357,7 +357,7 @@ export default function LaunchPlanner({
               {historical !== null
                 ? "Read-only historical snapshot"
                 : scenario
-                  ? `Scenario · ${scenario.storage === "falkordb-overlay" ? "revision overlay" : "native copy"} · base r${scenario.baseRevision} · v${scenario.version}`
+                  ? `Scenario · ${scenario.storage === "falkordb-overlay" ? "revision overlay" : "native copy"} · base r${scenario.baseRevision} · v${scenario.version} · owner ${scenario.owner ?? "local-owner"}`
                   : "Live baseline"}
             </span>
             <span className="synthetic-tag">

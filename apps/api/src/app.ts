@@ -1,5 +1,5 @@
 import { jobRoutes } from "./job-routes.js";
-import { agentRoutes, internalAgentCredential } from "./agent-routes.js";
+import { agentRoutes } from "./agent-routes.js";
 import type { ModelProvider } from "../../../packages/agent/src/index.js";
 import { platformRoutes } from "./platform-routes.js";
 import { Security, type SecurityOptions } from "./security.js";
@@ -68,8 +68,7 @@ export function createApp(
     logger: options.logger ?? false,
     bodyLimit: 4 * 1024 * 1024,
   }).withTypeProvider<ZodTypeProvider>();
-  const agentCredential = internalAgentCredential();
-  const security = new Security(options.security, agentCredential);
+  const security = new Security(options.security);
   app.addHook("onRequest", async (req) => {
     security.check(req);
   });
@@ -188,7 +187,7 @@ export function createApp(
     const investigate = agentRoutes(
       app,
       store,
-      agentCredential.token,
+      security,
       options.modelProvider,
     );
     jobRoutes(app, store, security, investigate, {
@@ -459,7 +458,13 @@ export function createApp(
       async (req, reply) =>
         reply
           .code(201)
-          .send(await scenarios.create(req.params.ontology, req.body)),
+          .send(
+            await scenarios.create(
+              req.params.ontology,
+              req.body,
+              security.principal(req).name,
+            ),
+          ),
     );
     app.get(
       "/api/ontologies/:ontology/scenarios/:scenario",
@@ -497,7 +502,13 @@ export function createApp(
         },
       },
       (req) =>
-        scenarios.edit(req.params.ontology, req.params.scenario, req.body),
+        scenarios.edit(
+          req.params.ontology,
+          req.params.scenario,
+          req.body,
+          security.principal(req).name,
+          security.principal(req).scopes.includes("admin"),
+        ),
     );
     app.patch(
       "/api/ontologies/:ontology/scenarios/:scenario/objects/:id",
@@ -515,6 +526,8 @@ export function createApp(
           req.params.scenario,
           req.params.id,
           req.body,
+          security.principal(req).name,
+          security.principal(req).scopes.includes("admin"),
         ),
     );
     app.get(
@@ -538,7 +551,12 @@ export function createApp(
         },
       },
       async (req, reply) => {
-        await scenarios.discard(req.params.ontology, req.params.scenario);
+        await scenarios.discard(
+          req.params.ontology,
+          req.params.scenario,
+          security.principal(req).name,
+          security.principal(req).scopes.includes("admin"),
+        );
         return reply.code(204).send();
       },
     );

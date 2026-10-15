@@ -525,7 +525,8 @@ export default function Operations({
               <summary>
                 {record.question}
                 <span>
-                  {record.mode} · {record.status}
+                  {record.mode} · {record.status} · owner{" "}
+                  {record.owner ?? "local-owner"}
                 </span>
               </summary>
               <p>{record.answer}</p>

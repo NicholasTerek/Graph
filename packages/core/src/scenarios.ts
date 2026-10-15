@@ -180,6 +180,7 @@ export class ScenarioService {
       expectedRevision?: number;
       strategy?: "copy" | "overlay";
     },
+    owner = "local-owner",
   ): Promise<Scenario> {
     return this.store.exclusive(async () => {
       await this.store.ontology(ontology);
@@ -204,6 +205,7 @@ export class ScenarioService {
           name: input.name,
           description: input.description,
           ontology,
+          owner,
           baseRevision: revision,
           historyGeneration: context.generation,
           storage: "falkordb-overlay",
@@ -237,6 +239,7 @@ export class ScenarioService {
         description: input.description,
         ontology,
         baseRevision: revision,
+        owner,
         version: 0,
         createdAt: now,
         updatedAt: now,
@@ -323,24 +326,31 @@ export class ScenarioService {
     ontology: string,
     id: string,
     edit: Overlay & { expectedVersion: number },
+    actor = "local-owner",
+    admin = false,
   ) {
-    return this.store.exclusive(async () =>
-      this.saveEdit(
-        await this.reference(ontology, id),
+    return this.store.exclusive(async () => {
+      const branch = await this.reference(ontology, id);
+      this.checkOwner(branch, actor, admin);
+      return this.saveEdit(
+        branch,
         await this.store.ontology(ontology),
         edit,
         edit.expectedVersion,
-      ),
-    );
+      );
+    });
   }
   async patchObject(
     ontology: string,
     id: string,
     objectId: string,
     patch: { properties: GraphObject["properties"]; expectedVersion: number },
+    actor = "local-owner",
+    admin = false,
   ) {
     return this.store.exclusive(async () => {
       const scenario = await this.reference(ontology, id);
+      this.checkOwner(scenario, actor, admin);
       const current = (await this.effective(scenario)).objects.find(
         (o) => o.id === objectId,
       );
@@ -383,7 +393,19 @@ export class ScenarioService {
       };
     });
   }
-  async discard(ontology: string, id: string) {
+  private checkOwner(scenario: Scenario, actor: string, admin: boolean) {
+    if (!admin && (scenario.owner ?? "local-owner") !== actor)
+      throw new PlatformError(
+        403,
+        "Only the scenario owner or an administrator can change this branch",
+      );
+  }
+  async discard(
+    ontology: string,
+    id: string,
+    actor = "local-owner",
+    admin = false,
+  ) {
     return this.store.exclusive(async () => {
       const stored = await this.store.document<Scenario>(
         "scenario",
@@ -394,6 +416,7 @@ export class ScenarioService {
         stored?.storage === "falkordb-overlay"
           ? stored
           : await this.reference(ontology, id);
+      this.checkOwner(scenario, actor, admin);
       if (scenario.storage === "falkordb-overlay")
         await this.store.nativeOverlays.discard(ontology, id);
       else await this.store.removeDocument("scenario", ontology, id);
