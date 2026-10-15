@@ -43,8 +43,10 @@ jobs:
       - run: docker compose exec -T app node --import tsx scripts/native-demo.ts prepare ci-overlay-branch overlay
       - run: docker compose exec -T app node --import tsx scripts/job-demo.ts prepare
       - run: docker compose exec -T app node --import tsx scripts/history-demo.ts prepare
+      - run: docker compose cp app:/app/artifacts/history-restart.json /tmp/graph-history-restart.json
       - run: docker compose stop app falkordb
       - run: docker compose up -d --wait
+      - run: docker compose cp /tmp/graph-history-restart.json app:/app/artifacts/history-restart.json
       - run: docker compose exec -T app node --import tsx scripts/native-demo.ts verify ci-native-branch
       - run: docker compose exec -T app node --import tsx scripts/native-demo.ts verify ci-overlay-branch overlay
       - run: docker compose exec -T app node --import tsx scripts/job-demo.ts verify
