@@ -32,6 +32,7 @@ export class Security {
     private internal?: Credential,
   ) {}
   check(request: FastifyRequest) {
+    const path = request.url.split("?")[0];
     const host = request.headers.host ?? "localhost";
     let hostname: string;
     try {
@@ -60,11 +61,7 @@ export class Security {
     )
       throw new PlatformError(403, "Origin is not allowed");
     const authorization = request.headers.authorization;
-    if (
-      !request.url.startsWith("/api/") &&
-      request.method === "GET" &&
-      !authorization
-    )
+    if (!path.startsWith("/api/") && request.method === "GET" && !authorization)
       return;
     let principal: Principal;
     if (authorization) {
@@ -84,7 +81,7 @@ export class Security {
     } else if (this.options.tokens?.length) {
       if (
         request.method === "GET" &&
-        /^\/api\/(health|docs(?:\/|$)|openapi\.json)/.test(request.url)
+        /^\/api\/(health|docs(?:\/|$)|openapi\.json)/.test(path)
       )
         return;
       throw new PlatformError(401, "An API credential is required");
@@ -94,8 +91,8 @@ export class Security {
         scopes: ["read", "write", "approve", "execute", "admin"],
       };
     this.principals.set(request, principal);
-    if (!request.url.startsWith("/api/")) return;
-    const ontology = /^\/api\/ontologies\/([^/?]+)/.exec(request.url)?.[1];
+    if (!path.startsWith("/api/")) return;
+    const ontology = /^\/api\/ontologies\/([^/?]+)/.exec(path)?.[1];
     if (
       ontology &&
       principal.ontologies &&
@@ -105,18 +102,18 @@ export class Security {
     const scopes =
       request.method === "GET"
         ? ["read"]
-        : /\/actions\/[^/]+\/(approve|reject|revoke)$/.test(request.url)
+        : /\/actions\/[^/]+\/(approve|reject|revoke)$/.test(path)
           ? ["approve"]
-          : /\/actions\/[^/]+\/(execute|reconcile)$/.test(request.url)
+          : /\/actions\/[^/]+\/(execute|reconcile)$/.test(path)
             ? ["execute"]
-            : /\/scenarios\/[^/]+\/promote$/.test(request.url)
+            : /\/scenarios\/[^/]+\/promote$/.test(path)
               ? ["write", "approve"]
               : /\/(restore|indexes|vacuum)$|\/native-graphs\/collect$/.test(
-                    request.url,
+                    path,
                   )
                 ? ["admin"]
                 : /\/functions\/[^/]+\/run$|\/objects\/query$|\/aggregate$|\/algorithms\/run$|\/explain$|\/state\/at(?:\/traverse)?$|\/snapshots(?:\/[^/]+)?$/.test(
-                      request.url,
+                      path,
                     )
                   ? ["read"]
                   : ["write"];
