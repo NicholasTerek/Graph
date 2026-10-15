@@ -59,3 +59,29 @@ Scenario state uses a shared immutable snapshot per branched revision plus per-s
 Observed verification: 14 unit/model tests, 23 real FalkorDB integration tests, and six Chromium browser tests pass. The first foundation commit's GitHub CI passed both the full verification job and the Docker Compose smoke test. The expanded workflow still requires its own post-commit CI run.
 
 The previous commit’s actual ontology and data were loaded over HTTP, then upgraded using the current seed script. The new GPU fields and fallback relationship registered without deleting existing data. The command-line SDK demo passed its recommendation-change and live-state isolation assertions against that upgraded service. Desktop and mobile launch-workspace screenshots were visually inspected.
+
+## Operational platform expansion
+
+Implemented the six requested priorities as a cohesive prototype: source synchronization and record history; inventory/capacity/qualification-aware GPU scheduling; selective three-way promotion; reviewed external actions; restricted SDK-driven investigation; and access/operations/SDK hardening.
+
+### Correctness boundaries
+
+- Replaced scattered graph writes with a shared commit path that submits operational mutations, history records, source checkpoints, and associated documents in one Cypher query. A single API process still owns serialization.
+- CSV/JSON/GitHub connectors preserve external mappings and deterministic identities. No-op synchronization preserves the graph revision. Manual modifications/deletions, pre-existing records, manual extensions, and remaining relationships prevent destructive source reconciliation.
+- Supplier qualification is a real `QUALIFIED_FOR` relationship plus an active qualification flag. Production covers only demand not supplied by inventory. Driver features and architecture are hard constraints. A DAG scheduler makes hardware-dependent validation wait for both assembled hardware and software pre-validation, and rejects cycles.
+- Scenario promotion compares base, hypothetical, and live values. Independent live property edits survive; overlapping changes are rejected. Approval and live/scenario versions are explicit at mutation boundaries.
+- Action preparation is side-effect free. Approval, execution, and reconciliation have distinct scopes and states. Unique markers support remote reconciliation. There is no exactly-once claim or automatic retry after a lost response.
+- Investigations use only the public SDK. Their internal credential cannot approve, execute, promote, restore, or administer indexes. Model responses that skip deterministic calculations fail; unsupported approval tools are rejected and budgets are enforced.
+- Backups exclude credentials and executable approvals. Restores verify their checksum, require explicit confirmation and revision matching, and advance the revision beyond restored/current contexts.
+
+### Observed verification
+
+- Strict TypeScript, SDK declaration builds, production web build, and independent tarball consumer verification pass.
+- The complete suite exercises schema/model logic, native FalkorDB writes, connector reconciliation, token scopes, promotion conflicts, action approval/execution/reconciliation, model-tool restrictions, backup/restore, and browser workflows.
+- The actual public GitHub connector fetched this project's public repository metadata over HTTP and persisted one repository object. It sent no GitHub credential.
+- The real HTTP seed, command-line recovery demo, diagnostics, and a 1,000-object benchmark ran successfully. Exact measurements and caveats are in `benchmarks.md`.
+- The external issue-creation protocol was exercised against a controlled HTTP fixture, including a simulated lost POST response followed by reconciliation. No real GitHub issue was created.
+- Model protocol and tool orchestration were tested with controlled compatible responses. No live model was configured; the default UI clearly identifies deterministic orchestration.
+- Docker remains unavailable in this coding environment. The actual Compose stack is checked by CI. Earlier foundation and scenario milestone CI runs passed; this expansion needs its own post-commit CI result.
+
+The production gaps remain explicit: one API writer, small-graph full-state reads, bounded snapshot connectors, no durable scheduler or distributed coordination, no enterprise governance, and no assertion of Foundry feature parity. README and operations/API guides describe supported behavior rather than presenting those gaps as implemented features.

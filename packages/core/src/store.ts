@@ -1,3 +1,4 @@
+import { canonical, recordChanges, validateUniqueState } from "./state.js";
 import { FalkorDB } from "falkordb";
 import type {
   Ontology,
@@ -8,6 +9,7 @@ import type {
   Traversal,
   GraphState,
   Page,
+  ObjectQuery,
 } from "@graph/contracts";
 import {
   PlatformError,
@@ -68,6 +70,29 @@ export class GraphStore {
           throw error;
       }
     }
+  }
+
+  async backfillNativeProperties() {
+    const rows = await this.rows(
+      "MATCH (o:Object) WHERE o.search IS NULL RETURN o.record AS record, o.ontology AS ontology",
+    );
+    if (rows.length)
+      await this.rows(
+        "UNWIND $items AS item MATCH (o:Object {ontology:item.ontology,id:item.id}) SET o=item.native",
+        {
+          items: rows.map((row) => {
+            const object = JSON.parse(String(row.record));
+            return {
+              ontology: String(row.ontology),
+              id: object.id,
+              native: {
+                ...this.native(object),
+                ontology: String(row.ontology),
+              },
+            };
+          }),
+        },
+      );
   }
 
   async health() {
@@ -145,46 +170,186 @@ export class GraphStore {
   }
 
   private async ingestUnlocked(id: string, input: Ingestion) {
-    const ontology = await this.ontology(id);
-    const current = await this.snapshot(id);
-    validateIngestion(ontology, current, input);
-    const objects = input.objects.map((object) => ({
+    const schema = await this.ontology(id);
+    const before = await this.snapshot(id);
+    validateIngestion(schema, before, input);
+    const objects = new Map(before.objects.map((o) => [o.id, o]));
+    const relationships = new Map(before.relationships.map((r) => [r.id, r]));
+    for (const object of input.objects) objects.set(object.id, object);
+    for (const relationship of input.relationships)
+      relationships.set(relationship.id, relationship);
+    await this.commitState(id, before, {
+      objects: [...objects.values()],
+      relationships: [...relationships.values()],
+    });
+    return {
+      objects: input.objects.length,
+      relationships: input.relationships.length,
+    };
+  }
+
+  async transact<T>(
+    ontology: string,
+    expectedRevision: number | undefined,
+    operation: (
+      state: GraphState,
+      schema: Ontology,
+    ) =>
+      | Promise<{
+          state: GraphSnapshot;
+          documents?: DocumentWrite[];
+          removeDocuments?: DocumentKey[];
+          revisionFloor?: number;
+          result: T;
+        }>
+      | {
+          state: GraphSnapshot;
+          documents?: DocumentWrite[];
+          removeDocuments?: DocumentKey[];
+          revisionFloor?: number;
+          result: T;
+        },
+  ) {
+    return this.write(async () => {
+      const revision = await this.revision(ontology);
+      if (expectedRevision !== undefined && expectedRevision !== revision)
+        throw new PlatformError(
+          409,
+          `Revision conflict: expected ${expectedRevision}, current ${revision}`,
+        );
+      const before = await this.snapshot(ontology);
+      const schema = await this.ontology(ontology);
+      const plan = await operation(
+        { ...structuredClone(before), revision },
+        schema,
+      );
+      validateUniqueState(plan.state);
+      validateIngestion(schema, { objects: [], relationships: [] }, plan.state);
+      const nextRevision = await this.commitState(
+        ontology,
+        before,
+        plan.state,
+        plan.documents,
+        plan.removeDocuments,
+        plan.revisionFloor,
+      );
+      return { revision: nextRevision, result: plan.result };
+    });
+  }
+
+  private native(object: GraphObject) {
+    return {
+      ontology: "",
       id: object.id,
       type: object.type,
       record: JSON.stringify(object),
+      search: [object.id, object.type, ...Object.values(object.properties)]
+        .join(" ")
+        .toLowerCase(),
+      ...Object.fromEntries(
+        Object.entries(object.properties).map(([key, value]) => [
+          "p_" + key,
+          value,
+        ]),
+      ),
+    };
+  }
+
+  private async commitState(
+    ontology: string,
+    before: GraphSnapshot,
+    after: GraphSnapshot,
+    documents: DocumentWrite[] = [],
+    removeDocuments: DocumentKey[] = [],
+    revisionFloor?: number,
+  ) {
+    const objects = recordChanges(before.objects, after.objects);
+    const relationships = recordChanges(
+      before.relationships,
+      after.relationships,
+    );
+    const revision = await this.revision(ontology);
+    const next =
+      Math.max(revision, revisionFloor ?? revision) +
+      (objects.length || relationships.length ? 1 : 0);
+    const now = new Date().toISOString();
+    const history = [
+      ...objects.map((change) => ({ kind: "object", change })),
+      ...relationships.map((change) => ({ kind: "relationship", change })),
+    ].map(({ kind, change }) => ({
+      kind: "history",
+      id: `${next}-${kind}-${change.id}`,
+      value: {
+        recordId: change.id,
+        kind,
+        revision: next,
+        operation: change.kind,
+        before: change.before,
+        after: change.after,
+        recordedAt: now,
+      },
     }));
-    const relationships = input.relationships.map((rel) => ({
-      id: rel.id,
-      type: rel.type,
-      from: rel.from,
-      to: rel.to,
-      record: JSON.stringify(rel),
+    const saved = [...history, ...documents].map((d) => ({
+      kind: d.kind,
+      id: d.id,
+      record: JSON.stringify(d.value),
     }));
-    if (objects.length && relationships.length) {
-      await this.rows(
-        `UNWIND $objects AS item
-          MERGE (o:Object {ontology: $ontology, id: item.id}) SET o.type = item.type, o.record = item.record
-          WITH count(o) AS written
-          UNWIND $relationships AS item
-          MATCH (a:Object {ontology: $ontology, id: item.from}), (b:Object {ontology: $ontology, id: item.to})
-          MERGE (a)-[r:LINK {id: item.id}]->(b) SET r.type = item.type, r.record = item.record
-          WITH count(r) AS written MATCH (meta:Ontology {id: $ontology}) SET meta.revision = coalesce(meta.revision, 0) + 1`,
-        { ontology: id, objects, relationships },
-      );
-    } else if (objects.length) {
-      await this.rows(
-        "UNWIND $objects AS item MERGE (o:Object {ontology: $ontology, id: item.id}) SET o.type = item.type, o.record = item.record WITH count(o) AS written MATCH (meta:Ontology {id: $ontology}) SET meta.revision = coalesce(meta.revision, 0) + 1",
-        { ontology: id, objects },
-      );
-    } else if (relationships.length) {
-      await this.rows(
-        `UNWIND $relationships AS item
-          MATCH (a:Object {ontology: $ontology, id: item.from}), (b:Object {ontology: $ontology, id: item.to})
-          MERGE (a)-[r:LINK {id: item.id}]->(b) SET r.type = item.type, r.record = item.record WITH count(r) AS written MATCH (meta:Ontology {id: $ontology}) SET meta.revision = coalesce(meta.revision, 0) + 1`,
-        { ontology: id, relationships },
-      );
-    }
-    return { objects: objects.length, relationships: relationships.length };
+    const upsertObjects = objects.flatMap((change) =>
+      change.after
+        ? [
+            {
+              id: change.id,
+              native: { ...this.native(change.after), ontology },
+            },
+          ]
+        : [],
+    );
+    const upsertRelationships = relationships.flatMap((change) =>
+      change.after
+        ? [{ ...change.after, record: JSON.stringify(change.after) }]
+        : [],
+    );
+    const removeRelationships = relationships
+      .filter((change) => change.before)
+      .map((change) => change.id);
+    const removeObjects = objects
+      .filter((change) => !change.after)
+      .map((change) => change.id);
+    if (
+      !objects.length &&
+      !relationships.length &&
+      !saved.length &&
+      !removeDocuments.length &&
+      revisionFloor === undefined
+    )
+      return revision;
+    await this.rows(
+      `MATCH (:Object {ontology:$ontology})-[r:LINK]->(:Object {ontology:$ontology}) WHERE r.id IN $removeRelationships DELETE r WITH count(*) AS removed
+      MATCH (o:Object {ontology:$ontology}) WHERE o.id IN $removeObjects DELETE o WITH count(*) AS removed
+      UNWIND $objects AS item MERGE (o:Object {ontology:$ontology,id:item.id}) SET o = item.native WITH count(*) AS written
+      UNWIND $relationships AS item MATCH (a:Object {ontology:$ontology,id:item.from}),(b:Object {ontology:$ontology,id:item.to}) CREATE (a)-[:LINK {id:item.id,type:item.type,record:item.record}]->(b) WITH count(*) AS written
+      MATCH (d:Document {ontology:$ontology}) WHERE any(item IN $removeDocuments WHERE item.kind=d.kind AND item.id=d.id) DELETE d WITH count(*) AS removed
+      UNWIND $documents AS item MERGE (d:Document {ontology:$ontology,kind:item.kind,id:item.id}) SET d.record=item.record WITH count(*) AS written
+      MATCH (meta:Ontology {id:$ontology}) SET meta.revision=$revision`,
+      {
+        ontology,
+        removeRelationships,
+        removeObjects,
+        objects: upsertObjects,
+        relationships: upsertRelationships,
+        documents: saved,
+        removeDocuments,
+        revision: next,
+      },
+    );
+    return next;
+  }
+
+  async history(ontology: string, id: string, kind = "object") {
+    await this.ontology(ontology);
+    return (await this.documents<RecordHistory>("history", ontology))
+      .filter((h) => h.recordId === id && h.kind === kind)
+      .sort((a, b) => a.revision - b.revision);
   }
 
   async object(ontology: string, id: string): Promise<GraphObject> {
@@ -198,37 +363,34 @@ export class GraphStore {
   }
 
   async deleteObject(ontology: string, id: string) {
-    return this.write(async () => {
-      await this.object(ontology, id);
-      const [row] = await this.rows(
-        "MATCH (o:Object {ontology: $ontology, id: $id}) OPTIONAL MATCH (o)-[r:LINK]-() RETURN count(r) AS links",
-        { ontology, id },
-      );
-      if (Number(row.links) > 0)
+    await this.transact(ontology, undefined, (state) => {
+      if (!state.objects.some((o) => o.id === id))
+        throw new PlatformError(404, `Object not found: ${id}`);
+      if (state.relationships.some((r) => r.from === id || r.to === id))
         throw new PlatformError(
           409,
           "Remove relationships before deleting this object",
         );
-      await this.rows(
-        "MATCH (o:Object {ontology: $ontology, id: $id}) DELETE o WITH count(*) AS deleted MATCH (meta:Ontology {id: $ontology}) SET meta.revision = coalesce(meta.revision, 0) + 1",
-        { ontology, id },
-      );
+      return {
+        state: {
+          objects: state.objects.filter((o) => o.id !== id),
+          relationships: state.relationships,
+        },
+        result: undefined,
+      };
     });
   }
-
   async deleteRelationship(ontology: string, id: string) {
-    return this.write(async () => {
-      await this.ontology(ontology);
-      const rows = await this.rows(
-        "MATCH (:Object {ontology: $ontology})-[r:LINK {id: $id}]->() RETURN r.id AS id",
-        { ontology, id },
-      );
-      if (!rows.length)
+    await this.transact(ontology, undefined, (state) => {
+      if (!state.relationships.some((r) => r.id === id))
         throw new PlatformError(404, `Relationship not found: ${id}`);
-      await this.rows(
-        "MATCH (:Object {ontology: $ontology})-[r:LINK {id: $id}]->() DELETE r WITH count(*) AS deleted MATCH (meta:Ontology {id: $ontology}) SET meta.revision = coalesce(meta.revision, 0) + 1",
-        { ontology, id },
-      );
+      return {
+        state: {
+          objects: state.objects,
+          relationships: state.relationships.filter((r) => r.id !== id),
+        },
+        result: undefined,
+      };
     });
   }
 
@@ -350,6 +512,143 @@ export class GraphStore {
     };
   }
 
+  async queryObjects(ontology: string, input: ObjectQuery) {
+    const schema = await this.ontology(ontology);
+    const params: Record<string, QueryValue> = {
+      ontology,
+      type: input.type ?? "",
+      after: input.after ?? "",
+      limit: input.limit + 1,
+    };
+    const predicates = [
+      "($type='' OR o.type=$type)",
+      "($after='' OR o.id>$after)",
+    ];
+    for (const [index, filter] of input.filters.entries()) {
+      if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(filter.property))
+        throw new PlatformError(400, "Invalid property name");
+      const definitions = schema.objectTypes
+        .filter((t) => !input.type || t.name === input.type)
+        .map((t) => t.properties[filter.property])
+        .filter(Boolean);
+      if (!definitions.length)
+        throw new PlatformError(422, `Unknown property ${filter.property}`);
+      if (definitions.some((d) => d.type !== typeof filter.value))
+        throw new PlatformError(
+          422,
+          `Filter value has the wrong type for ${filter.property}`,
+        );
+      const property = "o.`p_" + filter.property + "`";
+      const key = "value" + index;
+      params[key] = filter.value;
+      const operators = {
+        eq: "=",
+        ne: "<>",
+        gt: ">",
+        gte: ">=",
+        lt: "<",
+        lte: "<=",
+      };
+      if (filter.operator === "contains") {
+        if (typeof filter.value !== "string")
+          throw new PlatformError(422, "contains requires a string");
+        predicates.push(`toLower(${property}) CONTAINS toLower($${key})`);
+      } else {
+        if (
+          !["eq", "ne"].includes(filter.operator) &&
+          typeof filter.value !== "number"
+        )
+          throw new PlatformError(422, "Range predicates require numbers");
+        predicates.push(`${property} ${operators[filter.operator]} $${key}`);
+      }
+    }
+    const rows = await this.rows(
+      `MATCH (o:Object {ontology:$ontology}) WHERE ${predicates.join(" AND ")} RETURN o.record AS record ORDER BY o.id LIMIT $limit`,
+      params,
+    );
+    const items: GraphObject[] = rows.map((row) =>
+      JSON.parse(String(row.record)),
+    );
+    return {
+      items: items.slice(0, input.limit),
+      nextCursor: items.length > input.limit ? items[input.limit - 1].id : null,
+      limit: input.limit,
+    };
+  }
+  async aggregate(
+    ontology: string,
+    input: {
+      type: string;
+      property?: string;
+      operation: "count" | "sum" | "avg" | "min" | "max";
+      filters: ObjectQuery["filters"];
+    },
+  ) {
+    const schema = await this.ontology(ontology);
+    const type = schema.objectTypes.find((t) => t.name === input.type);
+    if (!type) throw new PlatformError(422, "Unknown object type");
+    if (
+      input.operation !== "count" &&
+      (!input.property || type.properties[input.property]?.type !== "number")
+    )
+      throw new PlatformError(
+        422,
+        "Numeric aggregation requires a numeric property",
+      );
+    const items: GraphObject[] = [];
+    let after: string | undefined;
+    do {
+      const page = await this.queryObjects(ontology, {
+        type: input.type,
+        filters: input.filters,
+        limit: 100,
+        after,
+      });
+      items.push(...page.items);
+      after = page.nextCursor ?? undefined;
+    } while (after);
+    const values = items
+      .map((o) => o.properties[input.property!])
+      .filter((v): v is number => typeof v === "number");
+    const value =
+      input.operation === "count"
+        ? items.length
+        : values.length === 0
+          ? null
+          : input.operation === "sum"
+            ? values.reduce((a, b) => a + b, 0)
+            : input.operation === "avg"
+              ? values.reduce((a, b) => a + b, 0) / values.length
+              : input.operation === "min"
+                ? Math.min(...values)
+                : Math.max(...values);
+    return {
+      operation: input.operation,
+      property: input.property ?? null,
+      count: items.length,
+      value,
+    };
+  }
+  async createPropertyIndex(ontology: string, type: string, property: string) {
+    const schema = await this.ontology(ontology);
+    if (!schema.objectTypes.find((t) => t.name === type)?.properties[property])
+      throw new PlatformError(422, "Unknown type/property");
+    if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(property))
+      throw new PlatformError(400, "Invalid property");
+    try {
+      await this.graph.query(
+        "CREATE INDEX FOR (o:Object) ON (o.`p_" + property + "`)",
+      );
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        !error.message.includes("already indexed")
+      )
+        throw error;
+    }
+    return { ontology, type, property, indexed: true };
+  }
+
   async relationship(ontology: string, id: string): Promise<GraphRelationship> {
     const [row] = await this.rows(
       "MATCH (:Object {ontology:$ontology})-[r:LINK {id:$id}]->(:Object {ontology:$ontology}) RETURN r.record AS record",
@@ -359,6 +658,17 @@ export class GraphStore {
     return JSON.parse(String(row.record));
   }
 
+  async documentEntries(
+    kind: string,
+    ontology: string,
+  ): Promise<{ id: string; value: unknown }[]> {
+    return (
+      await this.rows(
+        "MATCH (d:Document {kind:$kind,ontology:$ontology}) RETURN d.id AS id,d.record AS record ORDER BY d.id",
+        { kind, ontology },
+      )
+    ).map((r) => ({ id: String(r.id), value: JSON.parse(String(r.record)) }));
+  }
   async document<T>(
     kind: string,
     ontology: string,
@@ -435,3 +745,15 @@ export class GraphStore {
     return { objects, relationships, root, depth, direction };
   }
 }
+
+export type DocumentWrite = { kind: string; id: string; value: unknown };
+export type DocumentKey = { kind: string; id: string };
+export type RecordHistory = {
+  recordId: string;
+  kind: string;
+  revision: number;
+  operation: string;
+  before: GraphObject | GraphRelationship | null;
+  after: GraphObject | GraphRelationship | null;
+  recordedAt: string;
+};

@@ -2,7 +2,11 @@ import { strict as assert } from "node:assert";
 import { randomUUID } from "node:crypto";
 import { GraphClient } from "@graph/sdk";
 import type { LaunchResult } from "../examples/semiconductor/functions/launch-readiness.js";
-const client = new GraphClient(process.env.API_URL ?? "http://127.0.0.1:3001");
+const client = new GraphClient(
+  process.env.API_URL ?? "http://127.0.0.1:3001",
+  fetch,
+  { token: process.env.GRAPH_API_TOKEN },
+);
 const live = await client.snapshot("semiconductor");
 const baseline = await client.runFunction<LaunchResult>(
   "semiconductor",

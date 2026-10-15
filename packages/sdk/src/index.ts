@@ -1,4 +1,13 @@
 import type {
+  BackupArchive,
+  Investigation,
+  ActionRecord,
+  ActionInfo,
+  SourceConfig,
+  Source,
+  SyncResult,
+  PromotionPreview,
+  ObjectQuery,
   Ontology,
   GraphState,
   Ingestion,
@@ -28,17 +37,29 @@ export class GraphClient {
   constructor(
     private baseUrl = "",
     private request: typeof fetch = (...args) => fetch(...args),
+    private options: { token?: string | (() => string | undefined) } = {},
   ) {}
   private async call<T>(
     path: string,
     method = "GET",
     body?: unknown,
   ): Promise<T> {
-    const response = await this.request(`${this.baseUrl}/api${path}`, {
-      method,
-      headers: body === undefined ? {} : { "content-type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
+    const token =
+      typeof this.options.token === "function"
+        ? this.options.token()
+        : this.options.token;
+    const response = await this.request.call(
+      globalThis,
+      `${this.baseUrl}/api${path}`,
+      {
+        method,
+        headers: {
+          ...(body === undefined ? {} : { "content-type": "application/json" }),
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      },
+    );
     if (!response.ok) {
       const error = await response
         .json()
@@ -246,5 +267,189 @@ export class GraphClient {
   }
   runs(ontology: string) {
     return this.call<FunctionRun[]>(`${this.path(ontology)}/runs`);
+  }
+  sources(ontology: string) {
+    return this.call<Source[]>(`${this.path(ontology)}/sources`);
+  }
+  registerSource(ontology: string, input: SourceConfig) {
+    return this.call<Source>(`${this.path(ontology)}/sources`, "POST", input);
+  }
+  syncSource(
+    ontology: string,
+    id: string,
+    input: {
+      content?: string;
+      expectedCheckpoint?: string;
+      dryRun?: boolean;
+      expectedRevision?: number;
+    } = {},
+  ) {
+    return this.call<SyncResult>(
+      `${this.path(ontology)}/sources/${encodeURIComponent(id)}/sync`,
+      "POST",
+      input,
+    );
+  }
+  sourceRuns(ontology: string, id: string) {
+    return this.call<SyncResult[]>(
+      `${this.path(ontology)}/sources/${encodeURIComponent(id)}/runs`,
+    );
+  }
+  objectHistory(ontology: string, id: string) {
+    return this.call<unknown[]>(
+      `${this.path(ontology)}/objects/${encodeURIComponent(id)}/history`,
+    );
+  }
+  queryObjects(ontology: string, input: Partial<ObjectQuery> = {}) {
+    return this.call<Page<GraphObject>>(
+      `${this.path(ontology)}/objects/query`,
+      "POST",
+      input,
+    );
+  }
+  aggregate(
+    ontology: string,
+    input: {
+      type: string;
+      operation: "count" | "sum" | "avg" | "min" | "max";
+      property?: string;
+      filters?: ObjectQuery["filters"];
+    },
+  ) {
+    return this.call<{ count: number; value: number | null }>(
+      `${this.path(ontology)}/aggregate`,
+      "POST",
+      input,
+    );
+  }
+  reviewScenario(ontology: string, id: string) {
+    return this.call<PromotionPreview>(
+      `${this.path(ontology)}/scenarios/${encodeURIComponent(id)}/review`,
+    );
+  }
+  promoteScenario(
+    ontology: string,
+    id: string,
+    input: {
+      expectedVersion: number;
+      expectedRevision: number;
+      objects: string[];
+      relationships: string[];
+      confirm: true;
+    },
+  ) {
+    return this.call<{ revision: number; result: { id: string } }>(
+      `${this.path(ontology)}/scenarios/${encodeURIComponent(id)}/promote`,
+      "POST",
+      input,
+    );
+  }
+
+  actionTypes(ontology: string) {
+    return this.call<ActionInfo[]>(`${this.path(ontology)}/action-types`);
+  }
+  actions(ontology: string) {
+    return this.call<ActionRecord[]>(`${this.path(ontology)}/actions`);
+  }
+  action(ontology: string, id: string) {
+    return this.call<ActionRecord>(
+      `${this.path(ontology)}/actions/${encodeURIComponent(id)}`,
+    );
+  }
+  proposeAction(
+    ontology: string,
+    input: {
+      type: string;
+      input: unknown;
+      idempotencyKey: string;
+      scenario?: string;
+    },
+  ) {
+    return this.call<ActionRecord>(
+      `${this.path(ontology)}/actions`,
+      "POST",
+      input,
+    );
+  }
+  reviewAction(
+    ontology: string,
+    id: string,
+    input: { expectedVersion: number; digest: string; comment?: string },
+    approve = true,
+  ) {
+    return this.call<ActionRecord>(
+      `${this.path(ontology)}/actions/${encodeURIComponent(id)}/${approve ? "approve" : "reject"}`,
+      "POST",
+      input,
+    );
+  }
+  executeAction(
+    ontology: string,
+    id: string,
+    input: { expectedVersion: number; digest: string },
+  ) {
+    return this.call<ActionRecord>(
+      `${this.path(ontology)}/actions/${encodeURIComponent(id)}/execute`,
+      "POST",
+      input,
+    );
+  }
+  reconcileAction(ontology: string, id: string) {
+    return this.call<ActionRecord>(
+      `${this.path(ontology)}/actions/${encodeURIComponent(id)}/reconcile`,
+      "POST",
+      {},
+    );
+  }
+
+  investigate(
+    ontology: string,
+    input: {
+      question: string;
+      root?: string;
+      functionId?: string;
+      input?: unknown;
+      scenario?: string;
+      maxSteps?: number;
+    },
+  ) {
+    return this.call<Investigation>(
+      `${this.path(ontology)}/investigations`,
+      "POST",
+      input,
+    );
+  }
+  investigations(ontology: string) {
+    return this.call<Investigation[]>(`${this.path(ontology)}/investigations`);
+  }
+
+  backup(ontology: string) {
+    return this.call<BackupArchive>(`${this.path(ontology)}/backup`);
+  }
+  restore(ontology: string, archive: BackupArchive, expectedRevision: number) {
+    return this.call<{ revision: number; result: { id: string } }>(
+      `${this.path(ontology)}/restore`,
+      "POST",
+      { archive, expectedRevision, confirmOntology: ontology },
+    );
+  }
+  agentCapabilities() {
+    return this.call<{
+      mode: string;
+      approvalTools: boolean;
+      executionTools: boolean;
+    }>("/agent/capabilities");
+  }
+  functionRun(ontology: string, id: string) {
+    return this.call<FunctionRun>(
+      `${this.path(ontology)}/runs/${encodeURIComponent(id)}`,
+    );
+  }
+  createPropertyIndex(ontology: string, type: string, property: string) {
+    return this.call<{ indexed: boolean }>(
+      `${this.path(ontology)}/indexes`,
+      "POST",
+      { type, property },
+    );
   }
 }

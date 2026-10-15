@@ -1,3 +1,7 @@
+import { agentRoutes, internalAgentCredential } from "./agent-routes.js";
+import type { ModelProvider } from "../../../packages/agent/src/index.js";
+import { platformRoutes } from "./platform-routes.js";
+import { Security, type SecurityOptions } from "./security.js";
 import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import swagger from "@fastify/swagger";
@@ -32,6 +36,8 @@ import {
   ScenarioService,
   FunctionRuntime,
   type FunctionDefinition,
+  type ActionDefinition,
+  ActionService,
 } from "@graph/core";
 
 export function createApp(
@@ -40,19 +46,54 @@ export function createApp(
     logger?: boolean;
     serveWeb?: boolean;
     functions?: FunctionDefinition[];
+    actions?: ActionDefinition[];
+    modelProvider?: ModelProvider;
+    security?: SecurityOptions;
+    connectorFetch?: typeof fetch;
   } = {},
 ) {
   const app = Fastify({
     logger: options.logger ?? false,
     bodyLimit: 4 * 1024 * 1024,
   }).withTypeProvider<ZodTypeProvider>();
+  const agentCredential = internalAgentCredential();
+  const security = new Security(options.security, agentCredential);
+  app.addHook("onRequest", async (req) => {
+    security.check(req);
+  });
+  const metrics = new Map<
+    string,
+    { count: number; errors: number; totalMs: number }
+  >();
+  app.addHook("onResponse", async (req, reply) => {
+    const key = req.method + " " + (req.routeOptions.url ?? "unmatched");
+    const metric = metrics.get(key) ?? { count: 0, errors: 0, totalMs: 0 };
+    metric.count++;
+    metric.errors += reply.statusCode >= 400 ? 1 : 0;
+    metric.totalMs += reply.elapsedTime;
+    metrics.set(key, metric);
+  });
+  app.addHook("preHandler", async (req) => {
+    const principal = security.principal(req);
+    if (
+      req.method === "POST" &&
+      req.url === "/api/ontologies" &&
+      principal.ontologies &&
+      !principal.ontologies.includes((req.body as { id: string }).id)
+    )
+      throw new PlatformError(403, "Credential cannot register this ontology");
+  });
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   app.register(swagger, {
     openapi: {
+      components: {
+        securitySchemes: { bearerAuth: { type: "http", scheme: "bearer" } },
+      },
+      security: [{ bearerAuth: [] }],
       info: {
         title: "Graph Operational Ontology API",
-        version: "0.2.0",
+        version: "0.3.0",
         description:
           "Typed ontologies, connected objects, isolated scenarios, and deterministic domain functions. Trusted local workspace.",
       },
@@ -71,14 +112,12 @@ export function createApp(
           ? error.validation
           : undefined;
     if (issues)
-      return reply
-        .status(400)
-        .send({
-          code: "VALIDATION_ERROR",
-          message: "Invalid request",
-          issues,
-          requestId: request.id,
-        });
+      return reply.status(400).send({
+        code: "VALIDATION_ERROR",
+        message: "Invalid request",
+        issues,
+        requestId: request.id,
+      });
     const status =
       error instanceof PlatformError
         ? error.statusCode
@@ -87,24 +126,23 @@ export function createApp(
           : 500;
     const safeStatus = status >= 400 && status < 600 ? status : 500;
     if (safeStatus >= 500) request.log.error(error);
-    return reply
-      .status(safeStatus)
-      .send({
-        code:
-          (
-            {
-              404: "NOT_FOUND",
-              409: "CONFLICT",
-              422: "DOMAIN_VALIDATION_ERROR",
-            } as Record<number, string>
-          )[safeStatus] ??
-          (safeStatus >= 500 ? "INTERNAL_ERROR" : "BAD_REQUEST"),
-        message:
-          safeStatus < 500 && error instanceof Error
-            ? error.message
-            : "Graph operation failed",
-        requestId: request.id,
-      });
+    return reply.status(safeStatus).send({
+      code:
+        (
+          {
+            401: "UNAUTHORIZED",
+            403: "FORBIDDEN",
+            404: "NOT_FOUND",
+            409: "CONFLICT",
+            422: "DOMAIN_VALIDATION_ERROR",
+          } as Record<number, string>
+        )[safeStatus] ?? (safeStatus >= 500 ? "INTERNAL_ERROR" : "BAD_REQUEST"),
+      message:
+        safeStatus < 500 && error instanceof Error
+          ? error.message
+          : "Graph operation failed",
+      requestId: request.id,
+    });
   });
   const scenarios = new ScenarioService(store);
   const functions = new FunctionRuntime(
@@ -115,7 +153,25 @@ export function createApp(
   const ontologyParams = z.object({ ontology: identifier });
   const recordParams = ontologyParams.extend({ id: identifier });
   const scenarioParams = ontologyParams.extend({ scenario: identifier });
+  const actions = new ActionService(store, scenarios, options.actions ?? []);
   app.after(() => {
+    platformRoutes(
+      app,
+      store,
+      scenarios,
+      security,
+      options.connectorFetch,
+      actions,
+    );
+    app.get("/api/metrics", { schema: { tags: ["Operations"] } }, () => ({
+      uptimeSeconds: process.uptime(),
+      routes: [...metrics].map(([route, m]) => ({
+        route,
+        ...m,
+        meanMs: m.totalMs / m.count,
+      })),
+    }));
+    agentRoutes(app, store, agentCredential.token, options.modelProvider);
     app.get("/api/openapi.json", { schema: { hide: true } }, () =>
       app.swagger(),
     );
@@ -137,7 +193,12 @@ export function createApp(
           summary: "List registered ontology schemas",
         },
       },
-      () => store.listOntologies(),
+      async (req) => {
+        const principal = security.principal(req);
+        return (await store.listOntologies()).filter(
+          (o) => !principal.ontologies || principal.ontologies.includes(o.id),
+        );
+      },
     );
     app.post(
       "/api/ontologies",
@@ -508,13 +569,11 @@ export function createApp(
       !options.serveWeb ||
       !existsSync(webRoot)
     )
-      return reply
-        .code(404)
-        .send({
-          code: "NOT_FOUND",
-          message: "Route not found",
-          requestId: req.id,
-        });
+      return reply.code(404).send({
+        code: "NOT_FOUND",
+        message: "Route not found",
+        requestId: req.id,
+      });
     return reply.sendFile("index.html");
   });
   return app;

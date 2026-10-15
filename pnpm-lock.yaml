@@ -19,6 +19,9 @@ importers:
       "@xyflow/react":
         specifier: ^12.8.5
         version: 12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      csv-parse:
+        specifier: ^6.2.1
+        version: 6.2.1
       falkordb:
         specifier: ^6.2.0
         version: 6.8.0
@@ -75,11 +78,21 @@ importers:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@24.19.2)(supports-color@8.1.1)(tsx@4.23.15)(yaml@2.9.1)
 
-  packages/contracts: {}
+  packages/agent: {}
+
+  packages/contracts:
+    dependencies:
+      zod:
+        specifier: ^4.2.0
+        version: 4.6.7
 
   packages/core: {}
 
-  packages/sdk: {}
+  packages/sdk:
+    dependencies:
+      "@graph/contracts":
+        specifier: workspace:*
+        version: link:../contracts
 
 packages:
   "@babel/code-frame@7.29.7":
@@ -1259,6 +1272,12 @@ packages:
     resolution:
       {
         integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==,
+      }
+
+  csv-parse@6.2.1:
+    resolution:
+      {
+        integrity: sha512-LRLMV+UCyfMokp8Wb411duBf1gaBKJfOfBWU9eHMJ+b+cJYZsNu3AFmjJf3+yPGd59Exz1TsMjaSFyxnYB9+IQ==,
       }
 
   d3-color@3.1.0:
@@ -3045,6 +3064,8 @@ snapshots:
       which: 2.0.2
 
   csstype@3.2.3: {}
+
+  csv-parse@6.2.1: {}
 
   d3-color@3.1.0: {}
 

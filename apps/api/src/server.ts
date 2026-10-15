@@ -1,3 +1,6 @@
+import { CompatibleModelProvider } from "../../../packages/agent/src/index.js";
+import { githubRecoveryAction } from "../../../examples/semiconductor/actions/github.js";
+import { credentialSchema } from "./security.js";
 import { platformFunctions } from "./extensions.js";
 import { FalkorDB } from "falkordb";
 import { GraphStore } from "@graph/core";
@@ -13,10 +16,32 @@ const db = await FalkorDB.connect({
 });
 const store = new GraphStore(db, process.env.GRAPH_NAME ?? "graph");
 await store.initialize();
+await store.backfillNativeProperties();
 const app = createApp(store, {
   logger: true,
   serveWeb: true,
   functions: platformFunctions,
+  modelProvider:
+    process.env.GRAPH_AGENT_BASE_URL && process.env.GRAPH_AGENT_MODEL
+      ? new CompatibleModelProvider({
+          baseUrl: process.env.GRAPH_AGENT_BASE_URL,
+          model: process.env.GRAPH_AGENT_MODEL,
+          apiKey: process.env.GRAPH_AGENT_API_KEY,
+        })
+      : undefined,
+  actions: [
+    githubRecoveryAction({
+      repository: process.env.GRAPH_ACTION_REPOSITORY,
+      token: process.env.GITHUB_TOKEN,
+    }),
+  ],
+  security: {
+    tokens: JSON.parse(process.env.GRAPH_API_TOKENS ?? "[]").map(
+      (value: unknown) => credentialSchema.parse(value),
+    ),
+    allowedHosts: process.env.GRAPH_ALLOWED_HOSTS?.split(","),
+    allowedOrigins: process.env.GRAPH_ALLOWED_ORIGINS?.split(","),
+  },
 });
 app.addHook("onClose", () => store.close());
 for (const signal of ["SIGINT", "SIGTERM"])

@@ -33,6 +33,7 @@ const definitions = [
   ["Team", "Accountable engineering team"],
   ["Customer", "Synthetic customer commitment"],
   ["Launch", "Commercial launch milestone"],
+  ["Repository", "Public source-code repository"],
 ];
 const links = [
   ["REQUIRES", "Product", "Component"],
@@ -45,31 +46,49 @@ const links = [
   ["COMMITS_TO", "Launch", "Customer"],
   ["ALTERNATIVE", "Supplier", "Supplier"],
   ["FALLBACK", "Release", "Release"],
+  ["DEPENDS_ON", "Test", "Test"],
+  ["QUALIFIED_FOR", "Supplier", "Component"],
 ];
 const extraProperties: Record<
   string,
-  Record<string, { type: "number" | "string"; required: boolean }>
+  Record<string, { type: "number" | "string" | "boolean"; required: boolean }>
 > = {
   Product: {
     architecture: { type: "string", required: false },
     integrationDays: { type: "number", required: false },
+    demandUnits: { type: "number", required: false },
+    requiredFeatureLevel: { type: "number", required: false },
   },
-  Component: { assemblyDays: { type: "number", required: false } },
-  Supplier: Object.fromEntries(
-    [
-      "riskPoints",
-      "costUSD",
-      "expeditedLeadDays",
-      "expeditedRiskPoints",
-      "expeditedCostUSD",
-    ].map((name) => [name, { type: "number" as const, required: false }]),
-  ),
+  Component: {
+    assemblyDays: { type: "number", required: false },
+    inventoryUnits: { type: "number", required: false },
+    unitsPerProduct: { type: "number", required: false },
+  },
+  Supplier: {
+    qualified: { type: "boolean", required: false },
+    ...Object.fromEntries(
+      [
+        "dailyCapacity",
+        "riskPoints",
+        "costUSD",
+        "expeditedLeadDays",
+        "expeditedRiskPoints",
+        "expeditedCostUSD",
+      ].map((name) => [name, { type: "number" as const, required: false }]),
+    ),
+  },
   Release: {
     architecture: { type: "string", required: false },
     validationDays: { type: "number", required: false },
     riskPoints: { type: "number", required: false },
     repairCostUSD: { type: "number", required: false },
+    featureLevel: { type: "number", required: false },
   },
+  Test: {
+    durationDays: { type: "number", required: false },
+    requiresHardware: { type: "boolean", required: false },
+  },
+  Repository: { url: { type: "string", required: false } },
   Issue: { fixDays: { type: "number", required: false } },
 };
 const ontology = {
@@ -104,46 +123,63 @@ const data = {
     object("aquila-x900", "Product", "Aquila X900", "at-risk", {
       architecture: "Borealis",
       integrationDays: 5,
+      demandUnits: 1000,
+      requiredFeatureLevel: 2,
     }),
     object("aquila-x700", "Product", "Aquila X700", "ready", {
       architecture: "Borealis",
       integrationDays: 5,
+      demandUnits: 1000,
+      requiredFeatureLevel: 2,
     }),
     object("advanced-package", "Component", "Advanced package", "delayed", {
-      assemblyDays: 5,
+      assemblyDays: 3,
+      inventoryUnits: 400,
+      unitsPerProduct: 1,
     }),
     object("standard-package", "Component", "Standard package", "ready", {
       assemblyDays: 3,
+      inventoryUnits: 500,
+      unitsPerProduct: 1,
     }),
     object("northstar", "Supplier", "Northstar Packaging", "delayed", {
       leadDays: 28,
+      dailyCapacity: 300,
+      qualified: true,
       riskPoints: 1,
       costUSD: 0,
-      expeditedLeadDays: 10,
+      expeditedLeadDays: 8,
       expeditedRiskPoints: 4,
       expeditedCostUSD: 180000,
     }),
     object("meridian", "Supplier", "Meridian Packaging", "available", {
       leadDays: 7,
+      dailyCapacity: 300,
+      qualified: true,
       riskPoints: 2,
       costUSD: 65000,
     }),
     object("driver-26-10", "Release", "Driver 26.10", "blocked", {
       architecture: "Borealis",
-      validationDays: 5,
+      validationDays: 3,
+      featureLevel: 3,
       riskPoints: 2,
       repairCostUSD: 30000,
     }),
     object("driver-26-09", "Release", "Driver 26.09", "validated", {
       architecture: "Borealis",
       validationDays: 0,
+      featureLevel: 2,
       riskPoints: 4,
       repairCostUSD: 0,
     }),
     object("gpu-142", "Issue", "GPU-142 · memory regression", "open", {
       fixDays: 10,
     }),
-    object("memory-validation", "Test", "Memory residency suite", "failed"),
+    object("memory-validation", "Test", "Memory residency suite", "failed", {
+      durationDays: 2,
+      requiresHardware: true,
+    }),
     object("graphics-team", "Team", "Graphics systems", "assigned"),
     object("launch-x900", "Launch", "X900 launch · Nov 5", "at-risk", {
       daysRemaining: 21,
@@ -166,6 +202,9 @@ const data = {
     relationship("r12", "SUPPLIED_BY", "standard-package", "meridian"),
     relationship("r13", "NEEDS_RELEASE", "aquila-x700", "driver-26-09"),
     relationship("r14", "FALLBACK", "driver-26-10", "driver-26-09"),
+    relationship("r15", "QUALIFIED_FOR", "northstar", "advanced-package"),
+    relationship("r16", "QUALIFIED_FOR", "meridian", "advanced-package"),
+    relationship("r17", "QUALIFIED_FOR", "meridian", "standard-package"),
   ],
 };
 writeFileSync(

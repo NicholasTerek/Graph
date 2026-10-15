@@ -1,1 +1,1 @@
-{"name":"@graph/sdk","private":true,"type":"module","exports":"./src/index.ts"}
+{"name":"@graph/sdk","version":"0.3.0","type":"module","license":"MIT","files":["dist","README.md","LICENSE"],"exports":{".":{"types":"./dist/index.d.ts","import":"./dist/index.js"}},"dependencies":{"@graph/contracts":"workspace:*"}}

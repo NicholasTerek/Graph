@@ -1,3 +1,4 @@
+import Operations from "./Operations.js";
 import { workspaceExtensions } from "../../../examples/workspaces.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -34,7 +35,9 @@ import type {
 import "@xyflow/react/dist/style.css";
 import "./style.css";
 
-const client = new GraphClient();
+const client = new GraphClient("", (...args) => fetch(...args), {
+  token: () => sessionStorage.getItem("graph-api-token") ?? undefined,
+});
 const colors = [
   "#86d8bd",
   "#c9b5f7",
@@ -77,9 +80,14 @@ function App() {
   const [search, setSearch] = useState("");
   const [depth, setDepth] = useState(3);
   const [direction, setDirection] = useState<Traversal["direction"]>("both");
+  const [apiToken, setApiToken] = useState(
+    sessionStorage.getItem("graph-api-token") ?? "",
+  );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState<"graph" | "schema" | "application">("graph");
+  const [mode, setMode] = useState<
+    "graph" | "schema" | "application" | "operations"
+  >("graph");
   const requestId = useRef(0);
   const upload = useRef<HTMLInputElement>(null);
   const schemaUpload = useRef<HTMLInputElement>(null);
@@ -253,6 +261,13 @@ function App() {
             {extension.label}
           </button>
         )}
+        <button
+          className={`nav-item ${mode === "operations" ? "active" : ""}`}
+          onClick={() => setMode("operations")}
+        >
+          <Database size={17} />
+          Operations console
+        </button>
         <a
           className="nav-item"
           href="/api/docs"
@@ -296,10 +311,35 @@ function App() {
             Workspace <ChevronRight size={13} />
             <span>{ontology?.name ?? "Get started"}</span>
           </div>
-          <span className="version">FOUNDATION / 01</span>
+          <details className="api-credential">
+            <summary>API access</summary>
+            <label>
+              Session API token
+              <input
+                type="password"
+                value={apiToken}
+                onChange={(e) => setApiToken(e.target.value)}
+              />
+            </label>
+            <button
+              onClick={() => {
+                if (apiToken)
+                  sessionStorage.setItem("graph-api-token", apiToken);
+                else sessionStorage.removeItem("graph-api-token");
+                void loadOntologies().catch((e) => setError(e.message));
+              }}
+            >
+              Apply credential
+            </button>
+          </details>
         </header>
-        {mode === "application" && WorkspaceApplication ? (
-          <WorkspaceApplication client={client} />
+        {mode === "operations" ? (
+          <Operations client={client} ontology={ontologyId} />
+        ) : mode === "application" && WorkspaceApplication ? (
+          <WorkspaceApplication
+            client={client}
+            onOpenOperations={() => setMode("operations")}
+          />
         ) : (
           <>
             <section className="page-heading">

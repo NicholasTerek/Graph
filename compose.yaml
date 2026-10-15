@@ -24,6 +24,14 @@ services:
       FALKORDB_HOST: falkordb
       FALKORDB_PORT: 6379
       GRAPH_NAME: graph
+      GRAPH_API_TOKENS: ${GRAPH_API_TOKENS:-[]}
+      GRAPH_ALLOWED_HOSTS: ${GRAPH_ALLOWED_HOSTS:-}
+      GRAPH_ALLOWED_ORIGINS: ${GRAPH_ALLOWED_ORIGINS:-}
+      GRAPH_ACTION_REPOSITORY: ${GRAPH_ACTION_REPOSITORY:-NicholasTerek/Graph}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GRAPH_AGENT_BASE_URL: ${GRAPH_AGENT_BASE_URL:-}
+      GRAPH_AGENT_MODEL: ${GRAPH_AGENT_MODEL:-}
+      GRAPH_AGENT_API_KEY: ${GRAPH_AGENT_API_KEY:-}
       HOST: 0.0.0.0
     depends_on:
       falkordb:
@@ -39,5 +47,14 @@ services:
       interval: 5s
       timeout: 4s
       retries: 20
+  ollama:
+    image: ollama/ollama:0.11.11
+    profiles: [local-ai]
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - graph-models:/root/.ollama
+
 volumes:
   graph-data:
+  graph-models:

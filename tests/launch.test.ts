@@ -26,7 +26,7 @@ describe("GPU launch model constraints", () => {
     expect(result.recommendation.riskPoints).toBe(4);
   });
   it("changes the supplier decision at the exact deadline boundary", () => {
-    expect(evaluate({ meridian: { leadDays: 11 } }).recommendation.id).toBe(
+    expect(evaluate({ meridian: { leadDays: 9 } }).recommendation.id).toBe(
       "meridian_driver-26-10",
     );
     expect(evaluate({ meridian: { leadDays: 12 } }).recommendation.id).toBe(
@@ -56,4 +56,26 @@ describe("GPU launch model constraints", () => {
     evaluate();
     expect(JSON.stringify(fixture)).toBe(before);
   });
+});
+
+it("rejects unqualified suppliers and insufficient driver features as hard constraints", () => {
+  const data = structuredClone(fixture);
+  data.objects.find((o) => o.id === "meridian")!.properties.qualified = false;
+  data.objects.find((o) => o.id === "driver-26-09")!.properties.featureLevel =
+    1;
+  const result = calculateLaunch(
+    { graph: new GraphView(data), revision: 1, scenarioId: null },
+    { productId: "aquila-x900" },
+  );
+  expect(result.recommendation.hardware[0].supplierId).toBe("northstar");
+  expect(
+    result.plans
+      .filter((p) => p.hardware[0].supplierId === "meridian")
+      .every((p) => !p.eligible),
+  ).toBe(true);
+  expect(
+    result.plans
+      .filter((p) => p.releaseId === "driver-26-09")
+      .every((p) => !p.eligible),
+  ).toBe(true);
 });

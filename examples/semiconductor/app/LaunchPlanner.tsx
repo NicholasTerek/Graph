@@ -1,3 +1,4 @@
+import RecoveryWorkflow from "./RecoveryWorkflow.js";
 import { useEffect, useRef, useState } from "react";
 import {
   Activity,
@@ -28,7 +29,13 @@ const usd = (amount: number) =>
     maximumFractionDigits: 0,
   }).format(amount);
 const ontology = "semiconductor";
-export default function LaunchPlanner({ client }: { client: GraphClient }) {
+export default function LaunchPlanner({
+  client,
+  onOpenOperations,
+}: {
+  client: GraphClient;
+  onOpenOperations?: () => void;
+}) {
   const [state, setState] = useState<GraphState | null>(null);
   const [run, setRun] = useState<
     (FunctionRun & { output: LaunchResult }) | null
@@ -40,12 +47,31 @@ export default function LaunchPlanner({ client }: { client: GraphClient }) {
   const [lead, setLead] = useState(7);
   const [repair, setRepair] = useState(10);
   const [expedite, setExpedite] = useState(10);
+  const [capacity, setCapacity] = useState(300);
+  const [qualified, setQualified] = useState(true);
+  const [demand, setDemand] = useState(1000);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
   const [evidence, setEvidence] = useState<string | null>(null);
   const token = useRef(0);
   const result = run?.output;
   function assumptions(graph: GraphState) {
+    setCapacity(
+      Number(
+        graph.objects.find((o) => o.id === "meridian")?.properties
+          .dailyCapacity,
+      ),
+    );
+    setQualified(
+      graph.objects.find((o) => o.id === "meridian")?.properties.qualified ===
+        true,
+    );
+    setDemand(
+      Number(
+        graph.objects.find((o) => o.id === "aquila-x900")?.properties
+          .demandUnits,
+      ),
+    );
     setLead(
       Number(
         graph.objects.find((o) => o.id === "meridian")?.properties.leadDays,
@@ -135,6 +161,17 @@ export default function LaunchPlanner({ client }: { client: GraphClient }) {
       setError("Enter finite durations between 0 and 90 days.");
       return;
     }
+    if (
+      !Number.isFinite(capacity) ||
+      capacity < 0 ||
+      capacity > 1000000 ||
+      !Number.isFinite(demand) ||
+      demand < 1 ||
+      demand > 1000000
+    ) {
+      setError("Demand and capacity must be valid nonnegative quantities.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -147,32 +184,34 @@ export default function LaunchPlanner({ client }: { client: GraphClient }) {
           description:
             "Packaging and driver recovery assumptions for Aquila X900.",
         }));
-      const changes = [
+      const changes: {
+        id: string;
+        key: string;
+        value: string | number | boolean;
+      }[] = [
+        { id: "meridian", key: "dailyCapacity", value: capacity },
+        { id: "meridian", key: "qualified", value: qualified },
+        { id: "aquila-x900", key: "demandUnits", value: demand },
         { id: "meridian", key: "leadDays", value: lead },
         { id: "gpu-142", key: "fixDays", value: repair },
         { id: "northstar", key: "expeditedLeadDays", value: expedite },
       ];
-      const objects = changes.flatMap((change) => {
-        const object = state.objects.find((o) => o.id === change.id);
-        if (!object)
-          throw new Error(`Missing ${change.id}; reload the example dataset`);
-        return object.properties[change.key] === change.value
-          ? []
-          : [
-              {
-                ...object,
-                properties: {
-                  ...object.properties,
-                  [change.key]: change.value,
-                },
-                provenance: {
-                  source: `scenario:${branch.id}`,
-                  externalId: object.id,
-                  observedAt: new Date().toISOString(),
-                },
-              },
-            ];
-      });
+      const changed = new Map<string, GraphState["objects"][number]>();
+      for (const change of changes) {
+        const base = state.objects.find((o) => o.id === change.id);
+        if (!base) throw new Error("Missing example data: " + change.id);
+        const object = changed.get(change.id) ?? structuredClone(base);
+        if (object.properties[change.key] !== change.value) {
+          object.properties[change.key] = change.value;
+          object.provenance = {
+            source: "scenario:" + branch.id,
+            externalId: object.id,
+            observedAt: new Date().toISOString(),
+          };
+          changed.set(object.id, object);
+        }
+      }
+      const objects = [...changed.values()];
       branch = await client.editScenario(ontology, branch.id, {
         objects,
         expectedVersion: branch.version,
@@ -280,9 +319,11 @@ export default function LaunchPlanner({ client }: { client: GraphClient }) {
                 {result.recommendation.label}
               </h2>
               <p>
-                {result.recommendation.feasible
-                  ? `Feasible with ${result.deadlineDays - result.recommendation.readyDays} days of modeled slack.`
-                  : `No on-time option under these assumptions. Earliest recommended delay: ${result.recommendation.delayDays} days.`}
+                {!result.recommendation.eligible
+                  ? "No eligible recovery plan: review qualification, capacity and driver constraints."
+                  : result.recommendation.feasible
+                    ? `Feasible with ${result.deadlineDays - result.recommendation.readyDays} days of modeled slack.`
+                    : `No on-time option under these assumptions. Earliest recommended delay: ${result.recommendation.delayDays} days.`}
               </p>
               <div className="decision-foot">
                 <span>
@@ -308,6 +349,7 @@ export default function LaunchPlanner({ client }: { client: GraphClient }) {
               <div>
                 Hardware {result.baseline.hardwareReadyDays}d · software{" "}
                 {result.baseline.softwareReadyDays}d<br />+{" "}
+                {result.baseline.validationDays}d hardware validation +{" "}
                 {result.baseline.integrationDays}d final integration
               </div>
             </div>
@@ -379,6 +421,49 @@ export default function LaunchPlanner({ client }: { client: GraphClient }) {
                   days
                 </span>
               </label>
+              <details className="hard-constraints">
+                <summary>Inventory & qualification constraints</summary>
+                <label>
+                  Launch demand{" "}
+                  <input
+                    aria-label="Launch demand units"
+                    type="number"
+                    min="1"
+                    value={Number.isNaN(demand) ? "" : demand}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setDemand(
+                        e.target.value === "" ? NaN : Number(e.target.value),
+                      )
+                    }
+                  />
+                </label>
+                <label>
+                  Meridian units/day{" "}
+                  <input
+                    aria-label="Meridian daily capacity"
+                    type="number"
+                    min="0"
+                    value={Number.isNaN(capacity) ? "" : capacity}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setCapacity(
+                        e.target.value === "" ? NaN : Number(e.target.value),
+                      )
+                    }
+                  />
+                </label>
+                <label>
+                  Meridian qualified{" "}
+                  <input
+                    aria-label="Meridian qualification"
+                    type="checkbox"
+                    checked={qualified}
+                    disabled={busy}
+                    onChange={(e) => setQualified(e.target.checked)}
+                  />
+                </label>
+              </details>
               <button
                 className="primary-button evaluate"
                 disabled={busy}
@@ -515,7 +600,11 @@ export default function LaunchPlanner({ client }: { client: GraphClient }) {
                           <span
                             className={`feasibility ${plan.feasible ? "feasible" : ""}`}
                           >
-                            {plan.feasible ? "On time" : `+${plan.delayDays}d`}
+                            {!plan.eligible
+                              ? "Blocked"
+                              : plan.feasible
+                                ? "On time"
+                                : `+${plan.delayDays}d`}
                           </span>
                         </td>
                       </tr>
@@ -529,6 +618,59 @@ export default function LaunchPlanner({ client }: { client: GraphClient }) {
               </div>
             </section>
           </div>
+          <section className="operation-card critical-schedule">
+            <div className="section-kicker">
+              CRITICAL PATH / RECOMMENDED PLAN
+            </div>
+            <h2>From missing units to validated hardware.</h2>
+            <p>
+              {result.demandUnits} launch units ·{" "}
+              {result.recommendation.hardware
+                .map(
+                  (h) =>
+                    h.inventoryUnits +
+                    " in stock, " +
+                    h.shortageUnits +
+                    " to produce at " +
+                    h.dailyCapacity +
+                    "/day",
+                )
+                .join(" · ")}
+            </p>
+            {result.recommendation.tasks.map((task) => (
+              <div
+                className={`schedule-row ${task.critical ? "critical" : ""}`}
+                key={task.id}
+              >
+                <span>{task.label}</span>
+                <div>
+                  <i
+                    style={{
+                      marginLeft: `${(task.start / result.recommendation.readyDays) * 100}%`,
+                      width: `${Math.max(1, (task.duration / result.recommendation.readyDays) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <small>
+                  {task.start}–{task.end}d
+                </small>
+              </div>
+            ))}
+            <div className="constraint-results">
+              {result.recommendation.constraints.map((c) => (
+                <span key={c.code} className={c.passed ? "passed" : "failed"}>
+                  {c.passed ? "✓" : "✕"} {c.message}
+                </span>
+              ))}
+            </div>
+          </section>
+          <RecoveryWorkflow
+            client={client}
+            run={run}
+            scenario={scenario?.id}
+            onChanged={() => void refreshLive()}
+            onOpenOperations={onOpenOperations}
+          />
           <section className="evidence-panel">
             <div className="section-kicker">
               <Database size={16} />

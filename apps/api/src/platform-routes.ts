@@ -1,0 +1,216 @@
+import type { FastifyInstance } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod";
+import {
+  restoreInput,
+  actionProposal,
+  actionReview,
+  actionExecute,
+  identifier,
+  sourceSchema,
+  syncInput,
+  promotionInput,
+  objectQuery,
+  aggregationInput,
+} from "@graph/contracts";
+import {
+  GraphStore,
+  PlatformError,
+  SourceService,
+  ScenarioService,
+  PromotionService,
+  BackupService,
+  ActionService,
+} from "@graph/core";
+import type { Security } from "./security.js";
+export function platformRoutes(
+  instance: FastifyInstance,
+  store: GraphStore,
+  scenarios: ScenarioService,
+  security: Security,
+  request?: typeof fetch,
+  actions?: ActionService,
+) {
+  const app = instance.withTypeProvider<ZodTypeProvider>();
+  const sources = new SourceService(store, request);
+  const promotion = new PromotionService(store, scenarios);
+  const backup = new BackupService(store);
+  const params = z.object({ ontology: identifier });
+  const record = params.extend({ id: identifier });
+  app.get(
+    "/api/ontologies/:ontology/sources",
+    { schema: { tags: ["Sources"], params } },
+    (req) => sources.list(req.params.ontology),
+  );
+  app.post(
+    "/api/ontologies/:ontology/sources",
+    { schema: { tags: ["Sources"], params, body: sourceSchema } },
+    (req) => sources.register(req.params.ontology, req.body),
+  );
+  app.post(
+    "/api/ontologies/:ontology/sources/:id/sync",
+    { schema: { tags: ["Sources"], params: record, body: syncInput } },
+    (req) => sources.sync(req.params.ontology, req.params.id, req.body),
+  );
+  app.get(
+    "/api/ontologies/:ontology/sources/:id/runs",
+    { schema: { tags: ["Sources"], params: record } },
+    (req) => sources.history(req.params.ontology, req.params.id),
+  );
+  app.get(
+    "/api/ontologies/:ontology/objects/:id/history",
+    { schema: { tags: ["Objects"], params: record } },
+    (req) => store.history(req.params.ontology, req.params.id),
+  );
+  app.post(
+    "/api/ontologies/:ontology/objects/query",
+    { schema: { tags: ["Objects"], params, body: objectQuery } },
+    (req) => store.queryObjects(req.params.ontology, req.body),
+  );
+  app.post(
+    "/api/ontologies/:ontology/aggregate",
+    { schema: { tags: ["Objects"], params, body: aggregationInput } },
+    (req) =>
+      store.exclusive(() => store.aggregate(req.params.ontology, req.body)),
+  );
+  app.post(
+    "/api/ontologies/:ontology/indexes",
+    {
+      schema: {
+        tags: ["Objects"],
+        params,
+        body: z.object({ type: identifier, property: identifier }).strict(),
+      },
+    },
+    (req) =>
+      store.createPropertyIndex(
+        req.params.ontology,
+        req.body.type,
+        req.body.property,
+      ),
+  );
+  app.get(
+    "/api/ontologies/:ontology/scenarios/:id/review",
+    { schema: { tags: ["Scenarios"], params: record } },
+    (req) => promotion.review(req.params.ontology, req.params.id),
+  );
+  app.post(
+    "/api/ontologies/:ontology/scenarios/:id/promote",
+    { schema: { tags: ["Scenarios"], params: record, body: promotionInput } },
+    (req) =>
+      promotion.promote(
+        req.params.ontology,
+        req.params.id,
+        req.body,
+        security.principal(req).name,
+      ),
+  );
+  if (actions) {
+    app.get(
+      "/api/ontologies/:ontology/action-types",
+      { schema: { tags: ["Actions"], params } },
+      (req) => actions.list(req.params.ontology),
+    );
+    app.get(
+      "/api/ontologies/:ontology/actions",
+      { schema: { tags: ["Actions"], params } },
+      (req) => actions.records(req.params.ontology),
+    );
+    app.post(
+      "/api/ontologies/:ontology/actions",
+      { schema: { tags: ["Actions"], params, body: actionProposal } },
+      (req) =>
+        actions.propose(
+          req.params.ontology,
+          req.body,
+          security.principal(req).name,
+        ),
+    );
+    app.get(
+      "/api/ontologies/:ontology/actions/:id",
+      { schema: { tags: ["Actions"], params: record } },
+      (req) => actions.get(req.params.ontology, req.params.id),
+    );
+    for (const decision of ["approve", "reject"])
+      app.post(
+        `/api/ontologies/:ontology/actions/:id/${decision}`,
+        { schema: { tags: ["Actions"], params: record, body: actionReview } },
+        (req) =>
+          actions.review(
+            req.params.ontology,
+            req.params.id,
+            req.body,
+            decision === "approve",
+            security.principal(req).name,
+          ),
+      );
+    app.post(
+      "/api/ontologies/:ontology/actions/:id/execute",
+      { schema: { tags: ["Actions"], params: record, body: actionExecute } },
+      (req) =>
+        actions.execute(
+          req.params.ontology,
+          req.params.id,
+          req.body,
+          security.principal(req).name,
+        ),
+    );
+    app.post(
+      "/api/ontologies/:ontology/actions/:id/reconcile",
+      {
+        schema: {
+          tags: ["Actions"],
+          params: record,
+          body: z.object({}).strict(),
+        },
+      },
+      (req) => actions.reconcile(req.params.ontology, req.params.id),
+    );
+  }
+
+  app.get(
+    "/api/ontologies/:ontology/backup",
+    { schema: { tags: ["Operations"], params } },
+    (req) => backup.export(req.params.ontology),
+  );
+  app.post(
+    "/api/ontologies/:ontology/restore",
+    { schema: { tags: ["Operations"], params, body: restoreInput } },
+    (req) =>
+      backup.restore(
+        req.params.ontology,
+        req.body,
+        security.principal(req).name,
+      ),
+  );
+  app.get(
+    "/api/ontologies/:ontology/runs/:id",
+    { schema: { tags: ["Functions"], params: record } },
+    async (req) => {
+      const run = await store.document(
+        "run",
+        req.params.ontology,
+        req.params.id,
+      );
+      if (!run) throw new PlatformError(404, "Function run not found");
+      return run;
+    },
+  );
+  app.get(
+    "/api/ontologies/:ontology/objects/:id/provenance",
+    { schema: { tags: ["Objects"], params: record } },
+    async (req) => ({
+      current: (await store.object(req.params.ontology, req.params.id))
+        .provenance,
+      contributors: (await sources.list(req.params.ontology))
+        .filter((source) => source.managed[req.params.id])
+        .map((source) => ({
+          source: source.id,
+          externalId: source.managed[req.params.id].externalId,
+          fields: Object.keys(source.managed[req.params.id].fields),
+          lastSyncedAt: source.lastSyncedAt,
+        })),
+      history: await store.history(req.params.ontology, req.params.id),
+    }),
+  );
+}

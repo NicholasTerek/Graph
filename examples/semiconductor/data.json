@@ -7,7 +7,9 @@
         "name": "Aquila X900",
         "status": "at-risk",
         "architecture": "Borealis",
-        "integrationDays": 5
+        "integrationDays": 5,
+        "demandUnits": 1000,
+        "requiredFeatureLevel": 2
       },
       "provenance": {
         "source": "synthetic-demo",
@@ -22,7 +24,9 @@
         "name": "Aquila X700",
         "status": "ready",
         "architecture": "Borealis",
-        "integrationDays": 5
+        "integrationDays": 5,
+        "demandUnits": 1000,
+        "requiredFeatureLevel": 2
       },
       "provenance": {
         "source": "synthetic-demo",
@@ -36,7 +40,9 @@
       "properties": {
         "name": "Advanced package",
         "status": "delayed",
-        "assemblyDays": 5
+        "assemblyDays": 3,
+        "inventoryUnits": 400,
+        "unitsPerProduct": 1
       },
       "provenance": {
         "source": "synthetic-demo",
@@ -50,7 +56,9 @@
       "properties": {
         "name": "Standard package",
         "status": "ready",
-        "assemblyDays": 3
+        "assemblyDays": 3,
+        "inventoryUnits": 500,
+        "unitsPerProduct": 1
       },
       "provenance": {
         "source": "synthetic-demo",
@@ -65,9 +73,11 @@
         "name": "Northstar Packaging",
         "status": "delayed",
         "leadDays": 28,
+        "dailyCapacity": 300,
+        "qualified": true,
         "riskPoints": 1,
         "costUSD": 0,
-        "expeditedLeadDays": 10,
+        "expeditedLeadDays": 8,
         "expeditedRiskPoints": 4,
         "expeditedCostUSD": 180000
       },
@@ -84,6 +94,8 @@
         "name": "Meridian Packaging",
         "status": "available",
         "leadDays": 7,
+        "dailyCapacity": 300,
+        "qualified": true,
         "riskPoints": 2,
         "costUSD": 65000
       },
@@ -100,7 +112,8 @@
         "name": "Driver 26.10",
         "status": "blocked",
         "architecture": "Borealis",
-        "validationDays": 5,
+        "validationDays": 3,
+        "featureLevel": 3,
         "riskPoints": 2,
         "repairCostUSD": 30000
       },
@@ -118,6 +131,7 @@
         "status": "validated",
         "architecture": "Borealis",
         "validationDays": 0,
+        "featureLevel": 2,
         "riskPoints": 4,
         "repairCostUSD": 0
       },
@@ -146,7 +160,9 @@
       "type": "Test",
       "properties": {
         "name": "Memory residency suite",
-        "status": "failed"
+        "status": "failed",
+        "durationDays": 2,
+        "requiresHardware": true
       },
       "provenance": {
         "source": "synthetic-demo",
@@ -360,6 +376,39 @@
       "provenance": {
         "source": "synthetic-demo",
         "externalId": "r14",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r15",
+      "type": "QUALIFIED_FOR",
+      "from": "northstar",
+      "to": "advanced-package",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r15",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r16",
+      "type": "QUALIFIED_FOR",
+      "from": "meridian",
+      "to": "advanced-package",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r16",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r17",
+      "type": "QUALIFIED_FOR",
+      "from": "meridian",
+      "to": "standard-package",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r17",
         "observedAt": "2026-10-15T00:00:00Z"
       }
     }

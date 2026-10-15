@@ -9,19 +9,25 @@
   "scripts": {
     "dev": "concurrently -k 'node --import tsx --watch apps/api/src/server.ts' 'vite apps/web --host 127.0.0.1'",
     "start": "node --import tsx apps/api/src/server.ts",
-    "build": "pnpm typecheck && vite build apps/web",
+    "build": "pnpm build:sdk && pnpm typecheck && vite build apps/web",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "seed": "node --import tsx scripts/seed.ts",
-    "test:integration": "GRAPH_INTEGRATION=1 vitest run tests/integration.test.ts tests/workflow.integration.test.ts",
+    "test:integration": "GRAPH_INTEGRATION=1 vitest run tests/*integration.test.ts",
     "test:browser": "playwright test",
-    "demo": "node --import tsx scripts/launch-demo.ts"
+    "demo": "node --import tsx scripts/launch-demo.ts",
+    "build:sdk": "tsc -p packages/contracts/tsconfig.build.json && tsc -p packages/sdk/tsconfig.build.json",
+    "backup": "node --import tsx scripts/ops/backup.ts",
+    "restore": "node --import tsx scripts/ops/restore.ts",
+    "benchmark": "node --import tsx scripts/benchmark.ts",
+    "doctor:graph": "node --import tsx scripts/ops/doctor.ts"
   },
   "dependencies": {
     "@fastify/static": "^8.3.0",
     "@fastify/swagger": "^9.9.2",
     "@fastify/swagger-ui": "^5.2.6",
     "@xyflow/react": "^12.8.5",
+    "csv-parse": "^6.2.1",
     "falkordb": "^6.2.0",
     "fastify": "^5.6.1",
     "fastify-type-provider-zod": "^7.0.0",

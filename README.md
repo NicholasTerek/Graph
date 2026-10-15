@@ -1,27 +1,102 @@
 # Graph
 
-A self-hosted operational ontology platform powered by **FalkorDB**, with a synthetic semiconductor operations example. Define your own object types and relationships, ingest records with provenance, and investigate dependencies across connected operations.
+A self-hosted operational ontology platform powered by **FalkorDB**, with an interactive GPU launch-recovery application built on its public TypeScript SDK.
 
-**Status: interactive GPU recovery workflow.** The generic ontology APIs, TypeScript SDK, pinned scenario overlays, deterministic function runtime, and semiconductor launch application are implemented. Agent orchestration and approved external actions are still planned.
+Connect disconnected operational records, investigate dependencies, calculate recovery alternatives, branch hypothetical state, review changes, and prepare approved actions. The core is domain-independent; semiconductor types, scheduling logic, UI, and GitHub action live under `examples/semiconductor`.
 
-## Run locally
+**Current scope:** a tested single-process prototype with real graph persistence, repeatable source sync, a deterministic business-function runtime, scenario promotion, bounded agent tools, reviewed actions, and an operations console. This is not a feature-complete replacement for Palantir Foundry or Helix Foundry.
 
-Requires Docker with Compose v2. All published ports bind to localhost. This is a trusted local workspace without authentication; keep it local.
+## Run
+
+Requires Docker with Compose v2:
 
 ```sh
 docker compose up --build -d
 docker compose exec app node --import tsx scripts/seed.ts
 ```
 
-Open **http://localhost:3001**, select **Aquila Semiconductor → Launch operations**, and change Meridian’s lead time from **7 to 14 days**. Click **Evaluate scenario**: the recommendation changes from Meridian packaging to expedited Northstar packaging, using calculated readiness constraints. Change driver repair from **10 to 20 days** to select the validated fallback driver. Live records remain unchanged.
+Open **http://localhost:3001**. Choose **Aquila Semiconductor → Launch operations**.
 
-The **Graph explorer** lets you click an object and trace its dependencies. Switch to City Library to explore a completely different ontology using the same core and APIs. Use **Ontology registry** to inspect schemas, the upload icon beside **Ontologies** to register a JSON schema, and **Import data** to load a JSON dataset.
+1. With Meridian lead time at **7 days**, the model recommends Meridian packaging and driver repair.
+2. Change its lead time to **14 days**, then **Evaluate scenario**. The recommendation changes to expedited Northstar.
+3. Change driver repair to **20 days** to select the compatible, previously validated fallback driver.
+4. Expand **Inventory & qualification constraints** to vary demand, capacity, or qualification. Inspect the critical-path timeline and failed constraints.
+5. Run an investigation, prepare a GitHub recovery issue, or review selected scenario changes for live promotion.
+6. Open **Operations console** for source sync, approvals, investigation history, and backups.
 
-FalkorDB data persists in the `graph-data` Docker volume with append-only persistence enabled. `docker compose down` preserves it. Re-running the seed replaces example records by stable ID; it does not duplicate them.
+All business records and costs are synthetic. The seed registers a packaging CSV feed, a driver JSON feed, and a public GitHub repository reader. It synchronizes only the bundled files; GitHub reads remain an explicit sync operation. Re-running the seed resets demo records to their supplied values and reuses stable identities.
 
-### Development
+FalkorDB uses append-only persistence in the `graph-data` volume. Published ports bind to localhost. `docker compose down` preserves data; do not add `-v` unless you intend to remove it.
 
-Requires Node.js 22+ and pnpm 11.25.0.
+## Implemented capabilities
+
+| Area | Implemented |
+|---|---|
+| Ontology | Runtime registration; typed scalar properties and endpoints; safe additive schema changes |
+| Graph API | CRUD, partial edits, cursor lists, native property predicates, aggregates, property indexes, bounded Cypher traversal |
+| Ingestion | CSV/JSON snapshots and paginated public GitHub repository/issues readers; deterministic mappings and optional cross-source identity keys |
+| Sync correctness | Preview, checksum binding, checkpoints, safe deletions, no-op replay, detection of manual changes, atomic graph/history/checkpoint writes |
+| Provenance | Current source metadata, historical before/after records, and contributing source mappings |
+| Business logic | Typed deterministic extensions, read-only graph views, discoverable schemas, persisted calculation runs |
+| Scenarios | Pinned bases shared across sibling branches, sparse overlays, object/edge diffs, version checks, selective three-way promotion |
+| Agent | Bounded tool loop through the public SDK; optional compatible model; explicit deterministic mode without a model; recorded traces and historical summaries |
+| Actions | Typed proposals, exact review digest, approval/rejection, separate execution, idempotency, failure records, uncertain-outcome reconciliation |
+| Operations | Scoped API tokens, ontology restrictions, host/origin checks, backup/restore, health diagnostics, request metrics, distributable SDK/contracts |
+
+The agent has **no approval, execution, or promotion tool**. Its internal API credential has read/write scopes only. A human must review the target and contents before an external action can execute.
+
+## Real integrations and credentials
+
+### GitHub reads and actions
+
+Source connectors read public GitHub data without sending credentials. Pull requests are excluded from issue imports. Pagination limits reject incomplete snapshots rather than deleting records based on partial data.
+
+To enable actual issue creation, set these server variables in a local `.env` file before rebuilding/restarting the app:
+
+```dotenv
+GRAPH_ACTION_REPOSITORY=your-account/your-demo-repository
+GITHUB_TOKEN=your-repository-scoped-token
+```
+
+The token needs issue-write access to the configured demonstration repository. Proposals display the exact repository, title, body, graph revision, and review digest. Approval does not execute anything. The operations console has a separate **Execute approved action** button.
+
+Without a token, execution reports a clear failure. Ambiguous network outcomes become `uncertain`; reconciliation searches for the action's unique issue marker. The system does not promise exactly-once delivery and does not blindly retry an uncertain POST. Definite failures require a newly reviewed proposal after correcting the cause. No real GitHub issue was created during development verification; the external execution path is tested against a controlled HTTP fixture.
+
+### Optional local or hosted model
+
+No model is required for graph operations, calculations, or deterministic investigation. Without one, the UI explicitly labels investigation as **deterministic tool orchestration**.
+
+To use a model supporting Chat Completions function calls:
+
+```dotenv
+GRAPH_AGENT_BASE_URL=http://ollama:11434/v1
+GRAPH_AGENT_MODEL=qwen3:4b
+GRAPH_AGENT_API_KEY=
+```
+
+The optional local model service is separate from the default stack:
+
+```sh
+docker compose --profile local-ai up -d ollama
+docker compose exec ollama ollama pull qwen3:4b
+docker compose --profile local-ai up --build -d app
+```
+
+For another compatible provider, configure its HTTPS base URL, model, and server-side key. Ollama's compatibility reference is https://docs.ollama.com/api/openai-compatibility. The adapter and tool loop are tested with controlled model responses; a live language model was not available during verification. Calls are bounded by a 60-second investigation timeout and at most 16 tool invocations. Models must support the supplied tool schemas; model quality is not guaranteed.
+
+## Access control
+
+By default, loopback requests act as `local-owner`. To require credentials, configure `GRAPH_API_TOKENS` as a JSON array in the server environment. Each entry contains `name`, a secret `token` of at least 24 characters, `scopes`, and optional `ontologies`.
+
+Supported scopes: `read`, `write`, `approve`, `execute`, and `admin`. Promotion requires write and approval; restore and index creation require admin. Invalid credentials never fall back to local-owner access. Restricted credentials cannot list or access other ontologies.
+
+The UI's **API access** control stores an entered token for the browser session. CLI scripts use `GRAPH_API_TOKEN`. Swagger UI supports bearer authorization. Credentials belong in local configuration, not source records or git.
+
+Host and Origin checks protect the local workspace. Non-loopback hosting requires explicit `GRAPH_ALLOWED_HOSTS` and `GRAPH_ALLOWED_ORIGINS` configuration and an appropriately secured deployment. These controls are a small prototype permission model, not enterprise RBAC, SSO, or property-level governance.
+
+## Development
+
+Requires Node.js 22+ and pnpm 11.25.0; verification uses Node.js 24.
 
 ```sh
 npm install --global pnpm@11.25.0
@@ -30,128 +105,83 @@ docker compose up -d falkordb
 pnpm dev
 ```
 
-In another terminal:
+In a separate terminal, run `pnpm seed`, then open http://localhost:5173. Vite proxies `/api` to port 3001. For a built frontend, `pnpm build && pnpm start` serves http://localhost:3001.
 
-```sh
-pnpm seed
+Configuration defaults are listed in `.env.example`. Export variables in your shell or use Node's `--env-file` option when starting locally; Docker Compose consumes `.env`. Database configuration includes `FALKORDB_HOST`, `FALKORDB_PORT`, optional `FALKORDB_PASSWORD`, and `GRAPH_NAME`. Scripts accept `API_URL` and `GRAPH_API_TOKEN`.
+
+## Public API and SDK
+
+- Interactive reference: **http://localhost:3001/api/docs/**
+- OpenAPI: **http://localhost:3001/api/openapi.json**
+- Developer guide: [docs/api.md](docs/api.md)
+- Operations guide: [docs/operations.md](docs/operations.md)
+- Benchmarks: [docs/benchmarks.md](docs/benchmarks.md)
+
+```ts
+import { GraphClient } from '@graph/sdk';
+
+const graph = new GraphClient('http://127.0.0.1:3001', fetch, {
+  token: process.env.GRAPH_API_TOKEN,
+});
+const baseline = await graph.snapshot('semiconductor');
+let scenario = await graph.createScenario('semiconductor', {
+  id: 'supplier-investigation', name: 'Alternative takes 14 days',
+  expectedRevision: baseline.revision,
+});
+scenario = await graph.patchScenarioObject('semiconductor', scenario.id, 'meridian', {
+  properties: { leadDays: 14 }, expectedVersion: scenario.version,
+});
+const result = await graph.runFunction('semiconductor', 'launch-readiness', {
+  productId: 'aquila-x900',
+}, scenario.id);
 ```
 
-Open the Vite URL shown in the terminal (normally http://localhost:5173). Vite proxies `/api` to port 3001. For a production frontend without Docker, run `pnpm build` then `pnpm start` and open http://localhost:3001.
+Run the same workflow with `pnpm demo` or `docker compose exec app node --import tsx scripts/launch-demo.ts`. It asserts that changing an assumption changes the recommendation while leaving live state untouched.
 
-Configuration: `FALKORDB_HOST`, `FALKORDB_PORT`, optional `FALKORDB_PASSWORD`, `GRAPH_NAME`, `PORT`, `HOST`. `.env.example` documents defaults; export variables in your shell or use Node's `--env-file=.env` when starting the server. Seed scripts accept `API_URL`.
+`pnpm build:sdk` creates independent JavaScript and declaration outputs for `@graph/contracts` and `@graph/sdk`. `node scripts/verify-packages.mjs` packs both, installs them into a separate consumer, and exercises the public imports. The packages have not been published to npm.
 
-## What works
-
-- Runtime ontology registration, introspection, and strict property validation.
-- Generic object replacement and partial updates, cursor-paginated lists, filtering, relationship reads, and explicit deletion APIs.
-- Replayable JSON ingestion with source identity, external ID, and observation timestamp on every record.
-- Server-side, directed Cypher traversal with a configurable depth of 1–5.
-- A generic interactive relationship map, object inspector, schema browser, search, and uploads.
-- Two independent example ontologies loaded through the public TypeScript SDK and HTTP API.
-- Saved scenarios with a pinned base revision, object and edge changes, version conflicts, and explicit diffs.
-- Deterministic business functions with discoverable JSON schemas, graph evidence, and persisted run history.
-- A GPU launch application implemented entirely through the public SDK, outside the generic platform.
-- Interactive API documentation at `/api/docs/` and OpenAPI at `/api/openapi.json`.
-
-## Architecture
+## Architecture and guarantees
 
 ```text
-apps/api             Fastify HTTP boundary and server lifecycle
-apps/web             React + Vite + React Flow management UI
-packages/contracts   Zod schemas and shared TypeScript types
-packages/core        Domain-independent validation and FalkorDB queries
-packages/sdk         HTTP client used by the UI and ingestion scripts
-examples             Ontologies and synthetic datasets, outside the core
-scripts              Public-API seed workflow and fixture generation
+apps/api                 HTTP, validation, scopes, composition and local server
+apps/web                 Generic explorer and operations console
+packages/contracts       Zod schemas and shared public types
+packages/core            Graph storage, sources, scenarios, functions, actions
+packages/sdk             Public HTTP client
+packages/agent           Tool orchestration using the SDK, without database access
+examples/semiconductor   GPU schema, sources, planner, actions and application
 ```
 
-FalkorDB is the operational source of truth. Schema metadata is stored in `Ontology` nodes, objects in `Object` nodes, and relationships as real `LINK` edges. Domain type names are validated metadata rather than interpolated Cypher labels. Every object is scoped by `(ontology, id)`; relationship IDs are unique within an ontology through the serialized write path. Range indexes support ontology and object lookups.
+FalkorDB is the operational source of truth. `Ontology` nodes store schemas and revisions; `Object` nodes store stable scoped identities, typed native properties, and validated records; `LINK` edges represent actual domain relationships. `Document` nodes retain checkpoints, historical records, scenario bases/overlays, calculation runs, actions, and investigation traces. Domain property predicates bind values as parameters and use validated property names; there is no arbitrary Cypher execution endpoint.
 
-The initial representation stores validated properties and provenance as JSON records alongside indexed identity/type fields. This keeps arbitrary property names out of query construction. Property-level filtering and indexing are future work; current graph operations use structural Cypher traversals, not property predicates over the JSON payload.
+A live change, its before/after history, and associated checkpoint/audit documents are submitted in one Cypher write query. Mutations and consistent-state capture are serialized within one API process. Direct database writes, multiple API replicas, and distributed transactions are unsupported.
 
-### Graph model and essential query
+Scenarios share one immutable JSON base snapshot per branched revision and retain sparse overrides/tombstones. This avoids cloning the operational graph for each branch but still snapshots a full small graph once per branched revision. Promotion merges selected property changes against current state, preserves unrelated edits, and rejects conflicts or dangling relationships. This is application-level versioning, not database-native MVCC.
 
-Aquila X900 requires an advanced package supplied by a delayed vendor. It also needs a software release blocked by a driver issue and a failed validation test. Its launch connects to synthetic customer commitments. These are actual edges persisted in FalkorDB, not a frontend-only diagram.
-
-The explorer uses the following pattern (the depth is a validated integer, capped at five):
-
-```cypher
-MATCH p=(root:Object {ontology: $ontology, id: $root})-[:LINK*1..3]->(target:Object {ontology: $ontology})
-UNWIND nodes(p) AS n
-WITH DISTINCT n
-RETURN n.record AS record
-ORDER BY n.id
-```
-
-The API then retrieves relationships between the returned objects to show the induced subgraph. Direction controls discovery; the displayed subgraph includes all edges between discovered objects. Without FalkorDB, the registry, ingestion, explorer, and traversals cannot run.
-
-## Public API
-
-| Method | Route | Purpose |
-|---|---|---|
-| GET | `/api/health` | Verify a real FalkorDB query |
-| GET / POST | `/api/ontologies` | List / register schemas |
-| GET | `/api/ontologies/:ontology` | Read a schema |
-| GET | `/api/ontologies/:ontology/graph` | Read objects and relationships |
-| POST | `/api/ontologies/:ontology/ingest` | Validate and upsert a JSON batch |
-| GET / PUT / PATCH / DELETE | `/api/ontologies/:ontology/objects/:id` | Read / replace / merge properties / delete |
-| GET / PUT / DELETE | `/api/ontologies/:ontology/relationships/:id` | Read / upsert / delete a relationship |
-| GET | `/api/ontologies/:ontology/traverse?root=ID&depth=3&direction=out` | Bounded traversal (`out`, `in`, `both`) |
-
-Additional collections: `/objects`, `/relationships`, `/scenarios`, `/functions`, and `/runs`. Scenario paths support `/graph`, `/diff`, and hypothetical object edits. Function execution uses `POST /functions/:id/run` with `{ "input": {...}, "scenario": "optional-scenario-id" }`. Every error returns a machine-readable code and request ID; the SDK exposes `GraphApiError`.
-
-See `examples/library/ontology.json` and `data.json` for the smallest complete schema and ingestion format. Object and relationship IDs must start with a letter and contain only letters, digits, underscores, and hyphens, up to 64 characters. Exact registration replays are accepted. Existing schemas can add optional properties, object types, and relationship types. Removing or changing an existing property/type/relationship, adding a required property to an existing type, or renaming the ontology is rejected with HTTP 409.
-
-Batches are fully validated before a single Cypher write query. Invalid endpoints or properties reject the whole batch. Object types and relationship endpoints cannot be changed in place. Object deletion rejects connected nodes; remove their relationships explicitly first. Upserts replace the entire record, including its provenance, rather than keeping historical versions.
+The GPU planner calculates missing inventory and production duration, checks supplier/component qualification, capacity and driver compatibility, then schedules repair, pre-validation, hardware-dependent tests, and final integration using a DAG longest-path calculation. It returns task timing, critical paths, constraint results, costs, and source evidence. Capacity is reserved for one product; yield, competing orders, shipping variability, advanced optimization, and stochastic forecasts remain outside the model. Predicted validation completion is not an actual passing test.
 
 ## Verification
 
 ```sh
 pnpm build
-pnpm test
-pnpm test:integration
+GRAPH_INTEGRATION=1 pnpm test
 pnpm exec playwright install chromium
 pnpm test:browser
+node scripts/verify-packages.mjs
+pnpm doctor:graph
+pnpm benchmark
 ```
 
-Integration and browser checks require FalkorDB on the configured address. Unit tests run without it; integration tests are opt-in with `GRAPH_INTEGRATION=1`. Tests use disposable, uniquely named graphs and delete only those graphs. CI runs the build, unit tests, real FalkorDB integration tests, and browser checks.
+Integration/browser tests require FalkorDB and use disposable graphs. Unit tests run without a database. CI verifies the build, packaged client, real FalkorDB behavior, browser workflows, and Docker Compose setup. [Development log](docs/development.md) records observed results and limitations.
 
-See [development log](docs/development.md) for observed verification results and limitations. No performance claims are made yet.
+## Remaining work
 
-## Next milestones
-
-1. Improve domain realism: supplier qualification, capacity, driver feature compatibility, and validation gates.
-2. Add a tool-calling agent and a reviewed GitHub action with approval and audit records.
-3. Benchmark, polish the demo, and write the engineering article.
-
-The platform deliberately uses one API process. Mutations and pinned-state capture are serialized within that process; direct database writes and multiple API replicas are unsupported. This is not database-wide MVCC. Full-graph reads and property text search target small demonstration graphs; property search scans JSON records after graph-level type/cursor filtering. Multi-source entity resolution, checkpointed connectors, authentication, and production governance are not implemented.
-
-## GPU workflow and developer API
-
-See [API guide](docs/api.md) for SDK examples and endpoint semantics. Run the exact workflow from a terminal:
-
-```sh
-docker compose exec app node --import tsx scripts/launch-demo.ts
-```
-
-For local development, `pnpm demo` does the same. It saves a hypothetical branch, changes the supplier lead time, prints both recommendations and the diff, and asserts that the live graph stayed unchanged.
-
-The example planner enumerates the supplier/expedition and driver alternatives connected to a product. It checks architecture compatibility, derives hardware readiness from lead and assembly times, derives software readiness from repair and validation times, and adds final integration after both complete. On-time alternatives rank by explicit synthetic risk points, cost, then readiness. Costs are incremental USD assumptions, and risk points are ordinal penalties, not measured probabilities. A predicted validation finish is not an observed passing test.
-
-### Scenario implementation
-
-Live mutations increment an ontology revision. The first branch at a revision persists one shared immutable base snapshot in FalkorDB; sibling branches reference that same base and store only object/relationship overrides and tombstones. This avoids cloning the operational graph for each scenario, but still takes a full snapshot once per branched revision. It is a pragmatic small-graph implementation, not storage-engine MVCC.
-
-Scenario edits require `expectedVersion`; stale edits return 409. A scenario created with `expectedRevision` rejects a changed live base. Later live mutations never leak into a branch. Diffs compare with the pinned base and flag a different live revision. Discarding a branch removes its overlay and reclaims an unused base; recorded function outputs remain available. Live scenario promotion/merge is not implemented.
-
-Business functions are registered in server composition (`apps/api/src/extensions.ts`). Domain functions receive a read-only graph view through the public extension contract; they never import database clients or core storage. Execution validates input and output schemas and records the chosen revision, scenario version, inputs, and outputs in FalkorDB. Domain applications call only the HTTP SDK.
+This implements the six requested next steps at prototype scope. Remaining platform work includes richer ontology types and cardinality, distributed write coordination, production governance, large-source ingestion and resumable workers, richer entity-resolution policies, temporal history queries, nested/rebased branches, approval revocation/expiry, and production-grade backup retention. Model-backed investigation and authenticated GitHub execution still need verification in the operator's configured environment. A complete Foundry or Helix Foundry port is not claimed.
 
 ## Graph Hacks 2026
 
-Target tracks: **Company Brain** and **Agents That Act on Connected Data**. The latter requires the planned agent and approved action workflow before it is a credible submission. Official rules: https://www.wemakedevs.org/hackathons/falkordb/rules
+Target tracks: **Company Brain** and **Agents That Act on Connected Data**. Official rules: https://www.wemakedevs.org/hackathons/falkordb/rules
 
-Development uses AI coding assistance (OpenAI Codex) for implementation and verification. Participants remain responsible for reviewing and understanding the submitted system. This disclosure is independent of commit authorship.
+AI coding assistance (OpenAI Codex) is used for implementation and verification. Participants remain responsible for reviewing and understanding the system. This disclosure is independent of commit authorship.
 
-All included business data is synthetic. No real employer data is included. This is an implementation of established operational ontology concepts, not a claim to have invented them.
-
-Project code is MIT licensed; dependencies retain their own licenses. FalkorDB server is distributed separately under SSPLv1.
+All included business data is synthetic. No confidential employer information is used. Operational ontology concepts are established ideas, not a claim of conceptual novelty. Project code is MIT licensed; dependencies retain their own licenses. FalkorDB server is distributed separately under SSPLv1.

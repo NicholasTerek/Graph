@@ -194,3 +194,254 @@ export type FunctionRun = {
 export const functionInvocation = z
   .object({ input: z.unknown(), scenario: identifier.optional() })
   .strict();
+
+export const mappingValue = z.union([
+  z.object({ field: z.string().min(1).max(100) }).strict(),
+  z
+    .object({ value: z.union([z.string(), z.number().finite(), z.boolean()]) })
+    .strict(),
+]);
+export const sourceSchema = z
+  .object({
+    id: identifier,
+    name: z.string().min(1).max(100),
+    connector: z.enum(["csv", "json", "github"]),
+    githubResource: z.enum(["issues", "repository"]).default("issues"),
+    repository: z
+      .string()
+      .regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/)
+      .optional(),
+    mapping: z
+      .object({
+        type: identifier,
+        idField: z.string().min(1),
+        objectIdField: z.string().min(1).optional(),
+        identityField: z.string().min(1).optional(),
+        properties: z.record(identifier, mappingValue),
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.connector === "github" && !value.repository)
+      ctx.addIssue({
+        code: "custom",
+        message: "GitHub sources require a repository",
+      });
+  });
+export type SourceConfig = z.input<typeof sourceSchema>;
+export type Source = z.output<typeof sourceSchema> & {
+  version: number;
+  checkpoint: string | null;
+  lastSyncedAt: string | null;
+  managed: Record<
+    string,
+    {
+      externalId: string;
+      fields: Record<string, string | number | boolean>;
+      created?: boolean;
+    }
+  >;
+};
+export type SyncResult = {
+  id: string;
+  sourceId: string;
+  status: "preview" | "succeeded" | "failed";
+  revision: number;
+  added: string[];
+  updated: string[];
+  removed: string[];
+  unchanged: number;
+  checkpoint: string;
+  error?: string;
+  startedAt: string;
+  finishedAt: string;
+};
+export const syncInput = z
+  .object({
+    content: z.string().max(3000000).optional(),
+    expectedCheckpoint: z.string().length(64).optional(),
+    dryRun: z.boolean().default(false),
+    expectedRevision: z.number().int().nonnegative().optional(),
+  })
+  .strict();
+export const promotionInput = z
+  .object({
+    expectedVersion: z.number().int().nonnegative(),
+    expectedRevision: z.number().int().nonnegative(),
+    objects: z.array(identifier).default([]),
+    relationships: z.array(identifier).default([]),
+    confirm: z.literal(true),
+  })
+  .strict();
+export type PromotionPreview = {
+  scenario: string;
+  version: number;
+  liveRevision: number;
+  changes: {
+    objects: Change<GraphObject>[];
+    relationships: Change<GraphRelationship>[];
+  };
+  conflicts: { kind: string; id: string; field?: string }[];
+};
+export const propertyFilter = z
+  .object({
+    property: identifier,
+    operator: z.enum(["eq", "ne", "gt", "gte", "lt", "lte", "contains"]),
+    value: z.union([z.string(), z.number().finite(), z.boolean()]),
+  })
+  .strict();
+export const objectQuery = z
+  .object({
+    type: identifier.optional(),
+    filters: z.array(propertyFilter).max(10).default([]),
+    limit: z.number().int().min(1).max(100).default(50),
+    after: identifier.optional(),
+  })
+  .strict();
+export type ObjectQuery = z.infer<typeof objectQuery>;
+export const aggregationInput = z
+  .object({
+    type: identifier,
+    property: identifier.optional(),
+    operation: z.enum(["count", "sum", "avg", "min", "max"]),
+    filters: z.array(propertyFilter).max(10).default([]),
+  })
+  .strict();
+
+export type ActionInfo = {
+  id: string;
+  name: string;
+  description: string;
+  ontology: string;
+  inputSchema: Record<string, unknown>;
+};
+export type ActionRecord = {
+  id: string;
+  type: string;
+  ontology: string;
+  version: number;
+  status:
+    | "proposed"
+    | "approved"
+    | "rejected"
+    | "executing"
+    | "succeeded"
+    | "failed"
+    | "uncertain";
+  input: unknown;
+  prepared: {
+    title: string;
+    description: string;
+    target: string;
+    payload: unknown;
+  };
+  digest: string;
+  revision: number;
+  scenarioId: string | null;
+  scenarioVersion: number | null;
+  createdBy: string;
+  createdAt: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewComment?: string;
+  result?: unknown;
+  error?: string;
+  executionStartedAt?: string;
+  executedBy?: string;
+  finishedAt?: string;
+};
+export const actionProposal = z
+  .object({
+    type: identifier,
+    input: z.unknown(),
+    idempotencyKey: z.string().min(8).max(100),
+    scenario: identifier.optional(),
+  })
+  .strict();
+export const actionReview = z
+  .object({
+    expectedVersion: z.number().int().nonnegative(),
+    digest: z.string().length(64),
+    comment: z.string().max(1000).default(""),
+  })
+  .strict();
+export const actionExecute = z
+  .object({
+    expectedVersion: z.number().int().nonnegative(),
+    digest: z.string().length(64),
+  })
+  .strict();
+
+export const investigationInput = z
+  .object({
+    question: z.string().min(1).max(4000),
+    root: identifier.optional(),
+    functionId: identifier.optional(),
+    input: z.unknown().optional(),
+    scenario: identifier.optional(),
+    maxSteps: z.number().int().min(1).max(16).default(8),
+  })
+  .strict();
+export type ToolTrace = {
+  name: string;
+  input: unknown;
+  output: unknown;
+  error?: string;
+  at: string;
+};
+export type Investigation = {
+  id: string;
+  ontology: string;
+  question: string;
+  mode: "deterministic-tools" | "model-tools";
+  status: "running" | "completed" | "failed";
+  answer: string;
+  traces: ToolTrace[];
+  runIds: string[];
+  actionIds: string[];
+  createdAt: string;
+  finishedAt?: string;
+  error?: string;
+};
+
+export const backupPayloadSchema = z
+  .object({
+    format: z.literal("graph-backup-v1"),
+    createdAt: z.iso.datetime(),
+    ontology: ontologySchema,
+    revision: z.number().int().nonnegative(),
+    state: ingestionSchema,
+    documents: z
+      .array(
+        z
+          .object({
+            kind: z.enum([
+              "source",
+              "sync",
+              "history",
+              "base",
+              "scenario",
+              "run",
+              "promotion",
+              "investigation",
+            ]),
+            id: z.string().min(1).max(200),
+            value: z.unknown(),
+          })
+          .strict(),
+      )
+      .max(20000),
+  })
+  .strict();
+export const backupSchema = backupPayloadSchema.extend({
+  digest: z.string().length(64),
+});
+export type BackupArchive = z.infer<typeof backupSchema>;
+export const restoreInput = z
+  .object({
+    archive: backupSchema,
+    expectedRevision: z.number().int().nonnegative(),
+    confirmOntology: identifier,
+  })
+  .strict();

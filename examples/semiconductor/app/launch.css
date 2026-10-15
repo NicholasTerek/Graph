@@ -509,3 +509,162 @@
     font-size: 11px;
   }
 }
+.workflow-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.recovery-workflow h2 {
+  font-size: 17px;
+  font-weight: 500;
+}
+.investigation-result,
+.proposal-preview {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid #36505a;
+}
+.investigation-result > strong,
+.proposal-preview > strong {
+  font-size: 11px;
+  color: #a0d7be;
+}
+.investigation-result small {
+  font-size: 9px;
+  color: #668e99;
+  overflow-wrap: anywhere;
+  display: block;
+  margin-top: 13px;
+}
+.tool-chips {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.tool-chips span {
+  font-size: 8px;
+  background: #22372f;
+  color: #95c5ad;
+  padding: 5px;
+  border-radius: 3px;
+}
+.proposal-preview > a {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 10px;
+  color: #8fbcae;
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+.proposal-preview button {
+  font-size: 10px;
+  color: #9edcc0;
+  padding: 0;
+}
+.promotion-review label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: #a3bdbd;
+  margin: 16px 0;
+}
+.promotion-confirm {
+  border-top: 1px solid #334b53;
+  padding-top: 20px;
+}
+.promotion-review input {
+  accent-color: #96dcbd;
+}
+.critical-schedule h2 {
+  font-size: 17px;
+  font-weight: 500;
+}
+.schedule-row {
+  display: grid;
+  grid-template-columns: 215px 1fr 65px;
+  align-items: center;
+  gap: 20px;
+  font-size: 10px;
+  color: #8ba9ad;
+  margin: 13px 0;
+}
+.schedule-row > div {
+  height: 13px;
+  background: #182a30;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.schedule-row i {
+  display: block;
+  height: 100%;
+  background: #658a88;
+  border-radius: 2px;
+}
+.schedule-row.critical i {
+  background: #92d5ba;
+}
+.schedule-row.critical > span {
+  color: #c4dfd5;
+}
+.schedule-row small {
+  text-align: right;
+  color: #7297a3;
+}
+.constraint-results {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 1px solid #304951;
+  padding-top: 18px;
+  margin-top: 22px;
+}
+.constraint-results span {
+  font-size: 9px;
+  line-height: 1.7;
+}
+.constraint-results .passed {
+  color: #92c8ab;
+}
+.constraint-results .failed {
+  color: #dfa292;
+}
+.hard-constraints {
+  margin: 17px 0;
+  color: #94b6b8;
+  font-size: 10px;
+}
+.hard-constraints summary {
+  cursor: pointer;
+  line-height: 1.8;
+}
+.hard-constraints input[type="checkbox"] {
+  width: 16px;
+  accent-color: #9adbbd;
+}
+.hard-constraints label > input[type="number"] {
+  width: 75px;
+}
+@media (max-width: 1050px) {
+  .workflow-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .schedule-row {
+    grid-template-columns: 1fr 65px;
+    gap: 8px;
+  }
+  .schedule-row > div {
+    grid-column: 1/-1;
+    grid-row: auto;
+  }
+  .schedule-row small {
+    grid-column: 2;
+    grid-row: auto;
+  }
+  .schedule-row > span {
+    font-size: 10px;
+  }
+}

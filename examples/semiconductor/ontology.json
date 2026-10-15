@@ -22,6 +22,14 @@
         "integrationDays": {
           "type": "number",
           "required": false
+        },
+        "demandUnits": {
+          "type": "number",
+          "required": false
+        },
+        "requiredFeatureLevel": {
+          "type": "number",
+          "required": false
         }
       }
     },
@@ -40,6 +48,14 @@
         "assemblyDays": {
           "type": "number",
           "required": false
+        },
+        "inventoryUnits": {
+          "type": "number",
+          "required": false
+        },
+        "unitsPerProduct": {
+          "type": "number",
+          "required": false
         }
       }
     },
@@ -54,6 +70,14 @@
         "status": {
           "type": "string",
           "required": true
+        },
+        "qualified": {
+          "type": "boolean",
+          "required": false
+        },
+        "dailyCapacity": {
+          "type": "number",
+          "required": false
         },
         "riskPoints": {
           "type": "number",
@@ -108,6 +132,10 @@
         "repairCostUSD": {
           "type": "number",
           "required": false
+        },
+        "featureLevel": {
+          "type": "number",
+          "required": false
         }
       }
     },
@@ -140,6 +168,14 @@
         "status": {
           "type": "string",
           "required": true
+        },
+        "durationDays": {
+          "type": "number",
+          "required": false
+        },
+        "requiresHardware": {
+          "type": "boolean",
+          "required": false
         }
       }
     },
@@ -186,6 +222,24 @@
         "daysRemaining": {
           "type": "number",
           "required": true
+        }
+      }
+    },
+    {
+      "name": "Repository",
+      "description": "Public source-code repository",
+      "properties": {
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "required": true
+        },
+        "url": {
+          "type": "string",
+          "required": false
         }
       }
     }
@@ -249,6 +303,18 @@
       "name": "FALLBACK",
       "from": "Release",
       "to": "Release",
+      "description": ""
+    },
+    {
+      "name": "DEPENDS_ON",
+      "from": "Test",
+      "to": "Test",
+      "description": ""
+    },
+    {
+      "name": "QUALIFIED_FOR",
+      "from": "Supplier",
+      "to": "Component",
       "description": ""
     }
   ]

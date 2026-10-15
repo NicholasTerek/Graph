@@ -686,3 +686,40 @@ select {
     gap: 12px;
   }
 }
+.api-credential {
+  position: relative;
+  font-size: 10px;
+  color: #7c9ba5;
+}
+.api-credential summary {
+  cursor: pointer;
+}
+.api-credential[open] {
+  position: absolute;
+  right: 38px;
+  top: 26px;
+  width: 240px;
+  z-index: 10;
+  background: #19272c;
+  border: 1px solid #3b555c;
+  padding: 16px;
+  border-radius: 5px;
+}
+.api-credential label {
+  display: block;
+  margin: 15px 0 9px;
+  font-size: 10px;
+}
+.api-credential input {
+  margin-top: 9px;
+  width: 100%;
+  background: #0e1a20;
+  border: 1px solid #3d5b66;
+  padding: 8px;
+  color: #b8d5d5;
+}
+.api-credential button {
+  font-size: 10px;
+  color: #99dfc1;
+  padding: 8px 0;
+}

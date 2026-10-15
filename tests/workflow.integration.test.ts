@@ -116,8 +116,8 @@ suite("GPU application through the public SDK", () => {
       "launch-readiness",
       { productId: "aquila-x900" },
     );
-    expect(run.output.baseline.readyDays).toBe(38);
-    expect(run.output.baseline.delayDays).toBe(17);
+    expect(run.output.baseline.readyDays).toBe(40);
+    expect(run.output.baseline.delayDays).toBe(19);
     expect(run.output.recommendation.hardware[0].supplierId).toBe("meridian");
     expect(run.output.recommendation.readyDays).toBe(20);
     expect(run.output.plans).toHaveLength(6);
@@ -159,7 +159,7 @@ suite("GPU application through the public SDK", () => {
     expect(run.output.recommendation.readyDays).toBe(20);
     expect(
       run.output.plans.find((p) => p.id === "meridian_driver-26-10")?.delayDays,
-    ).toBe(3);
+    ).toBe(5);
     expect(await client.snapshot("semiconductor")).toEqual(before);
     const diff = await client.scenarioDiff("semiconductor", branch.id);
     expect(diff.objects).toHaveLength(1);

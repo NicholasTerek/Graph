@@ -1,3 +1,4 @@
+import { githubRecoveryAction } from "../examples/semiconductor/actions/github.js";
 import { platformFunctions } from "../apps/api/src/extensions.js";
 import { FalkorDB } from "falkordb";
 import { readFile } from "node:fs/promises";
@@ -12,7 +13,11 @@ const db = await FalkorDB.connect({
 const name = `browser_${Date.now()}_${process.pid}`;
 const store = new GraphStore(db, name);
 await store.initialize();
-const app = createApp(store, { serveWeb: true, functions: platformFunctions });
+const app = createApp(store, {
+  serveWeb: true,
+  functions: platformFunctions,
+  actions: [githubRecoveryAction({})],
+});
 app.addHook("onClose", async () => {
   await db.selectGraph(name).delete();
   await store.close();
@@ -36,4 +41,15 @@ for (const signal of ["SIGINT", "SIGTERM"])
   process.on(signal, () => {
     void app.close();
   });
+const { semiconductorSources } = await import(
+  "../examples/semiconductor/sources.js"
+);
+for (const source of semiconductorSources) {
+  const response = await app.inject({
+    method: "POST",
+    url: "/api/ontologies/semiconductor/sources",
+    payload: source,
+  });
+  if (response.statusCode >= 400) throw new Error(response.body);
+}
 await app.listen({ port: 3101, host: "127.0.0.1" });

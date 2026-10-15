@@ -1,0 +1,3 @@
+id,name,status,leadDays,dailyCapacity,qualified,riskPoints,costUSD
+northstar,Northstar Packaging,delayed,28,300,true,1,0
+meridian,Meridian Packaging,available,7,300,true,2,65000
