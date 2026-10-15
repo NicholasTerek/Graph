@@ -24,7 +24,7 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [x] OpenAPI, distributable SDK/contracts, independent package consumer check.
 - [x] Prove a second domain through its schema/function and registered library workspace, with no domain edits to core; see [extensions](extensions.md).
 - [x] Add a documented extension-composition interface instead of hard-coded GPU imports at the server composition root.
-- [ ] Decide package/API compatibility policy and publish installable SDK artifacts or a reproducible release.
+- [x] Define the 0.x package/API compatibility policy and reproducible paired SDK/contracts tarballs with source/tool/hash manifest; see [releases](releases.md).
 - [x] Track richer types, cardinalities and schema migration needs separately in the extension contract; these remain future capabilities.
 
 ### Source ingestion and provenance

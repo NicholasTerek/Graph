@@ -105,7 +105,7 @@ export function createApp(
       security: [{ bearerAuth: [] }],
       info: {
         title: "Graph Operational Ontology API",
-        version: "0.3.0",
+        version: "0.4.0",
         description:
           "Typed ontologies, connected objects, isolated scenarios, and deterministic domain functions. Trusted local workspace.",
       },
