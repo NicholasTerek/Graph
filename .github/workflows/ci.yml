@@ -3,7 +3,7 @@ on:
   pull_request:
   workflow_dispatch:
   push:
-    branches: [ci/verify]
+    branches: [ci/verify, "ci/verify/**"]
 concurrency:
   group: verify-${{ github.ref }}
   cancel-in-progress: true
