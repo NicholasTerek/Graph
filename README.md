@@ -2,7 +2,7 @@
 
 A self-hosted operational ontology platform powered by **FalkorDB**, with a synthetic semiconductor operations example. Define your own object types and relationships, ingest records with provenance, and investigate dependencies across connected operations.
 
-**Status: first working foundation.** The registry, graph APIs, JSON ingestion, TypeScript SDK, and interactive explorer are implemented. Scenario overlays, business functions, agent orchestration, and action approvals are planned, not implemented.
+**Status: interactive GPU recovery workflow.** The generic ontology APIs, TypeScript SDK, pinned scenario overlays, deterministic function runtime, and semiconductor launch application are implemented. Agent orchestration and approved external actions are still planned.
 
 ## Run locally
 
@@ -13,7 +13,9 @@ docker compose up --build -d
 docker compose exec app node --import tsx scripts/seed.ts
 ```
 
-Open **http://localhost:3001**. Select Aquila Semiconductor, click an object, and trace its dependencies. Switch to City Library to explore a completely different ontology using the same core and APIs. Use **Ontology registry** to inspect schemas, the upload icon beside **Ontologies** to register a JSON schema, and **Import data** to load a JSON dataset.
+Open **http://localhost:3001**, select **Aquila Semiconductor → Launch operations**, and change Meridian’s lead time from **7 to 14 days**. Click **Evaluate scenario**: the recommendation changes from Meridian packaging to expedited Northstar packaging, using calculated readiness constraints. Change driver repair from **10 to 20 days** to select the validated fallback driver. Live records remain unchanged.
+
+The **Graph explorer** lets you click an object and trace its dependencies. Switch to City Library to explore a completely different ontology using the same core and APIs. Use **Ontology registry** to inspect schemas, the upload icon beside **Ontologies** to register a JSON schema, and **Import data** to load a JSON dataset.
 
 FalkorDB data persists in the `graph-data` Docker volume with append-only persistence enabled. `docker compose down` preserves it. Re-running the seed replaces example records by stable ID; it does not duplicate them.
 
@@ -41,11 +43,15 @@ Configuration: `FALKORDB_HOST`, `FALKORDB_PORT`, optional `FALKORDB_PASSWORD`, `
 ## What works
 
 - Runtime ontology registration, introspection, and strict property validation.
-- Generic object replacement, relationship creation, reads, and explicit deletion APIs.
+- Generic object replacement and partial updates, cursor-paginated lists, filtering, relationship reads, and explicit deletion APIs.
 - Replayable JSON ingestion with source identity, external ID, and observation timestamp on every record.
 - Server-side, directed Cypher traversal with a configurable depth of 1–5.
 - A generic interactive relationship map, object inspector, schema browser, search, and uploads.
 - Two independent example ontologies loaded through the public TypeScript SDK and HTTP API.
+- Saved scenarios with a pinned base revision, object and edge changes, version conflicts, and explicit diffs.
+- Deterministic business functions with discoverable JSON schemas, graph evidence, and persisted run history.
+- A GPU launch application implemented entirely through the public SDK, outside the generic platform.
+- Interactive API documentation at `/api/docs/` and OpenAPI at `/api/openapi.json`.
 
 ## Architecture
 
@@ -88,11 +94,13 @@ The API then retrieves relationships between the returned objects to show the in
 | GET | `/api/ontologies/:ontology` | Read a schema |
 | GET | `/api/ontologies/:ontology/graph` | Read objects and relationships |
 | POST | `/api/ontologies/:ontology/ingest` | Validate and upsert a JSON batch |
-| GET / PUT / DELETE | `/api/ontologies/:ontology/objects/:id` | Read / replace / delete an object |
-| PUT / DELETE | `/api/ontologies/:ontology/relationships/:id` | Upsert / delete a relationship |
+| GET / PUT / PATCH / DELETE | `/api/ontologies/:ontology/objects/:id` | Read / replace / merge properties / delete |
+| GET / PUT / DELETE | `/api/ontologies/:ontology/relationships/:id` | Read / upsert / delete a relationship |
 | GET | `/api/ontologies/:ontology/traverse?root=ID&depth=3&direction=out` | Bounded traversal (`out`, `in`, `both`) |
 
-See `examples/library/ontology.json` and `data.json` for the smallest complete schema and ingestion format. Object and relationship IDs must start with a letter and contain only letters, digits, underscores, and hyphens, up to 64 characters. Ontology definitions are immutable in this milestone; a different schema under an existing ID returns HTTP 409. Exact registration replays are accepted.
+Additional collections: `/objects`, `/relationships`, `/scenarios`, `/functions`, and `/runs`. Scenario paths support `/graph`, `/diff`, and hypothetical object edits. Function execution uses `POST /functions/:id/run` with `{ "input": {...}, "scenario": "optional-scenario-id" }`. Every error returns a machine-readable code and request ID; the SDK exposes `GraphApiError`.
+
+See `examples/library/ontology.json` and `data.json` for the smallest complete schema and ingestion format. Object and relationship IDs must start with a letter and contain only letters, digits, underscores, and hyphens, up to 64 characters. Exact registration replays are accepted. Existing schemas can add optional properties, object types, and relationship types. Removing or changing an existing property/type/relationship, adding a required property to an existing type, or renaming the ontology is rejected with HTTP 409.
 
 Batches are fully validated before a single Cypher write query. Invalid endpoints or properties reject the whole batch. Object types and relationship endpoints cannot be changed in place. Object deletion rejects connected nodes; remove their relationships explicitly first. Upserts replace the entire record, including its provenance, rather than keeping historical versions.
 
@@ -112,13 +120,31 @@ See [development log](docs/development.md) for observed verification results and
 
 ## Next milestones
 
-1. Register deterministic business functions and return evidence with their results.
-2. Add isolated scenario overlays with a pinned base revision and explicit object/edge diffs.
-3. Calculate launch recovery alternatives from graph data, then show recommendations changing with assumptions.
-4. Add a tool-calling agent and a reviewed GitHub action with approval and audit records.
-5. Benchmark, polish the demo, and write the engineering article.
+1. Improve domain realism: supplier qualification, capacity, driver feature compatibility, and validation gates.
+2. Add a tool-calling agent and a reviewed GitHub action with approval and audit records.
+3. Benchmark, polish the demo, and write the engineering article.
 
-The first milestone is deliberately one API process. Mutations are serialized within that process; direct database writes and multiple API replicas are unsupported. Snapshot reads are not database-wide revision snapshots. Traversal and full-graph reads target small demonstration graphs; pagination, path-explosion protection beyond depth/time limits, multi-source entity resolution, checkpointed connectors, authentication, and production governance are not implemented.
+The platform deliberately uses one API process. Mutations and pinned-state capture are serialized within that process; direct database writes and multiple API replicas are unsupported. This is not database-wide MVCC. Full-graph reads and property text search target small demonstration graphs; property search scans JSON records after graph-level type/cursor filtering. Multi-source entity resolution, checkpointed connectors, authentication, and production governance are not implemented.
+
+## GPU workflow and developer API
+
+See [API guide](docs/api.md) for SDK examples and endpoint semantics. Run the exact workflow from a terminal:
+
+```sh
+docker compose exec app node --import tsx scripts/launch-demo.ts
+```
+
+For local development, `pnpm demo` does the same. It saves a hypothetical branch, changes the supplier lead time, prints both recommendations and the diff, and asserts that the live graph stayed unchanged.
+
+The example planner enumerates the supplier/expedition and driver alternatives connected to a product. It checks architecture compatibility, derives hardware readiness from lead and assembly times, derives software readiness from repair and validation times, and adds final integration after both complete. On-time alternatives rank by explicit synthetic risk points, cost, then readiness. Costs are incremental USD assumptions, and risk points are ordinal penalties, not measured probabilities. A predicted validation finish is not an observed passing test.
+
+### Scenario implementation
+
+Live mutations increment an ontology revision. The first branch at a revision persists one shared immutable base snapshot in FalkorDB; sibling branches reference that same base and store only object/relationship overrides and tombstones. This avoids cloning the operational graph for each scenario, but still takes a full snapshot once per branched revision. It is a pragmatic small-graph implementation, not storage-engine MVCC.
+
+Scenario edits require `expectedVersion`; stale edits return 409. A scenario created with `expectedRevision` rejects a changed live base. Later live mutations never leak into a branch. Diffs compare with the pinned base and flag a different live revision. Discarding a branch removes its overlay and reclaims an unused base; recorded function outputs remain available. Live scenario promotion/merge is not implemented.
+
+Business functions are registered in server composition (`apps/api/src/extensions.ts`). Domain functions receive a read-only graph view through the public extension contract; they never import database clients or core storage. Execution validates input and output schemas and records the chosen revision, scenario version, inputs, and outputs in FalkorDB. Domain applications call only the HTTP SDK.
 
 ## Graph Hacks 2026
 

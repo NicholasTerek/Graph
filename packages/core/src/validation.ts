@@ -75,3 +75,32 @@ export function validateIngestion(
     }
   }
 }
+
+export function isAdditiveSchema(previous: Ontology, next: Ontology): boolean {
+  if (previous.id !== next.id || previous.name !== next.name) return false;
+  for (const type of previous.objectTypes) {
+    const target = next.objectTypes.find((t) => t.name === type.name);
+    if (!target) return false;
+    for (const [name, definition] of Object.entries(type.properties)) {
+      const updated = target.properties[name];
+      if (
+        !updated ||
+        updated.type !== definition.type ||
+        updated.required !== definition.required
+      )
+        return false;
+    }
+    if (
+      Object.entries(target.properties).some(
+        ([name, definition]) =>
+          !Object.hasOwn(type.properties, name) && definition.required,
+      )
+    )
+      return false;
+  }
+  return previous.relationshipTypes.every((type) =>
+    next.relationshipTypes.some(
+      (t) => t.name === type.name && t.from === type.from && t.to === type.to,
+    ),
+  );
+}

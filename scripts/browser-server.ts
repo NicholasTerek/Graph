@@ -1,3 +1,4 @@
+import { platformFunctions } from "../apps/api/src/extensions.js";
 import { FalkorDB } from "falkordb";
 import { readFile } from "node:fs/promises";
 import { GraphStore } from "@graph/core";
@@ -11,7 +12,7 @@ const db = await FalkorDB.connect({
 const name = `browser_${Date.now()}_${process.pid}`;
 const store = new GraphStore(db, name);
 await store.initialize();
-const app = createApp(store, { serveWeb: true });
+const app = createApp(store, { serveWeb: true, functions: platformFunctions });
 app.addHook("onClose", async () => {
   await db.selectGraph(name).delete();
   await store.close();

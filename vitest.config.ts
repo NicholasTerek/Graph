@@ -3,6 +3,9 @@ import { fileURLToPath } from "node:url";
 export default defineConfig({
   resolve: {
     alias: {
+      "@graph/sdk": fileURLToPath(
+        new URL("./packages/sdk/src/index.ts", import.meta.url),
+      ),
       "@graph/contracts": fileURLToPath(
         new URL("./packages/contracts/src/index.ts", import.meta.url),
       ),

@@ -14,6 +14,14 @@
         "status": {
           "type": "string",
           "required": true
+        },
+        "architecture": {
+          "type": "string",
+          "required": false
+        },
+        "integrationDays": {
+          "type": "number",
+          "required": false
         }
       }
     },
@@ -28,6 +36,10 @@
         "status": {
           "type": "string",
           "required": true
+        },
+        "assemblyDays": {
+          "type": "number",
+          "required": false
         }
       }
     },
@@ -42,6 +54,26 @@
         "status": {
           "type": "string",
           "required": true
+        },
+        "riskPoints": {
+          "type": "number",
+          "required": false
+        },
+        "costUSD": {
+          "type": "number",
+          "required": false
+        },
+        "expeditedLeadDays": {
+          "type": "number",
+          "required": false
+        },
+        "expeditedRiskPoints": {
+          "type": "number",
+          "required": false
+        },
+        "expeditedCostUSD": {
+          "type": "number",
+          "required": false
         },
         "leadDays": {
           "type": "number",
@@ -60,6 +92,22 @@
         "status": {
           "type": "string",
           "required": true
+        },
+        "architecture": {
+          "type": "string",
+          "required": false
+        },
+        "validationDays": {
+          "type": "number",
+          "required": false
+        },
+        "riskPoints": {
+          "type": "number",
+          "required": false
+        },
+        "repairCostUSD": {
+          "type": "number",
+          "required": false
         }
       }
     },
@@ -74,6 +122,10 @@
         "status": {
           "type": "string",
           "required": true
+        },
+        "fixDays": {
+          "type": "number",
+          "required": false
         }
       }
     },
@@ -191,6 +243,12 @@
       "name": "ALTERNATIVE",
       "from": "Supplier",
       "to": "Supplier",
+      "description": ""
+    },
+    {
+      "name": "FALLBACK",
+      "from": "Release",
+      "to": "Release",
       "description": ""
     }
   ]

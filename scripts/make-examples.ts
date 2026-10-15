@@ -44,7 +44,34 @@ const links = [
   ["SCHEDULED_FOR", "Product", "Launch"],
   ["COMMITS_TO", "Launch", "Customer"],
   ["ALTERNATIVE", "Supplier", "Supplier"],
+  ["FALLBACK", "Release", "Release"],
 ];
+const extraProperties: Record<
+  string,
+  Record<string, { type: "number" | "string"; required: boolean }>
+> = {
+  Product: {
+    architecture: { type: "string", required: false },
+    integrationDays: { type: "number", required: false },
+  },
+  Component: { assemblyDays: { type: "number", required: false } },
+  Supplier: Object.fromEntries(
+    [
+      "riskPoints",
+      "costUSD",
+      "expeditedLeadDays",
+      "expeditedRiskPoints",
+      "expeditedCostUSD",
+    ].map((name) => [name, { type: "number" as const, required: false }]),
+  ),
+  Release: {
+    architecture: { type: "string", required: false },
+    validationDays: { type: "number", required: false },
+    riskPoints: { type: "number", required: false },
+    repairCostUSD: { type: "number", required: false },
+  },
+  Issue: { fixDays: { type: "number", required: false } },
+};
 const ontology = {
   id: "semiconductor",
   name: "Aquila Semiconductor",
@@ -56,6 +83,7 @@ const ontology = {
     properties: {
       name: { type: "string", required: true },
       status: { type: "string", required: true },
+      ...extraProperties[name],
       ...(name === "Supplier"
         ? { leadDays: { type: "number", required: true } }
         : {}),
@@ -73,19 +101,48 @@ const ontology = {
 };
 const data = {
   objects: [
-    object("aquila-x900", "Product", "Aquila X900", "at-risk"),
-    object("aquila-x700", "Product", "Aquila X700", "ready"),
-    object("advanced-package", "Component", "Advanced package", "delayed"),
-    object("standard-package", "Component", "Standard package", "ready"),
+    object("aquila-x900", "Product", "Aquila X900", "at-risk", {
+      architecture: "Borealis",
+      integrationDays: 5,
+    }),
+    object("aquila-x700", "Product", "Aquila X700", "ready", {
+      architecture: "Borealis",
+      integrationDays: 5,
+    }),
+    object("advanced-package", "Component", "Advanced package", "delayed", {
+      assemblyDays: 5,
+    }),
+    object("standard-package", "Component", "Standard package", "ready", {
+      assemblyDays: 3,
+    }),
     object("northstar", "Supplier", "Northstar Packaging", "delayed", {
       leadDays: 28,
+      riskPoints: 1,
+      costUSD: 0,
+      expeditedLeadDays: 10,
+      expeditedRiskPoints: 4,
+      expeditedCostUSD: 180000,
     }),
     object("meridian", "Supplier", "Meridian Packaging", "available", {
       leadDays: 7,
+      riskPoints: 2,
+      costUSD: 65000,
     }),
-    object("driver-26-10", "Release", "Driver 26.10", "blocked"),
-    object("driver-26-09", "Release", "Driver 26.09", "validated"),
-    object("gpu-142", "Issue", "GPU-142 · memory regression", "open"),
+    object("driver-26-10", "Release", "Driver 26.10", "blocked", {
+      architecture: "Borealis",
+      validationDays: 5,
+      riskPoints: 2,
+      repairCostUSD: 30000,
+    }),
+    object("driver-26-09", "Release", "Driver 26.09", "validated", {
+      architecture: "Borealis",
+      validationDays: 0,
+      riskPoints: 4,
+      repairCostUSD: 0,
+    }),
+    object("gpu-142", "Issue", "GPU-142 · memory regression", "open", {
+      fixDays: 10,
+    }),
     object("memory-validation", "Test", "Memory residency suite", "failed"),
     object("graphics-team", "Team", "Graphics systems", "assigned"),
     object("launch-x900", "Launch", "X900 launch · Nov 5", "at-risk", {
@@ -108,6 +165,7 @@ const data = {
     relationship("r11", "REQUIRES", "aquila-x700", "standard-package"),
     relationship("r12", "SUPPLIED_BY", "standard-package", "meridian"),
     relationship("r13", "NEEDS_RELEASE", "aquila-x700", "driver-26-09"),
+    relationship("r14", "FALLBACK", "driver-26-10", "driver-26-09"),
   ],
 };
 writeFileSync(

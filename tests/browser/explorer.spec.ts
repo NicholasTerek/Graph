@@ -20,7 +20,7 @@ test("explores persisted graph evidence and bounded dependencies", async ({
   await expect(
     page.getByRole("button", { name: "Clear traversal" }),
   ).toBeVisible();
-  await expect(page.locator(".react-flow__node")).toHaveCount(11);
+  await expect(page.locator(".react-flow__node")).toHaveCount(13);
   await page.getByRole("button", { name: "Close inspector" }).click();
   await page.screenshot({
     path: "/tmp/graph-explorer-desktop.png",
@@ -72,6 +72,63 @@ test("keeps the workspace usable on mobile", async ({ page }) => {
   ).toBe(true);
   await page.screenshot({
     path: "/tmp/graph-explorer-mobile.png",
+    fullPage: true,
+  });
+});
+
+test("changes the GPU recovery decision through an isolated scenario", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Launch operations" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Can Aquila X900 launch on time?" }),
+  ).toBeVisible();
+  await expect(page.getByTestId("recommendation")).toContainText(
+    "Meridian Packaging",
+  );
+  await page.getByLabel("Meridian lead days").fill("14");
+  await page.getByRole("button", { name: "Evaluate scenario" }).click();
+  await expect(page.getByTestId("recommendation")).toContainText(
+    "Expedite Northstar Packaging",
+  );
+  await expect(page.locator(".scenario-diff")).toContainText("leadDays");
+  await expect(page.getByTestId("ready-days")).toHaveText("20 days");
+  const live = await page.request.get(
+    "/api/ontologies/semiconductor/objects/meridian",
+  );
+  expect((await live.json()).properties.leadDays).toBe(7);
+  await page.screenshot({
+    path: "/tmp/graph-launch-desktop.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Reset to live" }).click();
+  await expect(page.getByTestId("recommendation")).toContainText(
+    "Meridian Packaging",
+  );
+});
+
+test("makes driver recovery change the selected release and stays usable on mobile", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Launch operations" }).click();
+  await expect(page.getByTestId("recommendation")).toContainText(
+    "Meridian Packaging",
+  );
+  await page.getByLabel("Driver repair days").fill("20");
+  await page.getByRole("button", { name: "Evaluate scenario" }).click();
+  await expect(page.getByTestId("recommendation")).toContainText(
+    "use validated Driver 26.09",
+  );
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "/tmp/graph-launch-mobile.png",
     fullPage: true,
   });
 });

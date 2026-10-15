@@ -13,14 +13,18 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "seed": "node --import tsx scripts/seed.ts",
-    "test:integration": "GRAPH_INTEGRATION=1 vitest run tests/integration.test.ts",
-    "test:browser": "playwright test"
+    "test:integration": "GRAPH_INTEGRATION=1 vitest run tests/integration.test.ts tests/workflow.integration.test.ts",
+    "test:browser": "playwright test",
+    "demo": "node --import tsx scripts/launch-demo.ts"
   },
   "dependencies": {
     "@fastify/static": "^8.3.0",
+    "@fastify/swagger": "^9.9.2",
+    "@fastify/swagger-ui": "^5.2.6",
     "@xyflow/react": "^12.8.5",
     "falkordb": "^6.2.0",
     "fastify": "^5.6.1",
+    "fastify-type-provider-zod": "^7.0.0",
     "lucide-react": "^0.544.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

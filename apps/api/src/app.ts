@@ -1,5 +1,14 @@
 import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
+import {
+  jsonSchemaTransform,
+  validatorCompiler,
+  serializerCompiler,
+  hasZodFastifySchemaValidationErrors,
+  type ZodTypeProvider,
+} from "fastify-type-provider-zod";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
@@ -9,117 +18,504 @@ import {
   ingestionSchema,
   objectInput,
   relationshipInput,
+  objectPatch,
+  pageQuery,
+  relationshipQuery,
+  scenarioCreate,
+  scenarioEdit,
+  scenarioObjectPatch,
+  functionInvocation,
 } from "@graph/contracts";
-import { GraphStore, PlatformError } from "@graph/core";
+import {
+  GraphStore,
+  PlatformError,
+  ScenarioService,
+  FunctionRuntime,
+  type FunctionDefinition,
+} from "@graph/core";
 
 export function createApp(
   store: GraphStore,
-  options: { logger?: boolean; serveWeb?: boolean } = {},
+  options: {
+    logger?: boolean;
+    serveWeb?: boolean;
+    functions?: FunctionDefinition[];
+  } = {},
 ) {
   const app = Fastify({
     logger: options.logger ?? false,
     bodyLimit: 4 * 1024 * 1024,
+  }).withTypeProvider<ZodTypeProvider>();
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
+  app.register(swagger, {
+    openapi: {
+      info: {
+        title: "Graph Operational Ontology API",
+        version: "0.2.0",
+        description:
+          "Typed ontologies, connected objects, isolated scenarios, and deterministic domain functions. Trusted local workspace.",
+      },
+    },
+    transform: jsonSchemaTransform,
+  });
+  app.register(swaggerUi, { routePrefix: "/api/docs" });
+  app.addHook("onRequest", async (req, reply) => {
+    reply.header("x-request-id", req.id);
   });
   app.setErrorHandler((error, request, reply) => {
-    if (error instanceof z.ZodError)
+    const issues =
+      error instanceof z.ZodError
+        ? error.issues
+        : hasZodFastifySchemaValidationErrors(error)
+          ? error.validation
+          : undefined;
+    if (issues)
       return reply
         .status(400)
-        .send({ message: "Invalid request", issues: error.issues });
-    if (error instanceof PlatformError)
-      return reply.status(error.statusCode).send({ message: error.message });
-    request.log.error(error);
+        .send({
+          code: "VALIDATION_ERROR",
+          message: "Invalid request",
+          issues,
+          requestId: request.id,
+        });
     const status =
-      typeof error === "object" && error && "statusCode" in error
-        ? Number(error.statusCode)
-        : 500;
+      error instanceof PlatformError
+        ? error.statusCode
+        : typeof error === "object" && error && "statusCode" in error
+          ? Number(error.statusCode)
+          : 500;
+    const safeStatus = status >= 400 && status < 600 ? status : 500;
+    if (safeStatus >= 500) request.log.error(error);
     return reply
-      .status(status >= 400 && status < 500 ? status : 500)
+      .status(safeStatus)
       .send({
+        code:
+          (
+            {
+              404: "NOT_FOUND",
+              409: "CONFLICT",
+              422: "DOMAIN_VALIDATION_ERROR",
+            } as Record<number, string>
+          )[safeStatus] ??
+          (safeStatus >= 500 ? "INTERNAL_ERROR" : "BAD_REQUEST"),
         message:
-          status >= 400 && status < 500 && error instanceof Error
+          safeStatus < 500 && error instanceof Error
             ? error.message
             : "Graph operation failed",
+        requestId: request.id,
       });
   });
-  const params = (value: unknown) =>
-    z.object({ ontology: identifier, id: identifier.optional() }).parse(value);
-  app.get("/api/health", async () => {
-    await store.health();
-    return { status: "ok", database: "FalkorDB" };
-  });
-  app.get("/api/ontologies", () => store.listOntologies());
-  app.post("/api/ontologies", async (req, reply) => {
-    const result = await store.register(ontologySchema.parse(req.body));
-    return reply.code(201).send(result);
-  });
-  app.get("/api/ontologies/:ontology", (req) =>
-    store.ontology(params(req.params).ontology),
+  const scenarios = new ScenarioService(store);
+  const functions = new FunctionRuntime(
+    store,
+    scenarios,
+    options.functions ?? [],
   );
-  app.get("/api/ontologies/:ontology/graph", (req) =>
-    store.snapshot(params(req.params).ontology),
-  );
-  app.post("/api/ontologies/:ontology/ingest", (req) =>
-    store.ingest(params(req.params).ontology, ingestionSchema.parse(req.body)),
-  );
-  app.get("/api/ontologies/:ontology/objects/:id", (req) => {
-    const { ontology, id } = params(req.params);
-    return store.object(ontology, id!);
-  });
-  app.put("/api/ontologies/:ontology/objects/:id", async (req) => {
-    const { ontology, id } = params(req.params);
-    const object = objectInput.parse(req.body);
-    if (object.id !== id)
-      throw new PlatformError(400, "Path and body IDs must match");
-    await store.ingest(ontology, { objects: [object], relationships: [] });
-    return object;
-  });
-  app.put("/api/ontologies/:ontology/relationships/:id", async (req) => {
-    const { ontology, id } = params(req.params);
-    const relationship = relationshipInput.parse(req.body);
-    if (relationship.id !== id)
-      throw new PlatformError(400, "Path and body IDs must match");
-    await store.ingest(ontology, {
-      objects: [],
-      relationships: [relationship],
-    });
-    return relationship;
-  });
-  app.delete("/api/ontologies/:ontology/objects/:id", async (req, reply) => {
-    const { ontology, id } = params(req.params);
-    await store.deleteObject(ontology, id!);
-    return reply.code(204).send();
-  });
-  app.delete(
-    "/api/ontologies/:ontology/relationships/:id",
-    async (req, reply) => {
-      const { ontology, id } = params(req.params);
-      await store.deleteRelationship(ontology, id!);
-      return reply.code(204).send();
-    },
-  );
-  app.get("/api/ontologies/:ontology/traverse", (req) => {
-    const query = z
-      .object({
-        root: identifier,
-        depth: z.coerce.number().int().min(1).max(5).default(3),
-        direction: z.enum(["out", "in", "both"]).default("both"),
-      })
-      .parse(req.query);
-    return store.traverse(
-      params(req.params).ontology,
-      query.root,
-      query.depth,
-      query.direction,
+  const ontologyParams = z.object({ ontology: identifier });
+  const recordParams = ontologyParams.extend({ id: identifier });
+  const scenarioParams = ontologyParams.extend({ scenario: identifier });
+  app.after(() => {
+    app.get("/api/openapi.json", { schema: { hide: true } }, () =>
+      app.swagger(),
+    );
+    app.get(
+      "/api/health",
+      {
+        schema: { tags: ["Platform"], summary: "Verify a real FalkorDB query" },
+      },
+      async () => {
+        await store.health();
+        return { status: "ok", database: "FalkorDB" };
+      },
+    );
+    app.get(
+      "/api/ontologies",
+      {
+        schema: {
+          tags: ["Ontologies"],
+          summary: "List registered ontology schemas",
+        },
+      },
+      () => store.listOntologies(),
+    );
+    app.post(
+      "/api/ontologies",
+      {
+        schema: {
+          tags: ["Ontologies"],
+          summary: "Register an immutable ontology schema",
+          body: ontologySchema,
+        },
+      },
+      async (req, reply) =>
+        reply.code(201).send(await store.register(req.body)),
+    );
+    app.get(
+      "/api/ontologies/:ontology",
+      {
+        schema: {
+          tags: ["Ontologies"],
+          summary: "Read an ontology schema",
+          params: ontologyParams,
+        },
+      },
+      (req) => store.ontology(req.params.ontology),
+    );
+    app.get(
+      "/api/ontologies/:ontology/graph",
+      {
+        schema: {
+          tags: ["Graph"],
+          summary: "Read a consistent graph view and ontology revision",
+          params: ontologyParams,
+        },
+      },
+      async (req, reply) => {
+        const state = await store.state(req.params.ontology);
+        reply.header("etag", `"${state.revision}"`);
+        return state;
+      },
+    );
+    app.post(
+      "/api/ontologies/:ontology/ingest",
+      {
+        schema: {
+          tags: ["Graph"],
+          summary: "Validate and upsert a complete JSON batch",
+          params: ontologyParams,
+          body: ingestionSchema,
+        },
+      },
+      (req) => store.ingest(req.params.ontology, req.body),
+    );
+    app.get(
+      "/api/ontologies/:ontology/objects",
+      {
+        schema: {
+          tags: ["Objects"],
+          summary:
+            "List objects with cursor pagination, type filtering, and text search",
+          params: ontologyParams,
+          querystring: pageQuery,
+        },
+      },
+      (req) => store.objects(req.params.ontology, req.query),
+    );
+    app.get(
+      "/api/ontologies/:ontology/objects/:id",
+      {
+        schema: {
+          tags: ["Objects"],
+          summary: "Read an object and its provenance",
+          params: recordParams,
+        },
+      },
+      (req) => store.object(req.params.ontology, req.params.id),
+    );
+    app.put(
+      "/api/ontologies/:ontology/objects/:id",
+      {
+        schema: {
+          tags: ["Objects"],
+          summary: "Create or replace an entire object",
+          params: recordParams,
+          body: objectInput,
+        },
+      },
+      async (req) => {
+        if (req.params.id !== req.body.id)
+          throw new PlatformError(400, "Path and body IDs must match");
+        await store.ingest(req.params.ontology, {
+          objects: [req.body],
+          relationships: [],
+        });
+        return req.body;
+      },
+    );
+    app.patch(
+      "/api/ontologies/:ontology/objects/:id",
+      {
+        schema: {
+          tags: ["Objects"],
+          summary:
+            "Merge properties with an optional expected ontology revision",
+          params: recordParams,
+          body: objectPatch,
+        },
+      },
+      async (req, reply) => {
+        const result = await store.patchObject(
+          req.params.ontology,
+          req.params.id,
+          req.body,
+        );
+        reply.header("etag", `"${result.revision}"`);
+        return result;
+      },
+    );
+    app.delete(
+      "/api/ontologies/:ontology/objects/:id",
+      {
+        schema: {
+          tags: ["Objects"],
+          summary: "Delete an unconnected object",
+          params: recordParams,
+        },
+      },
+      async (req, reply) => {
+        await store.deleteObject(req.params.ontology, req.params.id);
+        return reply.code(204).send();
+      },
+    );
+    app.get(
+      "/api/ontologies/:ontology/relationships",
+      {
+        schema: {
+          tags: ["Relationships"],
+          summary: "List relationships by type, endpoints, and cursor",
+          params: ontologyParams,
+          querystring: relationshipQuery,
+        },
+      },
+      (req) => store.relationships(req.params.ontology, req.query),
+    );
+    app.get(
+      "/api/ontologies/:ontology/relationships/:id",
+      {
+        schema: {
+          tags: ["Relationships"],
+          summary: "Read a relationship",
+          params: recordParams,
+        },
+      },
+      (req) => store.relationship(req.params.ontology, req.params.id),
+    );
+    app.put(
+      "/api/ontologies/:ontology/relationships/:id",
+      {
+        schema: {
+          tags: ["Relationships"],
+          summary: "Create or replace a relationship",
+          params: recordParams,
+          body: relationshipInput,
+        },
+      },
+      async (req) => {
+        if (req.params.id !== req.body.id)
+          throw new PlatformError(400, "Path and body IDs must match");
+        await store.ingest(req.params.ontology, {
+          objects: [],
+          relationships: [req.body],
+        });
+        return req.body;
+      },
+    );
+    app.delete(
+      "/api/ontologies/:ontology/relationships/:id",
+      {
+        schema: {
+          tags: ["Relationships"],
+          summary: "Delete a relationship explicitly",
+          params: recordParams,
+        },
+      },
+      async (req, reply) => {
+        await store.deleteRelationship(req.params.ontology, req.params.id);
+        return reply.code(204).send();
+      },
+    );
+    app.get(
+      "/api/ontologies/:ontology/traverse",
+      {
+        schema: {
+          tags: ["Graph"],
+          summary:
+            "Discover connected objects with bounded directed Cypher traversal",
+          params: ontologyParams,
+          querystring: z
+            .object({
+              root: identifier,
+              depth: z.coerce.number().int().min(1).max(5).default(3),
+              direction: z.enum(["out", "in", "both"]).default("both"),
+            })
+            .strict(),
+        },
+      },
+      (req) =>
+        store.traverse(
+          req.params.ontology,
+          req.query.root,
+          req.query.depth,
+          req.query.direction,
+        ),
+    );
+    app.get(
+      "/api/ontologies/:ontology/scenarios",
+      {
+        schema: {
+          tags: ["Scenarios"],
+          summary: "List saved hypothetical branches",
+          params: ontologyParams,
+        },
+      },
+      (req) => scenarios.list(req.params.ontology),
+    );
+    app.post(
+      "/api/ontologies/:ontology/scenarios",
+      {
+        schema: {
+          tags: ["Scenarios"],
+          summary: "Create a scenario pinned to the current ontology revision",
+          params: ontologyParams,
+          body: scenarioCreate,
+        },
+      },
+      async (req, reply) =>
+        reply
+          .code(201)
+          .send(await scenarios.create(req.params.ontology, req.body)),
+    );
+    app.get(
+      "/api/ontologies/:ontology/scenarios/:scenario",
+      {
+        schema: {
+          tags: ["Scenarios"],
+          summary: "Read scenario metadata and its sparse overlay",
+          params: scenarioParams,
+        },
+      },
+      (req) => scenarios.get(req.params.ontology, req.params.scenario),
+    );
+    app.get(
+      "/api/ontologies/:ontology/scenarios/:scenario/graph",
+      {
+        schema: {
+          tags: ["Scenarios"],
+          summary: "Materialize the pinned base with hypothetical changes",
+          params: scenarioParams,
+        },
+      },
+      (req) => scenarios.state(req.params.ontology, req.params.scenario),
+    );
+    app.patch(
+      "/api/ontologies/:ontology/scenarios/:scenario",
+      {
+        schema: {
+          tags: ["Scenarios"],
+          summary: "Upsert or remove hypothetical objects and relationships",
+          params: scenarioParams,
+          body: scenarioEdit,
+        },
+      },
+      (req) =>
+        scenarios.edit(req.params.ontology, req.params.scenario, req.body),
+    );
+    app.patch(
+      "/api/ontologies/:ontology/scenarios/:scenario/objects/:id",
+      {
+        schema: {
+          tags: ["Scenarios"],
+          summary: "Change hypothetical object properties with a version check",
+          params: scenarioParams.extend({ id: identifier }),
+          body: scenarioObjectPatch,
+        },
+      },
+      (req) =>
+        scenarios.patchObject(
+          req.params.ontology,
+          req.params.scenario,
+          req.params.id,
+          req.body,
+        ),
+    );
+    app.get(
+      "/api/ontologies/:ontology/scenarios/:scenario/diff",
+      {
+        schema: {
+          tags: ["Scenarios"],
+          summary: "Compare hypothetical state with its pinned base",
+          params: scenarioParams,
+        },
+      },
+      (req) => scenarios.diff(req.params.ontology, req.params.scenario),
+    );
+    app.delete(
+      "/api/ontologies/:ontology/scenarios/:scenario",
+      {
+        schema: {
+          tags: ["Scenarios"],
+          summary: "Discard a scenario without changing live objects",
+          params: scenarioParams,
+        },
+      },
+      async (req, reply) => {
+        await scenarios.discard(req.params.ontology, req.params.scenario);
+        return reply.code(204).send();
+      },
+    );
+    app.get(
+      "/api/ontologies/:ontology/functions",
+      {
+        schema: {
+          tags: ["Functions"],
+          summary: "Discover function input and output JSON schemas",
+          params: ontologyParams,
+        },
+      },
+      async (req) => {
+        await store.ontology(req.params.ontology);
+        return functions.list(req.params.ontology);
+      },
+    );
+    app.post(
+      "/api/ontologies/:ontology/functions/:id/run",
+      {
+        schema: {
+          tags: ["Functions"],
+          summary: "Run a deterministic function on live or hypothetical state",
+          params: recordParams,
+          body: functionInvocation,
+        },
+      },
+      (req) =>
+        functions.run(
+          req.params.ontology,
+          req.params.id,
+          req.body.input,
+          req.body.scenario,
+        ),
+    );
+    app.get(
+      "/api/ontologies/:ontology/runs",
+      {
+        schema: {
+          tags: ["Functions"],
+          summary:
+            "Read recorded function inputs, outputs, and revision evidence",
+          params: ontologyParams,
+        },
+      },
+      (req) => functions.history(req.params.ontology),
     );
   });
   const webRoot = resolve("apps/web/dist");
-  if (options.serveWeb && existsSync(webRoot)) {
+  if (options.serveWeb && existsSync(webRoot))
     app.register(fastifyStatic, { root: webRoot });
-    app.setNotFoundHandler((req, reply) =>
-      req.url.startsWith("/api/")
-        ? reply.code(404).send({ message: "API route not found" })
-        : reply.sendFile("index.html"),
-    );
-  }
+  app.setNotFoundHandler((req, reply) => {
+    if (
+      req.url.startsWith("/api/") ||
+      !options.serveWeb ||
+      !existsSync(webRoot)
+    )
+      return reply
+        .code(404)
+        .send({
+          code: "NOT_FOUND",
+          message: "Route not found",
+          requestId: req.id,
+        });
+    return reply.sendFile("index.html");
+  });
   return app;
 }

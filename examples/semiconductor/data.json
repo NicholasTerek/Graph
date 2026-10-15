@@ -5,7 +5,9 @@
       "type": "Product",
       "properties": {
         "name": "Aquila X900",
-        "status": "at-risk"
+        "status": "at-risk",
+        "architecture": "Borealis",
+        "integrationDays": 5
       },
       "provenance": {
         "source": "synthetic-demo",
@@ -18,7 +20,9 @@
       "type": "Product",
       "properties": {
         "name": "Aquila X700",
-        "status": "ready"
+        "status": "ready",
+        "architecture": "Borealis",
+        "integrationDays": 5
       },
       "provenance": {
         "source": "synthetic-demo",
@@ -31,7 +35,8 @@
       "type": "Component",
       "properties": {
         "name": "Advanced package",
-        "status": "delayed"
+        "status": "delayed",
+        "assemblyDays": 5
       },
       "provenance": {
         "source": "synthetic-demo",
@@ -44,7 +49,8 @@
       "type": "Component",
       "properties": {
         "name": "Standard package",
-        "status": "ready"
+        "status": "ready",
+        "assemblyDays": 3
       },
       "provenance": {
         "source": "synthetic-demo",
@@ -58,7 +64,12 @@
       "properties": {
         "name": "Northstar Packaging",
         "status": "delayed",
-        "leadDays": 28
+        "leadDays": 28,
+        "riskPoints": 1,
+        "costUSD": 0,
+        "expeditedLeadDays": 10,
+        "expeditedRiskPoints": 4,
+        "expeditedCostUSD": 180000
       },
       "provenance": {
         "source": "synthetic-demo",
@@ -72,7 +83,9 @@
       "properties": {
         "name": "Meridian Packaging",
         "status": "available",
-        "leadDays": 7
+        "leadDays": 7,
+        "riskPoints": 2,
+        "costUSD": 65000
       },
       "provenance": {
         "source": "synthetic-demo",
@@ -85,7 +98,11 @@
       "type": "Release",
       "properties": {
         "name": "Driver 26.10",
-        "status": "blocked"
+        "status": "blocked",
+        "architecture": "Borealis",
+        "validationDays": 5,
+        "riskPoints": 2,
+        "repairCostUSD": 30000
       },
       "provenance": {
         "source": "synthetic-demo",
@@ -98,7 +115,11 @@
       "type": "Release",
       "properties": {
         "name": "Driver 26.09",
-        "status": "validated"
+        "status": "validated",
+        "architecture": "Borealis",
+        "validationDays": 0,
+        "riskPoints": 4,
+        "repairCostUSD": 0
       },
       "provenance": {
         "source": "synthetic-demo",
@@ -111,7 +132,8 @@
       "type": "Issue",
       "properties": {
         "name": "GPU-142 · memory regression",
-        "status": "open"
+        "status": "open",
+        "fixDays": 10
       },
       "provenance": {
         "source": "synthetic-demo",
@@ -327,6 +349,17 @@
       "provenance": {
         "source": "synthetic-demo",
         "externalId": "r13",
+        "observedAt": "2026-10-15T00:00:00Z"
+      }
+    },
+    {
+      "id": "r14",
+      "type": "FALLBACK",
+      "from": "driver-26-10",
+      "to": "driver-26-09",
+      "provenance": {
+        "source": "synthetic-demo",
+        "externalId": "r14",
         "observedAt": "2026-10-15T00:00:00Z"
       }
     }

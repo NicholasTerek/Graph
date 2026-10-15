@@ -1,3 +1,4 @@
+import { platformFunctions } from "./extensions.js";
 import { FalkorDB } from "falkordb";
 import { GraphStore } from "@graph/core";
 import { createApp } from "./app.js";
@@ -12,7 +13,11 @@ const db = await FalkorDB.connect({
 });
 const store = new GraphStore(db, process.env.GRAPH_NAME ?? "graph");
 await store.initialize();
-const app = createApp(store, { logger: true, serveWeb: true });
+const app = createApp(store, {
+  logger: true,
+  serveWeb: true,
+  functions: platformFunctions,
+});
 app.addHook("onClose", () => store.close());
 for (const signal of ["SIGINT", "SIGTERM"])
   process.on(signal, () => {

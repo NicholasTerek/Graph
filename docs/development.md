@@ -45,3 +45,17 @@ Helix Foundry is an architectural reference; no implementation code was copied. 
 - Desktop (1440px) and mobile (390px) screenshots were visually inspected.
 - Browser checks caught a real SDK invocation defect before delivery; API-only checks would not have found it.
 - Container build and Compose startup remain delegated to CI because Docker is unavailable in the coding environment.
+
+## GPU application and reusable SDK proof
+
+The project owner redirected work toward the semiconductor application to establish whether the reusable API actually supports a domain workflow. The application lives under `examples/semiconductor/app`, and the deterministic planner lives under `examples/semiconductor/functions`. Neither has direct database access. Generic platform code has no GPU, supplier, or driver types.
+
+The model now enumerates six graph-derived supplier/release alternatives. The default Meridian lead of seven days produces a 20-day repaired-driver plan. Fourteen days makes that route three days late and selects expedited Northstar instead. A 20-day driver repair selects the validated fallback. The math uses graph properties and explicit assumptions, including ordinal risk points and incremental USD costs. It does not treat predicted validation completion as an observed passing test.
+
+Implemented supporting capabilities: OpenAPI/Swagger UI, object/relationship collection queries, typed SDK errors, optional revision checks for property patches, safe additive ontology schemas, scenario overlays, and persisted deterministic function runs.
+
+Scenario state uses a shared immutable snapshot per branched revision plus per-scenario overrides/tombstones. This is copy-on-write at the application layer; it does not pretend to be database-native MVCC. Conflicting scenario edits are rejected through version checks. Tests cover pinned-state isolation, live-update divergence, shared sibling bases, invalid edits, relationship changes, scenario deletion, and function extension outside the semiconductor domain.
+
+Observed verification: 14 unit/model tests, 23 real FalkorDB integration tests, and six Chromium browser tests pass. The first foundation commit's GitHub CI passed both the full verification job and the Docker Compose smoke test. The expanded workflow still requires its own post-commit CI run.
+
+The previous commit’s actual ontology and data were loaded over HTTP, then upgraded using the current seed script. The new GPU fields and fallback relationship registered without deleting existing data. The command-line SDK demo passed its recommendation-change and live-state isolation assertions against that upgraded service. Desktop and mobile launch-workspace screenshots were visually inspected.

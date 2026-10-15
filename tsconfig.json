@@ -18,5 +18,5 @@
       "@graph/sdk": ["packages/sdk/src/index.ts"]
     }
   },
-  "include": ["apps", "packages", "scripts", "tests"]
+  "include": ["apps", "packages", "scripts", "tests", "examples"]
 }
