@@ -1,0 +1,37 @@
+{
+  "size": 250,
+  "ingestMs": 58.351721999999995,
+  "branches": [
+    {
+      "trial": 0,
+      "firstBase": true,
+      "createMs": 75.77565700000014,
+      "editMs": 106.79384500000015
+    },
+    {
+      "trial": 1,
+      "firstBase": false,
+      "createMs": 94.07048699999996,
+      "editMs": 110.54870000000028
+    },
+    {
+      "trial": 2,
+      "firstBase": false,
+      "createMs": 90.91936100000021,
+      "editMs": 105.6465790000002
+    },
+    {
+      "trial": 3,
+      "firstBase": false,
+      "createMs": 96.59442000000035,
+      "editMs": 105.62043199999971
+    },
+    {
+      "trial": 4,
+      "firstBase": false,
+      "createMs": 95.64620100000047,
+      "editMs": 105.59426399999938
+    }
+  ],
+  "cleanupMs": 24.23551800000041
+}

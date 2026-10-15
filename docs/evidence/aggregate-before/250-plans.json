@@ -1,15 +1,36 @@
 {
-  "query": "MATCH (o:Object {ontology:'records-250'}) WHERE o.type='Record' AND o.p_score>=125 RETURN count(o) AS count,sum(o.p_score) AS value",
-  "explain": [
-    "Results",
-    "    Aggregate",
-    "        Filter",
-    "            Node By Index Scan | (o:Object)"
-  ],
-  "profile": [
-    "Results | Records produced: 1, Execution time: 0.000240 ms",
-    "    Aggregate | Records produced: 1, Execution time: 0.030114 ms",
-    "        Filter | Records produced: 125, Execution time: 0.028493 ms",
-    "            Node By Index Scan | (o:Object) | Records produced: 125, Execution time: 0.048154 ms"
-  ]
+  "referencePage": {
+    "query": "CYPHER ontology='records-250' type='Record' after='' value0=125 limit=101 MATCH (o:Object {ontology:$ontology}) WHERE ($type='' OR o.type=$type) AND ($after='' OR o.id>$after) AND o.`p_score` >= $value0 RETURN o.record AS record ORDER BY o.id LIMIT $limit",
+    "explain": [
+      "Results",
+      "    Limit",
+      "        Sort",
+      "            Project",
+      "                Filter",
+      "                    Node By Index Scan | (o:Object)"
+    ],
+    "profile": [
+      "Results | Records produced: 101, Execution time: 0.007521 ms",
+      "    Limit | Records produced: 101, Execution time: 0.007542 ms",
+      "        Sort | Records produced: 101, Execution time: 0.026221 ms",
+      "            Project | Records produced: 125, Execution time: 0.020549 ms",
+      "                Filter | Records produced: 125, Execution time: 0.019561 ms",
+      "                    Node By Index Scan | (o:Object) | Records produced: 125, Execution time: 0.037845 ms"
+    ]
+  },
+  "nativeAggregate": {
+    "query": "CYPHER ontology='records-250' type='Record' after='' value0=125 limit=101 MATCH (o:Object {ontology:$ontology}) WHERE ($type='' OR o.type=$type) AND ($after='' OR o.id>$after) AND o.`p_score` >= $value0 RETURN count(o) AS count,count(o.`p_score`) AS numericCount,sum(o.`p_score`) AS value",
+    "explain": [
+      "Results",
+      "    Aggregate",
+      "        Filter",
+      "            Node By Index Scan | (o:Object)"
+    ],
+    "profile": [
+      "Results | Records produced: 1, Execution time: 0.000200 ms",
+      "    Aggregate | Records produced: 1, Execution time: 0.025997 ms",
+      "        Filter | Records produced: 125, Execution time: 0.017412 ms",
+      "            Node By Index Scan | (o:Object) | Records produced: 125, Execution time: 0.030333 ms"
+    ]
+  }
 }

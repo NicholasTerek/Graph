@@ -1,0 +1,36 @@
+{
+  "referencePage": {
+    "query": "CYPHER ontology='records-250' type='Record' after='' value0=125 limit=101 MATCH (o:Object {ontology:$ontology}) WHERE ($type='' OR o.type=$type) AND ($after='' OR o.id>$after) AND o.`p_score` >= $value0 RETURN o.record AS record ORDER BY o.id LIMIT $limit",
+    "explain": [
+      "Results",
+      "    Limit",
+      "        Sort",
+      "            Project",
+      "                Filter",
+      "                    Node By Index Scan | (o:Object)"
+    ],
+    "profile": [
+      "Results | Records produced: 101, Execution time: 0.006851 ms",
+      "    Limit | Records produced: 101, Execution time: 0.007790 ms",
+      "        Sort | Records produced: 101, Execution time: 0.028204 ms",
+      "            Project | Records produced: 125, Execution time: 0.022073 ms",
+      "                Filter | Records produced: 125, Execution time: 0.030952 ms",
+      "                    Node By Index Scan | (o:Object) | Records produced: 125, Execution time: 0.113625 ms"
+    ]
+  },
+  "nativeAggregate": {
+    "query": "CYPHER ontology='records-250' type='Record' after='' value0=125 limit=101 MATCH (o:Object {ontology:$ontology}) WHERE ($type='' OR o.type=$type) AND ($after='' OR o.id>$after) AND o.`p_score` >= $value0 RETURN count(o) AS count,count(o.`p_score`) AS numericCount,sum(o.`p_score`) AS value",
+    "explain": [
+      "Results",
+      "    Aggregate",
+      "        Filter",
+      "            Node By Index Scan | (o:Object)"
+    ],
+    "profile": [
+      "Results | Records produced: 1, Execution time: 0.000210 ms",
+      "    Aggregate | Records produced: 1, Execution time: 0.026041 ms",
+      "        Filter | Records produced: 125, Execution time: 0.016638 ms",
+      "            Node By Index Scan | (o:Object) | Records produced: 125, Execution time: 0.030742 ms"
+    ]
+  }
+}

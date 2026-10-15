@@ -563,13 +563,14 @@ export class GraphStore {
     };
   }
 
-  async queryObjects(ontology: string, input: ObjectQuery) {
-    const schema = await this.ontology(ontology);
+  private objectPredicates(
+    schema: Ontology,
+    input: Pick<ObjectQuery, "type" | "after" | "filters">,
+  ) {
     const params: Record<string, QueryValue> = {
-      ontology,
+      ontology: schema.id,
       type: input.type ?? "",
       after: input.after ?? "",
-      limit: input.limit + 1,
     };
     const predicates = [
       "($type='' OR o.type=$type)",
@@ -613,9 +614,15 @@ export class GraphStore {
         predicates.push(`${property} ${operators[filter.operator]} $${key}`);
       }
     }
+    return { params, predicates };
+  }
+
+  async queryObjects(ontology: string, input: ObjectQuery) {
+    const schema = await this.ontology(ontology);
+    const { params, predicates } = this.objectPredicates(schema, input);
     const rows = await this.rows(
       `MATCH (o:Object {ontology:$ontology}) WHERE ${predicates.join(" AND ")} RETURN o.record AS record ORDER BY o.id LIMIT $limit`,
-      params,
+      { ...params, limit: input.limit + 1 },
     );
     const items: GraphObject[] = rows.map((row) =>
       JSON.parse(String(row.record)),
@@ -646,40 +653,32 @@ export class GraphStore {
         422,
         "Numeric aggregation requires a numeric property",
       );
-    const items: GraphObject[] = [];
-    let after: string | undefined;
-    do {
-      const page = await this.queryObjects(ontology, {
-        type: input.type,
-        filters: input.filters,
-        limit: 100,
-        after,
-      });
-      items.push(...page.items);
-      after = page.nextCursor ?? undefined;
-    } while (after);
-    const values = items
-      .map((o) => o.properties[input.property!])
-      .filter((v): v is number => typeof v === "number");
-    const value =
+    const { params, predicates } = this.objectPredicates(schema, input);
+    if (!["count", "sum", "avg", "min", "max"].includes(input.operation))
+      throw new PlatformError(400, "Unknown aggregation operation");
+    const expression =
       input.operation === "count"
-        ? items.length
-        : values.length === 0
-          ? null
-          : input.operation === "sum"
-            ? values.reduce((a, b) => a + b, 0)
-            : input.operation === "avg"
-              ? values.reduce((a, b) => a + b, 0) / values.length
-              : input.operation === "min"
-                ? Math.min(...values)
-                : Math.max(...values);
+        ? "count(o)"
+        : `${input.operation}(o.\`p_${input.property}\`)`;
+    const numericCount =
+      input.operation === "count"
+        ? "count(o)"
+        : `count(o.\`p_${input.property}\`)`;
+    const [row] = await this.rows(
+      `MATCH (o:Object {ontology:$ontology}) WHERE ${predicates.join(" AND ")} RETURN count(o) AS count, ${numericCount} AS numericCount, ${expression} AS value`,
+      params,
+    );
     return {
       operation: input.operation,
       property: input.property ?? null,
-      count: items.length,
-      value,
+      count: Number(row.count),
+      value:
+        input.operation !== "count" && Number(row.numericCount) === 0
+          ? null
+          : Number(row.value),
     };
   }
+
   async createPropertyIndex(ontology: string, type: string, property: string) {
     const schema = await this.ontology(ontology);
     if (!schema.objectTypes.find((t) => t.name === type)?.properties[property])

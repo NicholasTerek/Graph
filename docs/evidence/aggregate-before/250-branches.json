@@ -1,37 +1,37 @@
 {
   "size": 250,
-  "ingestMs": 61.19209799999999,
+  "ingestMs": 61.838146999999935,
   "branches": [
     {
       "trial": 0,
       "firstBase": true,
-      "createMs": 75.65536900000006,
-      "editMs": 105.76400999999987
+      "createMs": 54.429283999999825,
+      "editMs": 106.20710700000018
     },
     {
       "trial": 1,
       "firstBase": false,
-      "createMs": 95.55429699999968,
-      "editMs": 109.47838500000034
+      "createMs": 95.98304199999984,
+      "editMs": 111.76734699999997
     },
     {
       "trial": 2,
       "firstBase": false,
-      "createMs": 92.51083699999981,
-      "editMs": 104.85258200000044
+      "createMs": 89.40469099999973,
+      "editMs": 105.08073500000046
     },
     {
       "trial": 3,
       "firstBase": false,
-      "createMs": 96.6886710000008,
-      "editMs": 104.42907399999967
+      "createMs": 96.81122500000038,
+      "editMs": 105.78101499999957
     },
     {
       "trial": 4,
       "firstBase": false,
-      "createMs": 97.85565600000064,
-      "editMs": 104.10091099999954
+      "createMs": 96.7519399999992,
+      "editMs": 105.46360200000072
     }
   ],
-  "cleanupMs": 26.018051999999443
+  "cleanupMs": 25.019008000000213
 }

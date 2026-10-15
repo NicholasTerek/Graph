@@ -1,6 +1,7 @@
 import { performance } from "node:perf_hooks";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { cpus, platform, arch, totalmem } from "node:os";
+import { execFileSync } from "node:child_process";
 import { FalkorDB } from "falkordb";
 import { GraphStore } from "@graph/core";
 import { GraphClient } from "@graph/sdk";
@@ -42,6 +43,19 @@ try {
   const address = await app.listen({ host: "127.0.0.1", port: 0 });
   const client = new GraphClient(address);
   const native = db.selectGraph(graphName);
+  const connection = await db.connection;
+  const info = async (section: string) =>
+    Object.fromEntries(
+      (await connection.info(section))
+        .split("\n")
+        .filter((l) => l.includes(":"))
+        .map((l) => {
+          const at = l.indexOf(":");
+          return [l.slice(0, at), l.slice(at + 1).trim()];
+        }),
+    );
+  const pick = (record: Record<string, string>, keys: string[]) =>
+    Object.fromEntries(keys.map((k) => [k, record[k]]));
   for (const size of sizes) {
     const ontology = `records-${size}`;
     await client.register(
@@ -120,12 +134,26 @@ try {
         throw Error("Page answer mismatch");
     };
     // PROFILE is read-only here; the text deliberately matches the filter and native aggregate shape.
-    const query = `MATCH (o:Object {ontology:'${ontology}'}) WHERE o.type='Record' AND o.p_score>=${size / 2} RETURN count(o) AS count,sum(o.p_score) AS value`;
-    const plans = {
-      query,
-      explain: await native.explain(query),
-      profile: await native.profile(query),
+    const parameters = `CYPHER ontology='${ontology}' type='Record' after='' value0=${size / 2} limit=101 `;
+    const match =
+      "MATCH (o:Object {ontology:$ontology}) WHERE ($type='' OR o.type=$type) AND ($after='' OR o.id>$after) AND o.`p_score` >= $value0";
+    const queries = {
+      referencePage:
+        parameters +
+        match +
+        " RETURN o.record AS record ORDER BY o.id LIMIT $limit",
+      nativeAggregate:
+        parameters +
+        match +
+        " RETURN count(o) AS count,count(o.`p_score`) AS numericCount,sum(o.`p_score`) AS value",
     };
+    const plans: Record<string, unknown> = {};
+    for (const [name, query] of Object.entries(queries))
+      plans[name] = {
+        query,
+        explain: await native.explain(query),
+        profile: await native.profile(query),
+      };
     await writeFile(
       `${directory}/${size}-plans.json`,
       JSON.stringify(plans, null, 2) + "\n",
@@ -145,6 +173,7 @@ try {
             error?: string;
           }[] = [];
           let next = 0;
+          const databaseCpuBefore = await info("cpu");
           const cpuBefore = process.cpuUsage();
           const rssBefore = process.memoryUsage().rss;
           const start = performance.now();
@@ -177,6 +206,8 @@ try {
           );
           const elapsedMs = performance.now() - start;
           const cpu = process.cpuUsage(cpuBefore);
+          const databaseCpuAfter = await info("cpu");
+          const databaseMemory = await info("memory");
           const latencies = raw
             .filter((r) => r.ok)
             .map((r) => r.latencyMs)
@@ -199,6 +230,14 @@ try {
             p95Ms: quantile(latencies, 0.95),
             p99Ms: latencies.length >= 1000 ? quantile(latencies, 0.99) : null,
             nodeCpuMs: (cpu.user + cpu.system) / 1000,
+            databaseCpuMs:
+              (Number(databaseCpuAfter.used_cpu_user) +
+                Number(databaseCpuAfter.used_cpu_sys) -
+                Number(databaseCpuBefore.used_cpu_user) -
+                Number(databaseCpuBefore.used_cpu_sys)) *
+              1000,
+            databaseUsedMemoryBytes: Number(databaseMemory.used_memory),
+            databaseRssBytes: Number(databaseMemory.used_memory_rss),
             nodeRssBefore: rssBefore,
             nodeRssAfter: process.memoryUsage().rss,
             raw: file,
@@ -252,9 +291,36 @@ try {
     hostMemoryBytes: totalmem(),
     cgroupCpuMax: await readLimit("/sys/fs/cgroup/cpu.max"),
     cgroupMemoryMax: await readLimit("/sys/fs/cgroup/memory.max"),
-    databaseInfo: await db.info("server"),
-    persistenceInfo: await db.info("persistence"),
-    databaseMemory: await db.info("memory"),
+    sourceCommit: execFileSync("git", ["rev-parse", "HEAD"], {
+      encoding: "utf8",
+    }).trim(),
+    storeBlob: execFileSync(
+      "git",
+      ["hash-object", "packages/core/src/store.ts"],
+      { encoding: "utf8" },
+    ).trim(),
+    databaseInfo: pick(await info("server"), [
+      "redis_version",
+      "arch_bits",
+      "multiplexing_api",
+      "gcc_version",
+    ]),
+    moduleInfo: await connection.sendCommand(["MODULE", "LIST"]).then((r) =>
+      (Array.isArray(r) ? r.filter(Array.isArray) : []).map((fields) => ({
+        name: fields[fields.indexOf("name") + 1],
+        version: fields[fields.indexOf("ver") + 1],
+      })),
+    ),
+    persistenceInfo: pick(await info("persistence"), [
+      "aof_enabled",
+      "rdb_changes_since_last_save",
+      "rdb_last_bgsave_status",
+    ]),
+    databaseMemory: pick(await info("memory"), [
+      "used_memory",
+      "used_memory_rss",
+      "maxmemory",
+    ]),
     sizes,
     concurrencies,
     samples,
