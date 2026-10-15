@@ -4,6 +4,7 @@ import type {
   ActionRecord,
   ActionInfo,
   SourceConfig,
+  SourceStatus,
   Source,
   SyncResult,
   PromotionPreview,
@@ -346,6 +347,9 @@ export class GraphClient {
   }
   runs(ontology: string) {
     return this.call<FunctionRun[]>(`${this.path(ontology)}/runs`);
+  }
+  sourceStatuses(ontology: string) {
+    return this.call<SourceStatus[]>(`${this.path(ontology)}/sources/status`);
   }
   sources(ontology: string) {
     return this.call<Source[]>(`${this.path(ontology)}/sources`);

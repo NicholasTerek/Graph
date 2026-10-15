@@ -201,6 +201,11 @@ export function platformRoutes(
     { schema: { tags: ["Sources"], params } },
     (req) => sources.list(req.params.ontology),
   );
+  app.get(
+    "/api/ontologies/:ontology/sources/status",
+    { schema: { tags: ["Sources"], params } },
+    (req) => sources.statuses(req.params.ontology),
+  );
   app.post(
     "/api/ontologies/:ontology/sources",
     { schema: { tags: ["Sources"], params, body: sourceSchema } },

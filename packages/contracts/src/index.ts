@@ -511,6 +511,19 @@ export type Source = z.output<typeof sourceSchema> & {
     }
   >;
 };
+export type SourceStatus = {
+  sourceId: string;
+  connector: Source["connector"];
+  connectionState: "upload" | "public" | "configured" | "unavailable";
+  connectivity: "not_probed";
+  lastSuccessfulSync: string | null;
+  lastAttempt: {
+    status: SyncResult["status"];
+    at: string;
+    error?: string;
+  } | null;
+  guidance: string[];
+};
 export type SyncResult = {
   id: string;
   sourceId: string;

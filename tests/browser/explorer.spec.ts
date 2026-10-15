@@ -460,3 +460,118 @@ test("reopens an SDK-created revision overlay and recalculates its recovery inde
     await page.request.delete(`/api/ontologies/semiconductor/scenarios/${id}`);
   }
 });
+
+test("reviews imported native relationship counts before applying a library source", async ({
+  page,
+}) => {
+  const sourceId = "browser-linked-books";
+  const registered = await page.request.post(
+    "/api/ontologies/library/sources",
+    {
+      data: {
+        id: sourceId,
+        name: "Books with author references",
+        connector: "json",
+        mapping: {
+          type: "Book",
+          idField: "id",
+          objectIdField: "id",
+          properties: {
+            name: { field: "name" },
+            status: { value: "available" },
+          },
+          relationships: [
+            {
+              id: "author",
+              type: "WRITTEN_BY",
+              target: { objectId: { value: "author-1" } },
+            },
+          ],
+        },
+      },
+    },
+  );
+  expect(registered.ok()).toBe(true);
+  try {
+    await page.goto("/");
+    await page.getByRole("button", { name: "City Library" }).click();
+    await page.getByRole("button", { name: "Operations console" }).click();
+    const card = page.locator(".operation-card").filter({
+      has: page.getByRole("heading", {
+        name: "Books with author references",
+      }),
+    });
+    await expect(card).toContainText("Upload source");
+    const chooser = page.waitForEvent("filechooser");
+    await card.getByRole("button", { name: "Preview sync" }).click();
+    await (
+      await chooser
+    ).setFiles({
+      name: "books.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(
+        JSON.stringify([{ id: "book-imported", name: "Mapped author" }]),
+      ),
+    });
+    await expect(page.getByLabel("Relationship changes")).toContainText(
+      "Links: 1 additions",
+    );
+    await page.getByRole("button", { name: "Apply reviewed snapshot" }).click();
+    await expect(page.getByRole("status")).toContainText("committed together");
+    const state = await (
+      await page.request.get("/api/ontologies/library/graph")
+    ).json();
+    expect(
+      state.relationships.some(
+        (r: { from: string; to: string }) =>
+          r.from === "book-imported" && r.to === "author-1",
+      ),
+    ).toBe(true);
+  } finally {
+    await page.request.post(
+      `/api/ontologies/library/sources/${sourceId}/sync`,
+      { data: { content: "[]" } },
+    );
+  }
+});
+
+test("shows connection setup guidance and refreshes the recorded failure without staging stale data", async ({
+  page,
+}) => {
+  await page.request.post("/api/ontologies/library/sources", {
+    data: {
+      id: "browser-missing-notion",
+      name: "Notion connection setup",
+      connector: "notion",
+      connection: "unconfigured",
+      mapping: {
+        type: "Book",
+        idField: "id",
+        properties: { name: { field: "name" }, status: { value: "available" } },
+      },
+    },
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "City Library" }).click();
+  await page.getByRole("button", { name: "Operations console" }).click();
+  const card = page.locator(".operation-card").filter({
+    has: page.getByRole("heading", { name: "Notion connection setup" }),
+  });
+  await expect(card).toContainText("Connection needs setup");
+  await card.getByText("Connection and sync guidance").click();
+  await expect(card).toContainText(
+    "Share the data source with the integration",
+  );
+  await card.getByRole("button", { name: "Preview sync" }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Source connection is not configured",
+  );
+  await expect(card).toContainText("Last recorded attempt: failed");
+  await expect(
+    page.getByRole("button", { name: "Apply reviewed snapshot" }),
+  ).toHaveCount(0);
+  await page.screenshot({
+    path: "/tmp/graph-source-status.png",
+    fullPage: true,
+  });
+});

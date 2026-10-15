@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { GraphClient } from "@graph/sdk";
 import type {
   Source,
+  SourceStatus,
   SyncResult,
   ActionRecord,
   Investigation,
@@ -19,6 +20,7 @@ export default function Operations({
 }) {
   const [tab, setTab] = useState("sources");
   const [sources, setSources] = useState<Source[]>([]);
+  const [sourceStatuses, setSourceStatuses] = useState<SourceStatus[]>([]);
   const [actions, setActions] = useState<ActionRecord[]>([]);
   const [investigations, setInvestigations] = useState<Investigation[]>([]);
   const [busy, setBusy] = useState(false);
@@ -37,12 +39,14 @@ export default function Operations({
     setBusy(true);
     setError("");
     try {
-      const [s, a, i] = await Promise.all([
+      const [s, a, i, statuses] = await Promise.all([
         client.sources(ontology),
         client.actions(ontology),
         client.investigations(ontology),
+        client.sourceStatuses(ontology),
       ]);
       setSources(s);
+      setSourceStatuses(statuses);
       setActions(a);
       setInvestigations(i);
     } catch (e) {
@@ -67,9 +71,20 @@ export default function Operations({
     }
   }
   async function preview(id: string, content?: string) {
+    setStaged(null);
+    setSync(null);
     await task(async () => {
-      setSync(await client.syncSource(ontology, id, { content, dryRun: true }));
-      setStaged({ id, content });
+      try {
+        setSync(
+          await client.syncSource(ontology, id, { content, dryRun: true }),
+        );
+        setStaged({ id, content });
+      } finally {
+        await client
+          .sourceStatuses(ontology)
+          .then(setSourceStatuses)
+          .catch(() => {});
+      }
     });
   }
   async function apply() {
@@ -85,6 +100,7 @@ export default function Operations({
       );
       setStaged(null);
       setSources(await client.sources(ontology));
+      setSourceStatuses(await client.sourceStatuses(ontology));
       setMessage(
         "Source snapshot, record history and checkpoint committed together.",
       );
@@ -211,6 +227,48 @@ export default function Operations({
                   <dt>Checkpoint</dt>
                   <dd>{source.checkpoint?.slice(0, 16) ?? "None"}</dd>
                 </dl>
+                {sourceStatuses
+                  .filter((status) => status.sourceId === source.id)
+                  .map((status) => (
+                    <div className="source-status" key={status.sourceId}>
+                      <p>
+                        <strong>
+                          {
+                            {
+                              upload: "Upload source",
+                              public: "Public GitHub source",
+                              configured: "Connection configured",
+                              unavailable: "Connection needs setup",
+                            }[status.connectionState]
+                          }
+                        </strong>
+                      </p>
+                      {status.lastAttempt && (
+                        <p>
+                          Last recorded attempt: {status.lastAttempt.status} ·{" "}
+                          {new Date(status.lastAttempt.at).toLocaleString()}
+                        </p>
+                      )}
+                      {status.lastAttempt?.error && (
+                        <p className="source-status-error">
+                          {status.lastAttempt.error}
+                        </p>
+                      )}
+                      <details>
+                        <summary>Connection and sync guidance</summary>
+                        <ul>
+                          {status.guidance.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                        <p>
+                          Provider access is checked only when you preview or
+                          sync. Successful previews do not update the last
+                          applied sync time.
+                        </p>
+                      </details>
+                    </div>
+                  ))}
                 <button
                   className="primary-button"
                   disabled={busy}
@@ -285,6 +343,7 @@ export default function Operations({
                 void task(async () => {
                   await client.registerSource(ontology, JSON.parse(sourceJson));
                   setSources(await client.sources(ontology));
+                  setSourceStatuses(await client.sourceStatuses(ontology));
                   setSourceJson("");
                 })
               }

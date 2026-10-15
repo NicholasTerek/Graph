@@ -8,6 +8,7 @@ import {
   type GraphObject,
   type GraphRelationship,
   type SyncResult,
+  type SourceStatus,
 } from "@graph/contracts";
 import { GraphStore } from "./store.js";
 import { canonical } from "./state.js";
@@ -29,6 +30,96 @@ export class SourceService {
     const source = await this.store.document<Source>("source", ontology, id);
     if (!source) throw new PlatformError(404, `Source not found: ${id}`);
     return source;
+  }
+  async statuses(ontology: string): Promise<SourceStatus[]> {
+    return this.store.exclusive(async () => {
+      const sources = await this.list(ontology);
+      const latest = new Map<string, SyncResult>();
+      for (const run of await this.store.documents<SyncResult>(
+        "sync",
+        ontology,
+      )) {
+        const previous = latest.get(run.sourceId);
+        if (
+          !previous ||
+          run.finishedAt > previous.finishedAt ||
+          (run.finishedAt === previous.finishedAt && run.id > previous.id)
+        )
+          latest.set(run.sourceId, run);
+      }
+      return sources.map((source) => {
+        const remote =
+          source.connector === "notion" || source.connector === "discord";
+        const connection =
+          source.connection &&
+          Object.hasOwn(this.connections, source.connection)
+            ? this.connections[source.connection]
+            : undefined;
+        const configured =
+          connection?.connector === source.connector &&
+          connection.ontologies.includes(ontology);
+        const connectionState = remote
+          ? configured
+            ? "configured"
+            : "unavailable"
+          : source.connector === "github"
+            ? "public"
+            : "upload";
+        const last = latest.get(source.id);
+        const guidance =
+          connectionState === "unavailable"
+            ? [
+                `Configure the named ${source.connector} connection on the server for this ontology.`,
+                source.connector === "notion"
+                  ? "Share the data source with the integration and grant read access."
+                  : "Grant the bot View Channel, Read Message History and the required Message Content intent.",
+              ]
+            : connectionState === "configured"
+              ? [
+                  "Server connection is configured. Preview sync to check access; this status does not contact the provider.",
+                ]
+              : connectionState === "public"
+                ? [
+                    "Reads public repository metadata or issues. Preview sync to check the repository and current rate limit.",
+                  ]
+                : [
+                    "Upload a complete CSV or JSON snapshot, then review the preview before applying.",
+                  ];
+        if (last?.status === "failed") {
+          if (/read failed \((401|403)\)/.test(last.error ?? ""))
+            guidance.push(
+              "The provider rejected access. Check the server credential and resource permissions before retrying preview.",
+            );
+          else if (/read failed \(429\)/.test(last.error ?? ""))
+            guidance.push(
+              "The provider rate-limited the request. Wait before retrying preview; no partial snapshot was applied.",
+            );
+          else if (/Source connection is not configured/.test(last.error ?? ""))
+            guidance.push(
+              "The named connection must match both the connector and ontology allowlist.",
+            );
+          else
+            guidance.push(
+              "Review the last sync error and preview again after correcting the input or connection.",
+            );
+        }
+        return {
+          sourceId: source.id,
+          connector: source.connector,
+          connectionState,
+          connectivity: "not_probed",
+          lastSuccessfulSync: source.lastSyncedAt,
+          lastAttempt: last
+            ? {
+                status: last.status,
+                at: last.finishedAt,
+                ...(last.error ? { error: last.error } : {}),
+              }
+            : null,
+          guidance,
+        };
+      });
+    });
   }
   async register(ontology: string, config: SourceConfig) {
     config = sourceSchema.parse(config);

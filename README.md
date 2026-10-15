@@ -217,3 +217,5 @@ All included business data is synthetic. No confidential employer information is
 For measured engineering evidence, see the [aggregate before/after study](docs/performance-study.md), [concurrent-history checker](docs/concurrency-checker.md) and [versioning implementation draft](docs/versioning-notes.md).
 
 [Native overlay semantics](docs/native-overlays.md) and the [copy/overlay study](docs/branch-study.md) describe the explicit backend choice. Creation is cheaper with overlays; whole-graph algorithms currently pay for temporary projection.
+
+Imported scalar references can become source-owned native relationships through `mapping.relationships`; `pnpm demo:sources` verifies an SDK-only CSV/JSON library import with native paths and historical reads. Operations also shows redacted connection/setup state without probing providers. [Relationship mappings](docs/source-relationships.md) · [Status semantics](docs/source-status.md).

@@ -74,3 +74,7 @@ Startup migrates legacy JSON scenarios and collects unreferenced native keys in 
 Operations → History & retention loads lightweight context status and previews an explicit boundary. Apply requires admin scope, current generation/revision, exact plan digest and confirmation. Protected read pins hold the watermark back. Each apply prunes a bounded batch; obtain a fresh preview to continue. No background cleanup is scheduled. See [vacuum semantics](vacuum.md).
 
 Overlay branches are durable retention dependencies until discarded. The same backup exports their portable effective content and base, then restore materializes them as copy branches. `scripts/native-demo.ts prepare|verify ID overlay` checks their persistent restart path. See [native overlays](native-overlays.md).
+
+## Source connection guidance
+
+Operations → Sources distinguishes configured connections from actual applied syncs and shows the last recorded failure beside the last success. Expanding guidance explains missing setup, permissions or rate limits. Viewing status does not contact a provider. A preview failure clears any previous staged Apply action. See [source status](source-status.md) and [native reference mappings](source-relationships.md).

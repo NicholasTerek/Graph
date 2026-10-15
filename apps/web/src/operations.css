@@ -274,3 +274,21 @@
   margin-left: 8px;
   color: #a5c5c9;
 }
+
+.source-status {
+  border-top: 1px solid #32434b;
+  margin: 14px 0;
+  padding-top: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.source-status details {
+  margin: 8px 0;
+}
+.source-status summary {
+  cursor: pointer;
+}
+.source-status-error {
+  color: #e5ad83;
+}

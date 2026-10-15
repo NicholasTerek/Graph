@@ -1,0 +1,15 @@
+{
+  "ontology": "sources-1792073858981",
+  "objects": 4,
+  "relationships": 2,
+  "nativePath": {
+    "objects": ["book-one", "entity-82c431a026423f08e9fbc04b"],
+    "relationships": ["link-f44ee74d9a81f48df02ccc96"],
+    "hops": 1
+  },
+  "revision": 2,
+  "previewAppliedAtomically": true,
+  "replayPreservedRevision": true,
+  "historicalTopologyVerified": true,
+  "fixture": "Synthetic CSV/JSON data; no authenticated remote service"
+}

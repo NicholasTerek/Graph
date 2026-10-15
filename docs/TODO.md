@@ -38,7 +38,7 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [x] Named server-side connections restricted to resource and ontology; secrets excluded from source records/backups.
 - [x] Retain absent Notion/Discord records rather than infer deletion from lost visibility.
 - [ ] Validate each authenticated reader using an actual configured demonstration account.
-- [ ] Add source-connection status, setup guidance and actionable permission/rate-limit errors in the UI.
+- [x] Add redacted non-probing source-connection status, setup guidance and actionable permission/rate-limit errors in the UI; live-account validation remains separate.
 - [x] Register source relationship mappings so imported scalar references become native graph edges, with preview, ownership and temporal history.
 - [ ] Add scheduled explicit refresh with durable jobs, leases, bounded retries and cancellation.
 - [ ] Add progress/checkpoints for resumable larger imports if measured workloads need them.
