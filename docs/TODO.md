@@ -163,18 +163,18 @@ Implemented opt-in [native overlays](native-overlays.md), with [creation/edit/re
 
 Call this a small concurrent-history checker, inspired by Jepsen's approach. Do not claim a full Jepsen test or distributed failure coverage.
 
-Implemented: `pnpm check:history` and [its exact workload/checks](concurrency-checker.md). Seeded clients cover read/patch/atomic ingestion/branch/edit/promote/discard and stable pins; the broader function/sync/fault matrix below remains incomplete. Eight injected-anomaly unit tests validate the checker itself.
+Implemented: `pnpm check:history` and [its exact workload/checks](concurrency-checker.md). Seeded clients cover read/patch/atomic ingestion/CSV sync/optional registered calculation/branch/edit/promote/discard and stable pins. Eleven injected-anomaly unit tests validate the checker itself. Process/network faults remain separate tests.
 
-- [ ] Generate seeded concurrent clients performing read, patch, branch, calculate, promote, sync and discard operations.
-- [ ] Record invocation/completion times, input/output, revision/version and success/conflict/unknown outcome in JSONL.
-- [ ] Check no lost updates when preconditions are supplied; deliberately test omitted-precondition last-write behavior too.
+- [x] Exercise seeded SDK reads/patches/branches/promotions/CSV sync/discard, with registered pair calculations in milestone tests and optional CLI function selection.
+- [x] Journal invocation/completion, input/output, revision/version and explicit success/conflict/failed/unknown outcomes, including cleanup.
+- [x] Check guarded increments and explicitly demonstrate blind lost increments and unguarded last-write behavior in local mutation tests.
 - [x] Check repeatable pinned reads, object/edge read skew and zero dangling visible edges.
 - [ ] Check branch isolation, no partial candidate publication and no stale promotion/action execution.
 - [ ] Check temporal visibility intervals and commit/restore generation monotonicity.
-- [ ] Test same-record conflicts, independent changes, deletes with links and cross-record write-skew examples.
+- [x] Test same-record guards, independent fields, linked-deletion rejection and deliberate cross-record write skew; do not claim generic serializability.
 - [ ] Inject failures before native write, after candidate write, before/after pointer publication and before acknowledgment.
 - [ ] Restart API/database and verify persisted histories, pins and cleanup within the documented durability mode.
-- [ ] Save seeds, minimized counterexamples and a human-readable failure report.
+- [x] Save seeds/full journals, a bounded reduced diagnostic witness and a human-readable failure report; label reducer/replay limits explicitly.
 - [x] Run a small seeded suite in milestone CI; put longer concurrent schedules behind `pnpm check:history`. Scheduling itself is nondeterministic.
 
 ## F. Performance engineering and blog evidence

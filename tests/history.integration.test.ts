@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { FalkorDB } from "falkordb";
-import { GraphStore } from "@graph/core";
+import { GraphStore, defineFunction } from "@graph/core";
+import { z } from "zod";
 import { GraphClient } from "@graph/sdk";
 import { createApp } from "../apps/api/src/app.js";
 import { runHistoryWorkload } from "../scripts/lib/history-checker.js";
@@ -15,7 +16,27 @@ suite("seeded concurrent SDK history", () => {
     });
     const name = `history_${Date.now()}_${process.pid}`;
     const store = new GraphStore(db, name);
-    const app = createApp(store);
+    const app = createApp(store, {
+      functions: [42, 2718].map((seed) =>
+        defineFunction({
+          id: "pair-total",
+          ontology: `records-${seed}`,
+          name: "Captured pair total",
+          description: "Concurrent-history calculation",
+          input: z.object({}).strict(),
+          output: z.object({
+            left: z.number(),
+            right: z.number(),
+            total: z.number(),
+          }),
+          execute: ({ graph }) => {
+            const left = Number(graph.object("left").properties.value),
+              right = Number(graph.object("right").properties.value);
+            return { left, right, total: left + right };
+          },
+        }),
+      ),
+    });
     try {
       await store.initialize();
       await app.ready();
@@ -39,11 +60,26 @@ suite("seeded concurrent SDK history", () => {
           seed,
           rounds: 8,
           writers: 4,
+          functionId: "pair-total",
         });
         expect(result.summary.violations).toEqual([]);
         expect(result.summary.successfulIncrements).toBeGreaterThan(1);
         expect(result.summary.expectedConflicts).toBeGreaterThan(0);
         expect(result.summary.pinnedReads).toBe(8);
+        expect(result.summary.unknownOutcomes).toBe(0);
+        for (const kind of ["calculate", "sync", "discard"])
+          expect(
+            result.entries.some(
+              (e) => e.kind === kind && e.outcome === "success",
+            ),
+          ).toBe(true);
+        await expect(
+          runHistoryWorkload(client, `records-${seed}`, {
+            seed,
+            rounds: 1,
+            writers: 1,
+          }),
+        ).rejects.toThrow("new disposable ontology");
         expect(
           result.entries.some((e) => e.kind === "promote" && e.status === "ok"),
         ).toBe(true);

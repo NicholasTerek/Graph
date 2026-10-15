@@ -1,0 +1,217 @@
+{
+  "label": "Intentionally injected lost update; not an observed database failure",
+  "entries": [
+    {
+      "id": 0,
+      "actor": "reader",
+      "kind": "pinned",
+      "start": 0,
+      "end": 1,
+      "input": {
+        "snapshot": "pin"
+      },
+      "status": "ok",
+      "outcome": "success",
+      "output": {
+        "generation": "fixture",
+        "revision": 1,
+        "objects": [
+          {
+            "id": "counter",
+            "type": "Cell",
+            "properties": {
+              "value": 0
+            },
+            "provenance": {
+              "source": "intentional-broken-history-fixture",
+              "externalId": "fixture",
+              "observedAt": "2026-10-15T00:00:00Z"
+            }
+          },
+          {
+            "id": "left",
+            "type": "Cell",
+            "properties": {
+              "value": 0
+            },
+            "provenance": {
+              "source": "intentional-broken-history-fixture",
+              "externalId": "fixture",
+              "observedAt": "2026-10-15T00:00:00Z"
+            }
+          },
+          {
+            "id": "right",
+            "type": "Cell",
+            "properties": {
+              "value": 0
+            },
+            "provenance": {
+              "source": "intentional-broken-history-fixture",
+              "externalId": "fixture",
+              "observedAt": "2026-10-15T00:00:00Z"
+            }
+          }
+        ],
+        "relationships": []
+      }
+    },
+    {
+      "id": 1,
+      "actor": "writer",
+      "kind": "cas",
+      "start": 2,
+      "end": 3,
+      "input": {
+        "expectedRevision": 1,
+        "from": 0
+      },
+      "status": "ok",
+      "outcome": "success",
+      "output": {
+        "revision": 2
+      }
+    },
+    {
+      "id": 2,
+      "actor": "reader",
+      "kind": "final",
+      "start": 4,
+      "end": 5,
+      "input": {},
+      "status": "ok",
+      "outcome": "success",
+      "output": {
+        "generation": "fixture",
+        "revision": 2,
+        "objects": [
+          {
+            "id": "counter",
+            "type": "Cell",
+            "properties": {
+              "value": 0
+            },
+            "provenance": {
+              "source": "intentional-broken-history-fixture",
+              "externalId": "fixture",
+              "observedAt": "2026-10-15T00:00:00Z"
+            }
+          },
+          {
+            "id": "left",
+            "type": "Cell",
+            "properties": {
+              "value": 0
+            },
+            "provenance": {
+              "source": "intentional-broken-history-fixture",
+              "externalId": "fixture",
+              "observedAt": "2026-10-15T00:00:00Z"
+            }
+          },
+          {
+            "id": "right",
+            "type": "Cell",
+            "properties": {
+              "value": 0
+            },
+            "provenance": {
+              "source": "intentional-broken-history-fixture",
+              "externalId": "fixture",
+              "observedAt": "2026-10-15T00:00:00Z"
+            }
+          }
+        ],
+        "relationships": []
+      }
+    }
+  ],
+  "summary": {
+    "ok": false,
+    "operations": 3,
+    "successfulIncrements": 1,
+    "expectedConflicts": 0,
+    "liveReads": 1,
+    "pinnedReads": 1,
+    "violations": [
+      "#2 final: lost update: counter differs from 1 successful increments"
+    ],
+    "unknownOutcomes": 0
+  },
+  "reduced": {
+    "target": "lost update: counter differs from 1 successful increments",
+    "checks": 3,
+    "entries": [
+      {
+        "id": 1,
+        "actor": "writer",
+        "kind": "cas",
+        "start": 2,
+        "end": 3,
+        "input": {
+          "expectedRevision": 1,
+          "from": 0
+        },
+        "status": "ok",
+        "outcome": "success",
+        "output": {
+          "revision": 2
+        }
+      },
+      {
+        "id": 2,
+        "actor": "reader",
+        "kind": "final",
+        "start": 4,
+        "end": 5,
+        "input": {},
+        "status": "ok",
+        "outcome": "success",
+        "output": {
+          "generation": "fixture",
+          "revision": 2,
+          "objects": [
+            {
+              "id": "counter",
+              "type": "Cell",
+              "properties": {
+                "value": 0
+              },
+              "provenance": {
+                "source": "intentional-broken-history-fixture",
+                "externalId": "fixture",
+                "observedAt": "2026-10-15T00:00:00Z"
+              }
+            },
+            {
+              "id": "left",
+              "type": "Cell",
+              "properties": {
+                "value": 0
+              },
+              "provenance": {
+                "source": "intentional-broken-history-fixture",
+                "externalId": "fixture",
+                "observedAt": "2026-10-15T00:00:00Z"
+              }
+            },
+            {
+              "id": "right",
+              "type": "Cell",
+              "properties": {
+                "value": 0
+              },
+              "provenance": {
+                "source": "intentional-broken-history-fixture",
+                "externalId": "fixture",
+                "observedAt": "2026-10-15T00:00:00Z"
+              }
+            }
+          ],
+          "relationships": []
+        }
+      }
+    ],
+    "exhausted": false
+  }
+}

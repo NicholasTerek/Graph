@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { GraphClient } from "@graph/sdk";
-import { runHistoryWorkload } from "./lib/history-checker.js";
+import { runHistoryWorkload, reduceHistory } from "./lib/history-checker.js";
 const integer = (name: string, fallback: number, max: number) => {
   const n = Number(process.env[name] ?? fallback);
   if (!Number.isSafeInteger(n) || n < 1 || n > max)
@@ -13,11 +13,16 @@ const client = new GraphClient(
   fetch,
   { token: process.env.GRAPH_API_TOKEN },
 );
-const result = await runHistoryWorkload(client, `history-${Date.now()}`, {
-  seed: integer("HISTORY_SEED", 42, 4294967295),
-  rounds: integer("HISTORY_ROUNDS", 12, 500),
-  writers: integer("HISTORY_WRITERS", 4, 32),
-});
+const result = await runHistoryWorkload(
+  client,
+  process.env.HISTORY_ONTOLOGY ?? `history-${Date.now()}`,
+  {
+    seed: integer("HISTORY_SEED", 42, 4294967295),
+    rounds: integer("HISTORY_ROUNDS", 12, 500),
+    writers: integer("HISTORY_WRITERS", 4, 32),
+    functionId: process.env.HISTORY_FUNCTION_ID,
+  },
+);
 const output = process.env.HISTORY_OUTPUT ?? "artifacts/history/latest";
 await mkdir(dirname(output), { recursive: true });
 await writeFile(
@@ -43,4 +48,15 @@ console.log(
     2,
   ),
 );
-if (!result.summary.ok) process.exitCode = 1;
+if (!result.summary.ok) {
+  const reduced = reduceHistory(result.entries, 100);
+  await writeFile(
+    `${output}.witness.jsonl`,
+    reduced.entries.map((e) => JSON.stringify(e)).join("\n") + "\n",
+  );
+  await writeFile(
+    `${output}.failure.md`,
+    `# History failure\n\nSeed: ${result.metadata.seed}\n\n${result.summary.violations.map((v) => `- ${v}`).join("\n")}\n\nReduced diagnostic: ${reduced.target}\n\n${reduced.entries.length}/${result.entries.length} operations after ${reduced.checks} deletion checks. Budget exhausted: ${reduced.exhausted}. This partial witness preserves the diagnostic; it is not an independently replayable schedule. See the full JSONL journal for context.\n`,
+  );
+  process.exitCode = 1;
+}

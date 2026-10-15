@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   checkHistory,
+  reduceHistory,
   type HistoryEntry,
   type Observation,
 } from "../scripts/lib/history-checker.js";
@@ -82,6 +83,38 @@ describe("concurrent history checker rejects injected anomalies", () => {
     h.push(entry(4, "pinned", state(2, 1), { snapshot: "pin" }));
     expect(checkHistory(h).violations.join()).toContain("snapshot changed");
   });
+  it("finds a generation change hidden behind otherwise identical pinned data", () => {
+    const h = valid(),
+      moved = state(1, 0);
+    moved.generation = "restored";
+    h.push(entry(4, "pinned", moved, { snapshot: "pin" }));
+    expect(checkHistory(h).violations.join()).toContain("snapshot changed");
+  });
+  it("checks captured calculations and successful source checkpoints", () => {
+    const h = valid();
+    h.push(
+      entry(4, "calculate", {
+        revision: 2,
+        output: { left: 1, right: 2, total: 3 },
+      }),
+    );
+    h.push(entry(5, "sync", { status: "failed", revision: 2, checkpoint: "" }));
+    const result = checkHistory(h);
+    expect(result.violations.join()).toContain("calculation pair");
+    expect(result.violations.join()).toContain("successful checkpoint");
+  });
+  it("reduces a failed journal while preserving its original diagnostic", () => {
+    const h = valid();
+    h[3].output = state(2, 0);
+    const reduced = reduceHistory(h);
+    expect(reduced.entries.length).toBeLessThan(h.length);
+    expect(
+      checkHistory(reduced.entries).violations.some((v) =>
+        v.endsWith(reduced.target!),
+      ),
+    ).toBe(true);
+    expect(reduceHistory(valid()).entries).toEqual([]);
+  });
   it("finds a read older than a completed write", () => {
     const h = valid();
     h.splice(3, 0, entry(3, "read", state(1, 0)));
@@ -102,7 +135,9 @@ describe("concurrent history checker rejects injected anomalies", () => {
     h.push({ ...entry(4, "cas", undefined), status: "error", code: 409 });
     expect(checkHistory(h).ok).toBe(true);
     h[4].code = 500;
+    h[4].outcome = "unknown";
     expect(checkHistory(h).ok).toBe(false);
+    expect(checkHistory(h).unknownOutcomes).toBe(1);
     expect(checkHistory([]).violations.join()).toContain("incomplete");
   });
 });

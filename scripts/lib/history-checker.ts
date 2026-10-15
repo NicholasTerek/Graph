@@ -16,6 +16,7 @@ export type HistoryEntry = {
   end: number;
   input: Record<string, unknown>;
   status: "ok" | "error";
+  outcome?: "success" | "conflict" | "failed" | "unknown";
   code?: number;
   error?: string;
   output?: unknown;
@@ -62,7 +63,7 @@ export function checkHistory(entries: HistoryEntry[]) {
         fail(e, "atomic pair is skewed");
       if (e.kind === "pinned") {
         const key = String(e.input.snapshot);
-        const signature = `${s.revision}:${canonical(s)}`;
+        const signature = `${s.generation}:${s.revision}:${canonical(s)}`;
         if (pins.has(key) && pins.get(key) !== signature)
           fail(e, "snapshot changed between reads");
         pins.set(key, signature);
@@ -80,6 +81,37 @@ export function checkHistory(entries: HistoryEntry[]) {
       if (seen.has(revision))
         fail(e, "two successful guarded writes claimed the same revision");
       seen.add(revision);
+    }
+    if (e.kind === "calculate") {
+      const result = e.output as
+        | {
+            revision?: number;
+            output?: { left: number; right: number; total: number };
+          }
+        | undefined;
+      const output = result?.output;
+      if (
+        !output ||
+        !Number.isFinite(result?.revision) ||
+        ![output.left, output.right, output.total].every(Number.isFinite)
+      )
+        fail(e, "malformed pair calculation");
+      else if (
+        output.left !== output.right ||
+        output.total !== output.left + output.right
+      )
+        fail(e, "calculation pair is skewed or its total is incorrect");
+    }
+    if (e.kind === "sync") {
+      const result = e.output as
+        | { status?: string; revision?: number; checkpoint?: string }
+        | undefined;
+      if (
+        result?.status !== "succeeded" ||
+        !Number.isFinite(result.revision) ||
+        !/^[a-f0-9]{64}$/.test(result.checkpoint ?? "")
+      )
+        fail(e, "source sync did not publish a successful checkpoint");
     }
   }
   for (const e of live) {
@@ -121,15 +153,60 @@ export function checkHistory(entries: HistoryEntry[]) {
     liveReads: live.length,
     pinnedReads: entries.filter((e) => e.kind === "pinned").length,
     violations,
+    unknownOutcomes: entries.filter((e) => e.outcome === "unknown").length,
+  };
+}
+
+/** Bounded deletion reducer; preserves one exact diagnostic, not a replay guarantee. */
+export function reduceHistory(entries: HistoryEntry[], maxChecks = 100) {
+  const signature = (message: string) => message.replace(/^#\d+ [^:]+: /, "");
+  const target = checkHistory(entries).violations[0];
+  if (!target)
+    return { target: null, checks: 0, entries: [], exhausted: false };
+  const diagnostic = signature(target);
+  let current = [...entries],
+    checks = 0;
+  for (
+    let width = Math.max(1, Math.floor(current.length / 2));
+    width >= 1 && checks < maxChecks;
+    width = Math.floor(width / 2)
+  ) {
+    for (let index = 0; index < current.length && checks < maxChecks; ) {
+      const candidate = [
+        ...current.slice(0, index),
+        ...current.slice(index + width),
+      ];
+      checks++;
+      if (
+        checkHistory(candidate).violations.some(
+          (v) => signature(v) === diagnostic,
+        )
+      )
+        current = candidate;
+      else index += width;
+    }
+  }
+  return {
+    target: diagnostic,
+    checks,
+    entries: current,
+    exhausted: checks >= maxChecks,
   };
 }
 
 export async function runHistoryWorkload(
   client: GraphClient,
   ontology: string,
-  options: { seed: number; rounds: number; writers: number },
+  options: {
+    seed: number;
+    rounds: number;
+    writers: number;
+    functionId?: string;
+  },
 ) {
   const { seed, rounds, writers } = options;
+  if ((await client.ontologies()).some((o) => o.id === ontology))
+    throw Error("History workloads require a new disposable ontology");
   let random = seed >>> 0;
   const rng = () => {
     random = (Math.imul(random, 1664525) + 1013904223) >>> 0;
@@ -154,6 +231,7 @@ export async function runHistoryWorkload(
       end: 0,
       input,
       status: "ok",
+      outcome: "success",
     };
     entries.push(entry);
     try {
@@ -163,6 +241,12 @@ export async function runHistoryWorkload(
     } catch (error) {
       entry.status = "error";
       entry.code = error instanceof GraphApiError ? error.status : 0;
+      entry.outcome =
+        entry.code === 409
+          ? "conflict"
+          : entry.code === 0 || entry.code >= 500
+            ? "unknown"
+            : "failed";
       entry.error = error instanceof Error ? error.message : String(error);
       return undefined;
     } finally {
@@ -201,6 +285,20 @@ export async function runHistoryWorkload(
       { id: "pair", type: "PAIR", from: "left", to: "right", provenance },
     ],
   });
+  await client.registerSource(ontology, {
+    id: "history-feed",
+    name: "Synthetic changing CSV",
+    connector: "csv",
+    mapping: {
+      type: "Cell",
+      idField: "id",
+      objectIdField: "id",
+      properties: { value: { field: "value" } },
+    },
+  });
+  await client.syncSource(ontology, "history-feed", {
+    content: "id,value\nfeed-sample,0\n",
+  });
   const snapshot = await client.createReadSnapshot(ontology, {
     ttlSeconds: 3600,
   });
@@ -220,6 +318,7 @@ export async function runHistoryWorkload(
               {
                 expectedRevision: state.revision,
                 from: value(state, "counter"),
+                object: "counter",
               },
               () =>
                 client.patchObject(ontology, "counter", {
@@ -230,6 +329,30 @@ export async function runHistoryWorkload(
           }
         })(),
       ),
+      (async () => {
+        for (let i = 1; i <= Math.ceil(rounds / 2); i++) {
+          await pause();
+          const content = `id,value\nfeed-sample,${i}\n`;
+          await observe(
+            "source-writer",
+            "sync",
+            { sourceId: "history-feed", content },
+            () => client.syncSource(ontology, "history-feed", { content }),
+          );
+        }
+      })(),
+      (async () => {
+        if (!options.functionId) return;
+        for (let i = 0; i < rounds; i++) {
+          await pause();
+          await observe(
+            "calculator",
+            "calculate",
+            { functionId: options.functionId },
+            () => client.runFunction(ontology, options.functionId!, {}),
+          );
+        }
+      })(),
       (async () => {
         for (let i = 1; i <= rounds; i++) {
           await pause();
@@ -267,7 +390,7 @@ export async function runHistoryWorkload(
           const branch = await observe(
             "scenario-agent",
             "branch",
-            { expectedRevision: state.revision, strategy },
+            { scenario: id, expectedRevision: state.revision, strategy },
             () =>
               client.createScenario(ontology, {
                 id,
@@ -281,7 +404,11 @@ export async function runHistoryWorkload(
           const edited = await observe(
             "scenario-agent",
             "edit",
-            { expectedVersion: branch.version },
+            {
+              scenario: id,
+              object: "counter",
+              expectedVersion: branch.version,
+            },
             () =>
               client.patchScenarioObject(ontology, id, "counter", {
                 expectedVersion: branch.version,
@@ -293,13 +420,18 @@ export async function runHistoryWorkload(
           await observe(
             "scenario-agent",
             "branchRead",
-            { expectedCounter: value(state, "counter") + 1 },
+            { scenario: id, expectedCounter: value(state, "counter") + 1 },
             () => client.scenarioGraph(ontology, id),
           );
           await observe(
             "scenario-agent",
             "promote",
-            { expectedRevision: state.revision, from: value(state, "counter") },
+            {
+              scenario: id,
+              expectedVersion: edited.version,
+              expectedRevision: state.revision,
+              from: value(state, "counter"),
+            },
             () =>
               client.promoteScenario(ontology, id, {
                 expectedVersion: edited.version,
@@ -315,51 +447,79 @@ export async function runHistoryWorkload(
     // An uncontended promotion exercises the success path even when the racing agent always conflicts.
     const state = await read("final-agent");
     if (state) {
-      const branch = await client.createScenario(ontology, {
-        id: "final-branch",
-        name: "Final branch",
-        expectedRevision: state.revision,
-        strategy: "overlay",
-      });
-      branches.push(branch.id);
-      const edited = await client.patchScenarioObject(
-        ontology,
-        branch.id,
-        "counter",
-        {
-          expectedVersion: branch.version,
-          properties: { value: value(state, "counter") + 1 },
-        },
-      );
-      await observe(
+      const branch = await observe(
         "final-agent",
-        "promote",
-        { expectedRevision: state.revision, from: value(state, "counter") },
+        "branch",
+        {
+          scenario: "final-branch",
+          expectedRevision: state.revision,
+          strategy: "overlay",
+        },
         () =>
-          client.promoteScenario(ontology, branch.id, {
-            expectedVersion: edited.version,
+          client.createScenario(ontology, {
+            id: "final-branch",
+            name: "Final branch",
             expectedRevision: state.revision,
-            objects: ["counter"],
-            relationships: [],
-            confirm: true,
+            strategy: "overlay",
           }),
       );
+      if (branch) {
+        branches.push(branch.id);
+        const edited = await observe(
+          "final-agent",
+          "edit",
+          {
+            scenario: branch.id,
+            object: "counter",
+            expectedVersion: branch.version,
+          },
+          () =>
+            client.patchScenarioObject(ontology, branch.id, "counter", {
+              expectedVersion: branch.version,
+              properties: { value: value(state, "counter") + 1 },
+            }),
+        );
+        if (edited)
+          await observe(
+            "final-agent",
+            "promote",
+            {
+              scenario: branch.id,
+              expectedVersion: edited.version,
+              expectedRevision: state.revision,
+              from: value(state, "counter"),
+            },
+            () =>
+              client.promoteScenario(ontology, branch.id, {
+                expectedVersion: edited.version,
+                expectedRevision: state.revision,
+                objects: ["counter"],
+                relationships: [],
+                confirm: true,
+              }),
+          );
+      }
     }
     await observe("final-reader", "final", {}, () => client.stateAt(ontology));
-    return {
-      metadata: {
-        seed,
-        rounds,
-        writers,
-        ontology,
-        model:
-          "one API writer; SDK callers; no injected process/network faults",
-      },
-      entries: entries.sort((a, b) => a.id - b.id),
-      summary: checkHistory(entries),
-    };
   } finally {
-    await client.releaseReadSnapshot(ontology, snapshot.id);
-    for (const id of branches) await client.discardScenario(ontology, id);
+    await observe("cleanup", "release", { snapshot: snapshot.id }, () =>
+      client.releaseReadSnapshot(ontology, snapshot.id),
+    );
+    for (const id of branches)
+      await observe("cleanup", "discard", { scenario: id }, () =>
+        client.discardScenario(ontology, id),
+      );
   }
+  return {
+    metadata: {
+      seed,
+      rounds,
+      writers,
+      ontology,
+      functionId: options.functionId ?? null,
+      model: "one API writer; SDK callers; no injected process/network faults",
+    },
+    entries: entries.sort((a, b) => a.id - b.id),
+    summary: checkHistory(entries),
+  };
 }
