@@ -512,7 +512,12 @@ export class GraphClient {
   reviewAction(
     ontology: string,
     id: string,
-    input: { expectedVersion: number; digest: string; comment?: string },
+    input: {
+      expectedVersion: number;
+      digest: string;
+      comment?: string;
+      expiresInSeconds?: number;
+    },
     approve = true,
   ) {
     return this.call<ActionRecord>(
@@ -528,6 +533,17 @@ export class GraphClient {
   ) {
     return this.call<ActionRecord>(
       `${this.path(ontology)}/actions/${encodeURIComponent(id)}/execute`,
+      "POST",
+      input,
+    );
+  }
+  revokeAction(
+    ontology: string,
+    id: string,
+    input: { expectedVersion: number; digest: string; comment?: string },
+  ) {
+    return this.call<ActionRecord>(
+      `${this.path(ontology)}/actions/${encodeURIComponent(id)}/revoke`,
       "POST",
       input,
     );

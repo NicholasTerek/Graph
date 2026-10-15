@@ -68,7 +68,7 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [ ] Run an actual configured model against the GPU workflow and evaluate its evidence/answer quality.
 - [ ] Complete one explicitly approved real external action against a demonstration repository.
 - [x] Add a durable investigation/job state machine with cancellation and recovery; source retries are bounded, interrupted agents require explicit retry.
-- [ ] Add approval expiry/revocation and surface stale context before execution.
+- [x] Add approval expiry/revocation and surface stale context before execution; reviewed deadlines and server-side rechecks prevent external calls after expiry/revocation.
 - [ ] Build a two-agent demonstration with separate branches, visible roles, saved results and human promotion.
 - [ ] Add branch ownership/agent credentials and prevent one agent silently changing another's plan.
 - [ ] Keep the deterministic tool mode visibly distinct from real model orchestration.

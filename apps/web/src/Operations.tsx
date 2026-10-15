@@ -23,6 +23,10 @@ export default function Operations({
   const [sources, setSources] = useState<Source[]>([]);
   const [sourceStatuses, setSourceStatuses] = useState<SourceStatus[]>([]);
   const [actions, setActions] = useState<ActionRecord[]>([]);
+  const [actionContext, setActionContext] = useState<{
+    revision: number;
+    branches: Map<string, number>;
+  } | null>(null);
   const [investigations, setInvestigations] = useState<Investigation[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -40,15 +44,21 @@ export default function Operations({
     setBusy(true);
     setError("");
     try {
-      const [s, a, i, statuses] = await Promise.all([
+      const [s, a, i, statuses, graph, branches] = await Promise.all([
         client.sources(ontology),
         client.actions(ontology),
         client.investigations(ontology),
         client.sourceStatuses(ontology),
+        client.snapshot(ontology),
+        client.scenarios(ontology),
       ]);
       setSources(s);
       setSourceStatuses(statuses);
       setActions(a);
+      setActionContext({
+        revision: graph.revision,
+        branches: new Map(branches.map((b) => [b.id, b.version])),
+      });
       setInvestigations(i);
     } catch (e) {
       setError((e as Error).message);
@@ -406,6 +416,30 @@ export default function Operations({
                 {action.reviewedBy ? " · reviewed by " + action.reviewedBy : ""}
                 <br />
                 Review digest: {action.digest}
+                {action.approvalExpiresAt && (
+                  <p>
+                    Approval expires{" "}
+                    {new Date(action.approvalExpiresAt).toLocaleString()}
+                    {Date.parse(action.approvalExpiresAt) <= Date.now()
+                      ? " · expired"
+                      : ""}
+                  </p>
+                )}
+                {actionContext &&
+                  (actionContext.revision !== action.revision ||
+                    (action.scenarioId &&
+                      actionContext.branches.get(action.scenarioId) !==
+                        action.scenarioVersion)) && (
+                    <p>
+                      Stale context. Refresh the investigation and create a new
+                      proposal.
+                    </p>
+                  )}
+                {action.revokedAt && (
+                  <p>
+                    Revoked by {action.revokedBy}: {action.revocationComment}
+                  </p>
+                )}
               </div>
               {action.error && <p className="action-error">{action.error}</p>}
               {action.result !== undefined && (
@@ -439,6 +473,23 @@ export default function Operations({
                   >
                     <Play size={14} />
                     Execute approved action
+                  </button>
+                )}
+                {["proposed", "approved"].includes(action.status) && (
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      void task(async () => {
+                        await client.revokeAction(ontology, action.id, {
+                          expectedVersion: action.version,
+                          digest: action.digest,
+                          comment: "Revoked in the operations console",
+                        });
+                        setActions(await client.actions(ontology));
+                      })
+                    }
+                  >
+                    Revoke authorization
                   </button>
                 )}
                 {["executing", "uncertain"].includes(action.status) && (

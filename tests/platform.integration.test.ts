@@ -770,6 +770,49 @@ suite("operational platform capabilities", () => {
       properties: { status: "available" },
     });
   });
+  it("expires approvals and revokes authorization without issuing external writes", async () => {
+    const before = posts;
+    const action = await propose("expiry-operation");
+    const approved = await client.reviewAction("semiconductor", action.id, {
+      expectedVersion: 0,
+      digest: action.digest,
+      expiresInSeconds: 30,
+    });
+    expect(
+      Date.parse(approved.approvalExpiresAt!) -
+        Date.parse(approved.reviewedAt!),
+    ).toBe(30000);
+    await store.saveDocument("action", "semiconductor", action.id, {
+      ...approved,
+      approvalExpiresAt: "2026-01-01T00:00:00Z",
+    });
+    await expect(
+      client.executeAction("semiconductor", action.id, {
+        expectedVersion: approved.version,
+        digest: action.digest,
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    await expect(
+      forRole("writer").revokeAction("semiconductor", action.id, {
+        expectedVersion: approved.version,
+        digest: action.digest,
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+    const revoked = await client.revokeAction("semiconductor", action.id, {
+      expectedVersion: approved.version,
+      digest: action.digest,
+      comment: "Plan superseded",
+    });
+    expect(revoked.status).toBe("revoked");
+    expect(revoked.revocationComment).toBe("Plan superseded");
+    await expect(
+      client.executeAction("semiconductor", action.id, {
+        expectedVersion: revoked.version,
+        digest: action.digest,
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(posts).toBe(before);
+  });
   it("reconciles ambiguous network outcomes instead of blindly posting again", async () => {
     const action = await propose("lost-response-operation");
     const approved = await client.reviewAction("semiconductor", action.id, {

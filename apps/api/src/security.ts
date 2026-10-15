@@ -105,7 +105,7 @@ export class Security {
     const scopes =
       request.method === "GET"
         ? ["read"]
-        : /\/actions\/[^/]+\/(approve|reject)$/.test(request.url)
+        : /\/actions\/[^/]+\/(approve|reject|revoke)$/.test(request.url)
           ? ["approve"]
           : /\/actions\/[^/]+\/(execute|reconcile)$/.test(request.url)
             ? ["execute"]

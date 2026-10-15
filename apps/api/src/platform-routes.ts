@@ -309,6 +309,23 @@ export function platformRoutes(
           ),
       );
     app.post(
+      "/api/ontologies/:ontology/actions/:id/revoke",
+      {
+        schema: {
+          tags: ["Actions"],
+          params: record,
+          body: actionReview.omit({ expiresInSeconds: true }),
+        },
+      },
+      (req) =>
+        actions.revoke(
+          req.params.ontology,
+          req.params.id,
+          req.body,
+          security.principal(req).name,
+        ),
+    );
+    app.post(
       "/api/ontologies/:ontology/actions/:id/execute",
       { schema: { tags: ["Actions"], params: record, body: actionExecute } },
       (req) =>

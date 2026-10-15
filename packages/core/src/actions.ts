@@ -179,7 +179,12 @@ export class ActionService {
   async review(
     ontology: string,
     id: string,
-    input: { expectedVersion: number; digest: string; comment: string },
+    input: {
+      expectedVersion: number;
+      digest: string;
+      comment: string;
+      expiresInSeconds?: number;
+    },
     approve: boolean,
     actor: string,
   ) {
@@ -192,6 +197,7 @@ export class ActionService {
         throw new PlatformError(409, "The proposal changed after review");
       if (action.status !== "proposed")
         throw new PlatformError(409, "Only proposed actions can be reviewed");
+      if (approve) await this.checkContext(action);
       const updated: ActionRecord = {
         ...action,
         version: action.version + 1,
@@ -199,6 +205,61 @@ export class ActionService {
         reviewedBy: actor,
         reviewedAt: new Date().toISOString(),
         reviewComment: input.comment,
+        ...(approve
+          ? {
+              approvalExpiresAt: new Date(
+                Date.now() + (input.expiresInSeconds ?? 3600) * 1000,
+              ).toISOString(),
+            }
+          : {}),
+      };
+      await this.store.saveDocument("action", ontology, id, updated);
+      return updated;
+    });
+  }
+  private async checkContext(action: ActionRecord) {
+    if ((await this.store.revision(action.ontology)) !== action.revision)
+      throw new PlatformError(
+        409,
+        "Live data changed since proposal; create a new proposal",
+      );
+    if (action.scenarioId) {
+      const branch = await this.scenarios.reference(
+        action.ontology,
+        action.scenarioId,
+      );
+      if (branch.version !== action.scenarioVersion)
+        throw new PlatformError(
+          409,
+          "Scenario changed since proposal; create a new proposal",
+        );
+    }
+  }
+  async revoke(
+    ontology: string,
+    id: string,
+    input: { expectedVersion: number; digest: string; comment: string },
+    actor: string,
+  ) {
+    return this.store.exclusive(async () => {
+      const action = await this.get(ontology, id);
+      if (
+        action.version !== input.expectedVersion ||
+        action.digest !== input.digest
+      )
+        throw new PlatformError(409, "Action changed before revocation");
+      if (!["proposed", "approved"].includes(action.status))
+        throw new PlatformError(
+          409,
+          "Only unexecuted proposals or approvals can be revoked",
+        );
+      const updated: ActionRecord = {
+        ...action,
+        version: action.version + 1,
+        status: "revoked",
+        revokedBy: actor,
+        revokedAt: new Date().toISOString(),
+        revocationComment: input.comment,
       };
       await this.store.saveDocument("action", ontology, id, updated);
       return updated;
@@ -226,19 +287,16 @@ export class ActionService {
           409,
           "Action requires approval and cannot be executed again",
         );
-      if ((await this.store.revision(ontology)) !== action.revision)
+      if (
+        !action.approvalExpiresAt ||
+        !Number.isFinite(Date.parse(action.approvalExpiresAt)) ||
+        Date.parse(action.approvalExpiresAt) <= Date.now()
+      )
         throw new PlatformError(
           409,
-          "Live data changed since approval; create a new proposal",
+          "Approval expired or has no deadline; create and review a new proposal",
         );
-      if (action.scenarioId) {
-        const scenario = await this.scenarios.reference(
-          ontology,
-          action.scenarioId,
-        );
-        if (scenario.version !== action.scenarioVersion)
-          throw new PlatformError(409, "Scenario changed since approval");
-      }
+      await this.checkContext(action);
       const running: ActionRecord = {
         ...action,
         status: "executing",

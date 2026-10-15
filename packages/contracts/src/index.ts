@@ -612,6 +612,7 @@ export type ActionRecord = {
     | "proposed"
     | "approved"
     | "rejected"
+    | "revoked"
     | "executing"
     | "succeeded"
     | "failed"
@@ -632,6 +633,10 @@ export type ActionRecord = {
   reviewedBy?: string;
   reviewedAt?: string;
   reviewComment?: string;
+  approvalExpiresAt?: string;
+  revokedBy?: string;
+  revokedAt?: string;
+  revocationComment?: string;
   result?: unknown;
   error?: string;
   executionStartedAt?: string;
@@ -651,6 +656,7 @@ export const actionReview = z
     expectedVersion: z.number().int().nonnegative(),
     digest: z.string().length(64),
     comment: z.string().max(1000).default(""),
+    expiresInSeconds: z.number().int().min(30).max(86400).default(3600),
   })
   .strict();
 export const actionExecute = z

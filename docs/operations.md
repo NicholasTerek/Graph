@@ -22,7 +22,7 @@ JSON/CSV syncs support at most 2,000 rows per request. GitHub syncs support at m
 
 Successful sync writes operational changes, history, mappings, checkpoint, and run result together. No-op replay leaves the graph revision unchanged. Source-managed manual edits and manual deletions conflict instead of being overwritten. Removing a source-created entity requires no remaining relationships, no other contributor, and no manual extension. Pre-existing objects are not automatically deleted by losing one source row. Use explicit graph edits after reviewing those cases.
 
-`expectedCheckpoint` binds an apply request to the exact previewed content. `expectedRevision` rejects a changed live graph. Uploads use full source snapshots; they are not append feeds. Background scheduling, resumable large imports, and CDC are not implemented.
+`expectedCheckpoint` binds an apply request to the exact previewed content. `expectedRevision` rejects a changed live graph. Uploads use full source snapshots; they are not append feeds. Explicit scheduled remote refresh and durable investigations are available; see [jobs](jobs.md). Resumable large imports and CDC remain unimplemented.
 
 ## Approvals and external execution
 
@@ -63,7 +63,7 @@ The default loopback workspace has a local owner without a token. Explicit Host/
 
 The write queue belongs to one API process. Do not run multiple replicas or mutate the database directly. Native property backfill at startup upgrades records from earlier milestones without changing their semantic revisions. The graph is intended for small datasets; full-state copies, historical scans, and function execution remain bounded by this prototype's size limits.
 
-External calls are bounded but remain synchronous. A process restart does not automatically replay work. Source sync can be re-run; external actions use explicit status and reconciliation rather than blind retries. There is no durable job scheduler or distributed lease manager yet.
+Direct calls remain synchronous; optional persisted jobs provide bounded source retries and interrupted-investigation recovery on one API writer. See [job and schedule semantics](jobs.md). External actions use explicit status and reconciliation rather than blind retries. Multiple API workers and distributed lease management remain unsupported.
 
 ## Native scenarios
 
@@ -78,3 +78,9 @@ Overlay branches are durable retention dependencies until discarded. The same ba
 ## Source connection guidance
 
 Operations → Sources distinguishes configured connections from actual applied syncs and shows the last recorded failure beside the last success. Expanding guidance explains missing setup, permissions or rate limits. Viewing status does not contact a provider. A preview failure clears any previous staged Apply action. See [source status](source-status.md) and [native reference mappings](source-relationships.md).
+
+## Approval lifetime and revocation
+
+Approval defaults to one hour; `reviewAction` accepts `expiresInSeconds` from 30 seconds to one day. Execution checks the deadline, current graph revision, scenario version, review digest and record version before marking an action executing. Old approvals without a deadline fail closed. Expired or stale proposals need a new idempotency key, calculation and review. Approval also checks that the proposal context is current. The console shows the deadline and context captured on refresh; the server checks again at execution.
+
+`revokeAction` requires approve scope and the reviewed version/digest. It persists reviewer, time and reason for proposed or approved actions; execution then fails. Revocation cannot retract a running or completed external write. A revoke/execute race is serialized: whichever transition wins determines whether execution may begin. Successful execution replay still returns the recorded result without another external call.
