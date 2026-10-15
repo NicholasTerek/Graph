@@ -12,6 +12,28 @@ import { GraphStore } from "./store.js";
 import { PlatformError } from "./validation.js";
 export class SnapshotService {
   constructor(private store: GraphStore) {}
+  async status(ontology: string) {
+    return this.store.exclusive(async () => {
+      const context = await this.store.temporal.ensure(ontology);
+      const pins = (
+        await this.store.documents<ReadSnapshot>("snapshot", ontology)
+      ).filter(
+        (pin) =>
+          pin.generation === context.generation &&
+          Date.parse(pin.expiresAt) > Date.now(),
+      );
+      return {
+        generation: context.generation,
+        revision: context.revision,
+        retainedFrom: context.startRevision,
+        committedAt: context.committedAt,
+        activeSnapshots: pins.length,
+        oldestPinnedRevision: pins.length
+          ? Math.min(...pins.map((p) => p.revision))
+          : null,
+      };
+    });
+  }
   async traverse(
     ontology: string,
     input: HistoricalTraversalInput,

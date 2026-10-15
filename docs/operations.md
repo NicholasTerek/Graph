@@ -68,3 +68,7 @@ External calls are bounded but remain synchronous. A process restart does not au
 ## Native scenarios
 
 Startup migrates legacy JSON scenarios and collects unreferenced native keys in this platform namespace before serving requests. Back up before upgrading; native graph keys share the FalkorDB volume. Logical export materializes portable base/overlay data without embedding graph references. A failed branch edit may leave an unpublished graph until collection; reread the branch version after an ambiguous response. See [native graphs and recovery check](native-graphs.md). Multiple API replicas remain unsupported.
+
+## History retention
+
+Operations → History & retention loads lightweight context status and previews an explicit boundary. Apply requires admin scope, current generation/revision, exact plan digest and confirmation. Protected read pins hold the watermark back. Each apply prunes a bounded batch; obtain a fresh preview to continue. No background cleanup is scheduled. See [vacuum semantics](vacuum.md).

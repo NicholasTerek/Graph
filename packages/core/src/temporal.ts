@@ -28,6 +28,60 @@ const native = (ontology: string, o: GraphObject) => ({
 });
 export class TemporalStorage {
   constructor(private query: Query) {}
+  async vacuumCounts(ontology: string, generation: string, watermark: number) {
+    const params = { ontology, generation, watermark };
+    const [objects] = await this.query(
+      "MATCH (v:ObjectVersion {ontology:$ontology}) WHERE v.generation<>$generation OR v.valid_to<=$watermark RETURN count(v) AS count",
+      params,
+    );
+    const [edges] = await this.query(
+      "MATCH (:Identity {ontology:$ontology})-[r:HISTORICAL_LINK]->(:Identity {ontology:$ontology}) WHERE r.generation<>$generation OR r.valid_to<=$watermark RETURN count(r) AS count",
+      params,
+    );
+    const [commits] = await this.query(
+      "MATCH (c:Commit {ontology:$ontology}) WHERE c.generation<>$generation OR c.revision<$watermark RETURN count(c) AS count",
+      params,
+    );
+    return {
+      objectVersions: Number(objects.count),
+      relationshipVersions: Number(edges.count),
+      commits: Number(commits.count),
+    };
+  }
+  async vacuumBatch(
+    ontology: string,
+    generation: string,
+    watermark: number,
+    batchSize: number,
+    audit: { id: string; actor: string; digest: string; at: string },
+  ) {
+    const [result] = await this.query(
+      `MATCH (v:ObjectVersion {ontology:$ontology})-[link:VERSION_OF]->(:Identity {ontology:$ontology}) WHERE v.generation<>$generation OR v.valid_to<=$watermark
+      WITH v,link LIMIT $limit DELETE link,v WITH count(*) AS removedObjects
+      OPTIONAL MATCH (:Identity {ontology:$ontology})-[r:HISTORICAL_LINK]->(:Identity {ontology:$ontology}) WHERE r.generation<>$generation OR r.valid_to<=$watermark
+      WITH removedObjects,r LIMIT $limit DELETE r WITH removedObjects,count(r) AS removedRelationships
+      OPTIONAL MATCH (c:Commit {ontology:$ontology}) WHERE c.generation<>$generation OR c.revision<$watermark
+      WITH removedObjects,removedRelationships,c LIMIT $limit DELETE c WITH removedObjects,removedRelationships,count(c) AS removedCommits
+      MATCH (meta:Ontology {id:$ontology}) SET meta.historyStart=$watermark
+      CREATE (:Document {ontology:$ontology,kind:'vacuum',id:$auditId,record:$audit})
+      RETURN removedObjects,removedRelationships,removedCommits`,
+      {
+        ontology,
+        generation,
+        watermark,
+        limit: batchSize,
+        auditId: audit.id,
+        audit: JSON.stringify({ ...audit, generation, watermark, batchSize }),
+      },
+    );
+    if (!result)
+      throw new PlatformError(500, "Vacuum did not produce an atomic result");
+    return {
+      objectVersions: Number(result.removedObjects),
+      relationshipVersions: Number(result.removedRelationships),
+      commits: Number(result.removedCommits),
+    };
+  }
   async initialize() {
     for (const cypher of [
       "CREATE INDEX FOR (i:Identity) ON (i.ontology,i.id)",
@@ -240,8 +294,14 @@ export class TemporalStorage {
   async commits(ontology: string, after = -1, limit = 100) {
     const context = await this.ensure(ontology);
     const rows = await this.query(
-      "MATCH (c:Commit {ontology:$ontology,generation:$generation}) WHERE c.revision>$after RETURN c.revision AS revision,c.committedAt AS committedAt ORDER BY c.revision LIMIT $limit",
-      { ontology, generation: context.generation, after, limit },
+      "MATCH (c:Commit {ontology:$ontology,generation:$generation}) WHERE c.revision>$after AND c.revision>=$retainedFrom RETURN c.revision AS revision,c.committedAt AS committedAt ORDER BY c.revision LIMIT $limit",
+      {
+        ontology,
+        generation: context.generation,
+        after,
+        limit,
+        retainedFrom: context.startRevision,
+      },
     );
     return {
       generation: context.generation,

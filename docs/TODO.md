@@ -151,11 +151,11 @@ This is planned work. The native-copy implementation is the functional baseline,
 ### Vacuum and retention
 
 - [ ] Compute a watermark from retention policy, active snapshot pins and every live branch base.
-- [ ] Keep the version visible at the watermark even if its valid_from is older.
-- [ ] Remove only versions invisible to all supported/pinned reads; coordinate edge-version cleanup with endpoints.
-- [ ] Expire/release snapshot leases safely; don't drop active branch bases because an agent went idle.
-- [ ] Vacuum in bounded resumable batches with dry-run statistics and tests for interrupted collection.
-- [ ] Expose oldest retained revision, pinned bases, estimated reclaimable versions and storage growth.
+- [x] Keep the version visible at the watermark even if its valid_from is older.
+- [x] Remove only versions invisible to all supported/pinned reads; coordinate edge-version cleanup with endpoints.
+- [x] Expire/release snapshot leases safely; don't drop active branch bases because an agent went idle.
+- [x] Vacuum in bounded resumable batches with dry-run statistics and tests for interrupted collection.
+- [x] Expose oldest retained revision, pinned bases, estimated reclaimable versions and storage growth.
 
 ## E. Correctness history checker
 

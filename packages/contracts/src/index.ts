@@ -367,6 +367,62 @@ export type CommitList = {
   currentRevision: number;
   items: { revision: number; committedAt: string }[];
 };
+export const vacuumInput = z
+  .object({
+    generation: z.uuid(),
+    expectedRevision: z.number().int().nonnegative(),
+    retainFrom: z.number().int().nonnegative(),
+    batchSize: z.number().int().min(1).max(1000).default(100),
+    dryRun: z.boolean().default(true),
+    digest: z.string().length(64).optional(),
+    confirm: z.boolean().default(false),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (!value.dryRun && (!value.digest || !value.confirm))
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Vacuum apply requires the preview digest and explicit confirmation",
+      });
+  });
+export type VacuumInput = z.input<typeof vacuumInput>;
+export type VacuumPlan = {
+  ontology: string;
+  generation: string;
+  revision: number;
+  retainedFrom: number;
+  requestedFrom: number;
+  watermark: number;
+  batchSize: number;
+  protectedSnapshots: {
+    id: string;
+    owner: string;
+    revision: number;
+    expiresAt: string;
+  }[];
+  protectedBranches: { id: string; revision: number }[];
+  eligible: {
+    objectVersions: number;
+    relationshipVersions: number;
+    commits: number;
+  };
+  digest: string;
+  applied: boolean;
+  removed?: {
+    objectVersions: number;
+    relationshipVersions: number;
+    commits: number;
+  };
+};
+export type HistoryStatus = {
+  generation: string;
+  revision: number;
+  retainedFrom: number;
+  committedAt: string;
+  activeSnapshots: number;
+  oldestPinnedRevision: number | null;
+};
 export const functionInvocation = z
   .object({
     input: z.unknown(),

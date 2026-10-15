@@ -17,6 +17,7 @@ import {
   historicalInput,
   historicalTraversalInput,
   snapshotInput,
+  vacuumInput,
 } from "@graph/contracts";
 import {
   GraphStore,
@@ -31,6 +32,7 @@ import {
   ExplanationService,
   FunctionRuntime,
   SnapshotService,
+  VacuumService,
 } from "@graph/core";
 import type { Security } from "./security.js";
 export function platformRoutes(
@@ -49,6 +51,26 @@ export function platformRoutes(
   const backup = new BackupService(store);
   const algorithms = new AlgorithmService(store, scenarios);
   const snapshots = new SnapshotService(store);
+  app.get(
+    "/api/ontologies/:ontology/history",
+    {
+      schema: { params: z.object({ ontology: identifier }), tags: ["History"] },
+    },
+    (req) => snapshots.status(req.params.ontology),
+  );
+  const vacuum = new VacuumService(store);
+  app.post(
+    "/api/ontologies/:ontology/vacuum",
+    {
+      schema: {
+        params: z.object({ ontology: identifier }),
+        body: vacuumInput,
+        tags: ["History"],
+      },
+    },
+    (req) =>
+      vacuum.run(req.params.ontology, req.body, security.principal(req).name),
+  );
   const ontologyOnly = z.object({ ontology: identifier });
   app.post(
     "/api/ontologies/:ontology/state/at/traverse",

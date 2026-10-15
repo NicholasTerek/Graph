@@ -9,6 +9,7 @@ import type {
 } from "@graph/contracts";
 import { Database, RefreshCw, Play, Check, X } from "lucide-react";
 import "./operations.css";
+import RetentionPanel from "./RetentionPanel.js";
 export default function Operations({
   client,
   ontology,
@@ -152,21 +153,25 @@ export default function Operations({
         </button>
       </div>
       <div className="operation-tabs">
-        {["sources", "actions", "investigations", "backup"].map((name) => (
-          <button
-            key={name}
-            className={tab === name ? "selected" : ""}
-            onClick={() => setTab(name)}
-          >
-            {name === "sources"
-              ? "Data sources"
-              : name === "actions"
-                ? "Action approvals"
-                : name === "investigations"
-                  ? "Investigation history"
-                  : "Backup & restore"}
-          </button>
-        ))}
+        {["sources", "actions", "investigations", "history", "backup"].map(
+          (name) => (
+            <button
+              key={name}
+              className={tab === name ? "selected" : ""}
+              onClick={() => setTab(name)}
+            >
+              {name === "sources"
+                ? "Data sources"
+                : name === "actions"
+                  ? "Action approvals"
+                  : name === "investigations"
+                    ? "Investigation history"
+                    : name === "history"
+                      ? "History & retention"
+                      : "Backup & restore"}
+            </button>
+          ),
+        )}
       </div>
       {error && (
         <div role="alert" className="error">
@@ -415,6 +420,9 @@ export default function Operations({
             </details>
           ))}
         </>
+      )}
+      {tab === "history" && (
+        <RetentionPanel client={client} ontology={ontology} />
       )}
       {tab === "backup" && (
         <div className="backup-grid">

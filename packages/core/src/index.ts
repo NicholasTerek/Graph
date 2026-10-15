@@ -22,3 +22,4 @@ export { BackupService } from "./backup.js";
 export { AlgorithmService, graphAlgorithms } from "./algorithms.js";
 export { ExplanationService } from "./explanations.js";
 export { SnapshotService } from "./snapshots.js";
+export { VacuumService } from "./vacuum.js";

@@ -388,6 +388,14 @@ suite("native revision visibility and read snapshots", () => {
       await expect(
         reader.patchObject("records", "a", { properties: { amount: 5 } }),
       ).rejects.toMatchObject({ status: 403 });
+      await expect(
+        reader.vacuum("records", {
+          generation: pin.generation,
+          expectedRevision: pin.revision,
+          retainFrom: pin.revision,
+          dryRun: true,
+        }),
+      ).rejects.toMatchObject({ status: 403 });
     } finally {
       await secured.close();
     }
@@ -423,5 +431,88 @@ suite("native revision visibility and read snapshots", () => {
       expect(state.objects.find((o) => o.id === "a")!.properties.amount).toBe(
         state.objects.find((o) => o.id === "b")!.properties.amount,
       );
+  });
+  it("vacuum respects pinned watermarks, preserves native copy branches and resumes bounded batches", async () => {
+    const original = await client.stateAt("records");
+    const copy = await client.createScenario("records", {
+      id: "retained-copy",
+      name: "Independent native copy",
+    });
+    const pin = await client.createReadSnapshot("records", {
+      revision: original.revision,
+    });
+    for (const amount of [100, 101, 102])
+      await client.patchObject("records", "a", { properties: { amount } });
+    await client.deleteRelationship("records", "a-b");
+    await client.deleteObject("records", "b");
+    const current = await client.stateAt("records");
+    const input = {
+      generation: current.generation,
+      expectedRevision: current.revision,
+      retainFrom: current.revision,
+      batchSize: 1,
+    };
+    const preview = await client.vacuum("records", { ...input, dryRun: true });
+    expect(preview.watermark).toBe(original.revision);
+    expect(preview.protectedSnapshots.map((p) => p.id)).toContain(pin.id);
+    const applied = await client.vacuum("records", {
+      ...input,
+      dryRun: false,
+      digest: preview.digest,
+      confirm: true,
+    });
+    expect(applied.applied).toBe(true);
+    expect(applied.removed?.objectVersions).toBeLessThanOrEqual(1);
+    expect(
+      (await client.stateAt("records", { snapshot: pin.id })).objects,
+    ).toEqual(original.objects);
+    expect(
+      (await client.commits("records")).items.every(
+        (c) => c.revision >= original.revision,
+      ),
+    ).toBe(true);
+    await client.releaseReadSnapshot("records", pin.id);
+    let remaining = Infinity;
+    for (let batch = 0; batch < 100; batch++) {
+      const next = await client.vacuum("records", { ...input, dryRun: true });
+      remaining = Object.values(next.eligible).reduce((a, b) => a + b, 0);
+      if (remaining === 0) break;
+      const result = await client.vacuum("records", {
+        ...input,
+        dryRun: false,
+        digest: next.digest,
+        confirm: true,
+      });
+      for (const count of Object.values(result.removed!))
+        expect(count).toBeLessThanOrEqual(1);
+      expect((await client.stateAt("records")).objects).toEqual(
+        current.objects,
+      );
+    }
+    expect(remaining).toBe(0);
+    const end = await client.stateAt("records");
+    expect(end.retainedFrom).toBe(current.revision);
+    expect(end.objects).toEqual(current.objects);
+    await expect(
+      client.stateAt("records", { revision: original.revision }),
+    ).rejects.toMatchObject({ status: 410 });
+    expect((await client.scenarioGraph("records", copy.id)).objects).toEqual(
+      original.objects,
+    );
+    const review = await client.vacuum("records", { ...input, dryRun: true });
+    const changedPin = await client.createReadSnapshot("records");
+    await expect(
+      client.vacuum("records", {
+        ...input,
+        dryRun: false,
+        digest: review.digest,
+        confirm: true,
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    await client.releaseReadSnapshot("records", changedPin.id);
+    await expect(
+      client.vacuum("records", { ...input, dryRun: false }),
+    ).rejects.toMatchObject({ status: 400 });
+    await client.discardScenario("records", copy.id);
   });
 });

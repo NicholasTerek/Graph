@@ -18,6 +18,9 @@ import type {
   HistoricalTraversalInput,
   ReadSnapshot,
   CommitList,
+  VacuumInput,
+  VacuumPlan,
+  HistoryStatus,
   Ontology,
   GraphState,
   Ingestion,
@@ -44,6 +47,16 @@ export class GraphApiError extends Error {
   }
 }
 export class GraphClient {
+  historyStatus(ontology: string) {
+    return this.call<HistoryStatus>(`${this.path(ontology)}/history`);
+  }
+  vacuum(ontology: string, input: VacuumInput) {
+    return this.call<VacuumPlan>(
+      `${this.path(ontology)}/vacuum`,
+      "POST",
+      input,
+    );
+  }
   traverseAt(ontology: string, input: HistoricalTraversalInput) {
     return this.call<HistoricalTraversal>(
       `${this.path(ontology)}/state/at/traverse`,

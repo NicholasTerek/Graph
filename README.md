@@ -88,7 +88,7 @@ For another compatible provider, configure its HTTPS base URL, model, and server
 
 ## Historical reads
 
-Launch operations includes a revision scrubber that recalculates the GPU plan from a pinned read-only snapshot. Native object and relationship visibility runs in Cypher; snapshot leases preserve one generation/revision across reads. Restores establish a new history generation. See [temporal semantics and limits](docs/temporal.md). Full-history backup, vacuum and cheap revision/overlay branches remain separate work.
+Launch operations includes a revision scrubber that recalculates the GPU plan from a pinned read-only snapshot. Native object and relationship visibility runs in Cypher; snapshot leases preserve one generation/revision across reads. Restores establish a new history generation. See [temporal semantics and limits](docs/temporal.md). Reviewed watermark-based vacuum is available in Operations → History & retention. Full-history backup and cheap revision/overlay branches remain separate work.
 
 ## Explain decisions
 

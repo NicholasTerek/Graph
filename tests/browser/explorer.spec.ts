@@ -134,6 +134,56 @@ test("recalculates an older graph revision without changing the live recovery", 
   }
 });
 
+test("previews history retention and requires explicit confirmation while protecting a read pin", async ({
+  page,
+}) => {
+  const status = await (
+    await page.request.get("/api/ontologies/semiconductor/history")
+  ).json();
+  const pin = await (
+    await page.request.post("/api/ontologies/semiconductor/snapshots", {
+      data: { revision: status.retainedFrom, ttlSeconds: 300 },
+    })
+  ).json();
+  try {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Operations console" }).click();
+    await page
+      .getByRole("button", { name: "History & retention", exact: true })
+      .click();
+    await page
+      .getByLabel("Retain revisions from")
+      .fill(String(status.revision));
+    await page
+      .getByRole("button", { name: "Preview history pruning", exact: true })
+      .click();
+    const panel = page.locator(".retention-panel");
+    await expect(
+      panel.getByRole("heading", { name: "Review retention plan" }),
+    ).toBeVisible();
+    await expect(panel).toContainText(
+      `Snapshot at revision ${status.retainedFrom}`,
+    );
+    const prune = panel.getByRole("button", { name: "Prune reviewed batch" });
+    await expect(prune).toBeDisabled();
+    await panel.getByLabel("Confirm history pruning").check();
+    await expect(prune).toBeEnabled();
+    await panel.getByLabel("Confirm history pruning").uncheck();
+    await panel.screenshot({ path: "/tmp/graph-retention.png" });
+    expect(
+      (
+        await (
+          await page.request.get("/api/ontologies/semiconductor/history")
+        ).json()
+      ).revision,
+    ).toBe(status.revision);
+  } finally {
+    await page.request.delete(
+      `/api/ontologies/semiconductor/snapshots/${pin.id}`,
+    );
+  }
+});
+
 test("explores persisted graph evidence and bounded dependencies", async ({
   page,
 }) => {
