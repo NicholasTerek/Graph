@@ -1,0 +1,8 @@
+{
+  "size": 250,
+  "batch": 500,
+  "trial": 0,
+  "requestLatenciesMs": [
+    25.430045000000064
+  ]
+}

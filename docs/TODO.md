@@ -185,11 +185,11 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 
 - [x] Small HTTP baseline command and explicit benchmark limitations.
 - [x] Generate deterministic synthetic task dependency DAGs: chain, bounded degree and hubs, with known edge/answer cardinality for the [graph-view study](graph-view-study.md).
-- [ ] Separate database-only fixtures from end-to-end platform ingestion so setup shortcuts aren't presented as platform capacity.
-- [ ] Measure increasing graph sizes (1k/10k/100k only where actually supported), branch counts and changed-record fractions.
-- [ ] Compare native copy, previous JSON-base/overlay implementation and native version/overlay implementation at equal semantics.
-- [ ] Measure first/sibling branch creation, edit, evaluation, promotion, cleanup and storage bytes.
-- [ ] Measure ingestion: row-by-row versus batched UNWIND, with equal validation/history/durability semantics.
+- [x] Label in-memory fixtures, public HTTP ingestion and direct branch-service timings separately in the measured studies; record setup rather than calling it platform capacity.
+- [x] Measure 1k/10k chains with one/two/three retained branches and 0.1%/1%/10% edits in [lifecycle trials](branch-lifecycle.md); 100k exceeds the current supported algorithm budget and is not claimed.
+- [x] Compare common guarded create/edit/read/diff/discard semantics across the actual historical JSON service and current copy/overlay services, with current store/validation shared and capability differences explicit; [raw evidence](branch-lifecycle.md).
+- [x] Combine native [promotion/function/algorithm trials](branch-study.md) with three-backend [first/sibling/edit/read/cleanup and RDB-byte measurements](branch-lifecycle.md); JSON promotion parity is not claimed.
+- [x] Compare 1/50/500-row HTTP writes with identical validation/history/durability settings and explicit transaction-granularity differences; [18 checked trials](ingestion-study.md).
 - [x] Capture GRAPH.EXPLAIN and read-only GRAPH.PROFILE for the actual aggregate/reference-page queries and range index; broader dependency queries remain work.
 - [x] Record warmups and repeated fixed-duration function trials with p50/p95/p99, achieved completions, errors and CPU/memory; short-trial limits are explicit.
 - [x] Add guarded scalar writes with zero/eight closed-loop aggregate readers, alongside 1/8/32 function readers; report achieved load and remaining queue costs.
