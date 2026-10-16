@@ -194,7 +194,7 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 - [x] Record warmups and repeated fixed-duration function trials with p50/p95/p99, achieved completions, errors and CPU/memory; short-trial limits are explicit.
 - [x] Add guarded scalar writes with zero/eight closed-loop aggregate readers, alongside 1/8/32 function readers; report achieved load and remaining queue costs.
 - [x] Record Node/Redis CPU and RSS, graph memory estimates, serialized state/document bytes and RDB archive bytes in measured studies.
-- [ ] Measure physical temporary-copy I/O and peak dump-file space on a host exposing suitable counters; this environment denied `/proc` I/O reads.
+- [x] Observe native copy dump-file length, allocated blocks and cleanup through an owned-file descriptor in [six checked microbenchmark samples](copy-files.md). Kernel physical-I/O counters remain unavailable; device throughput, concurrent-process peaks and durability are not claimed.
 - [x] Record hardware, versions, persistence, indexes, network placement and warm/cold state for the aggregate study.
 - [x] Commit raw samples, scripts and reproduction commands; build the aggregate chart directly from recorded trials.
 
