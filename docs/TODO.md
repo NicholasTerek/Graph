@@ -172,7 +172,7 @@ Implemented: `pnpm check:history` and [its exact workload/checks](concurrency-ch
 - [x] Check isolation, failed candidate publication and stale promotion/action rejection in the independent native, overlay and workflow integration suites; these are separate from the journal workload.
 - [x] Check visibility intervals and fresh monotonic restore heads/generations in temporal and v2 backup integration suites.
 - [x] Test same-record guards, independent fields, linked-deletion rejection and deliberate cross-record write skew; do not claim generic serializability.
-- [ ] Inject failures before native write, after candidate write, before/after pointer publication and before acknowledgment.
+- [x] Combine native/overlay runtime rollback tests with [12 real API SIGKILL boundary trials](branch-crash.md): before copy, after candidate write, after pointer publication and at response. Unknown outcomes and orphan inventory are checked; mid-copy/database crashes remain separate.
 - [x] Verify persisted copy/overlay branches, histories and pins across graceful persistent API/database restart in the passing Compose drill. Abrupt crashes and timed orphan recovery remain separate work.
 - [x] Save seeds/full journals, a bounded reduced diagnostic witness and a human-readable failure report; label reducer/replay limits explicitly.
 - [x] Run a small seeded suite in milestone CI; put longer concurrent schedules behind `pnpm check:history`. Scheduling itself is nondeterministic.

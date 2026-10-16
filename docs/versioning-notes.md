@@ -40,7 +40,7 @@ A pin expires or can be explicitly released. Expired/pruned history produces an 
 
 The first branch at a live revision projects an ontology-only immutable base graph. Siblings use `GRAPH.COPY` from that base. An edit validates its effective state, prepares another native graph, applies the change and then publishes the new graph reference with an incremented branch version.
 
-Readers use the published graph. An unreferenced candidate cannot become a half-edited visible branch. Acknowledged old candidates are removed; startup/discard collection removes unreferenced keys in the managed namespace. Failure tests cover a failed candidate and an acknowledgment lost after publication. A client with an uncertain outcome must reread the branch version before retrying.
+Readers use the published graph. An unreferenced candidate cannot become a half-edited visible branch. Acknowledged old candidates are removed; startup/discard collection removes unreferenced keys in the managed namespace. Failure tests cover a failed candidate and an acknowledgment lost after publication. A client with an uncertain outcome must reread the branch version before retrying. [Twelve API-process SIGKILL trials](branch-crash.md) now check this boundary with a real HTTP client: the new state survived publication even when the client saw a transport failure, and startup collection removed the unreferenced graph. Database power-loss behavior is a separate question.
 
 ```mermaid
 flowchart TD
