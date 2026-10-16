@@ -1,3 +1,4 @@
+import { requestErrorMessage } from "./request-error.js";
 import { useEffect, useState, useRef } from "react";
 import { GraphClient } from "@graph/sdk";
 import type { JobRecord, SourceSchedule, Source } from "@graph/contracts";
@@ -36,7 +37,7 @@ export default function JobsPanel({
     const refresh = () => {
       if (active)
         void load().catch((e) => {
-          if (active) setError(e.message);
+          if (active) setError(requestErrorMessage(e));
         });
     };
     refresh();
@@ -54,7 +55,7 @@ export default function JobsPanel({
       await work();
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      setError(requestErrorMessage(e));
     } finally {
       setBusy(false);
     }

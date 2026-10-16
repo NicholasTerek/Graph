@@ -42,7 +42,7 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [x] Register source relationship mappings so imported scalar references become native graph edges, with preview, ownership and temporal history.
 - [x] Add scheduled explicit refresh with durable jobs, leases, bounded retries and cancellation; see [job semantics](jobs.md).
 - [ ] Add progress/checkpoints for resumable larger imports if measured workloads need them.
-- [ ] Keep OAuth, CDC, arbitrary REST adapters and additional SaaS connectors out of the critical path.
+- [x] Scope decision: OAuth, CDC, arbitrary REST adapters and more SaaS connectors remain outside this demonstration; existing bounded readers are the supported path.
 
 ### GPU operational model
 
@@ -55,7 +55,7 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [ ] Replace one bundled input with connected operational/demo data through existing source APIs.
 - [x] Link model assumptions to captured contributing inputs and named rules in the GPU planner and explanation view; label synthetic limits as declarations.
 - [x] Show exact failed qualification/capacity/driver constraints, rule IDs and captured record links per blocked alternative; distinguish eligible late plans by modeled delay.
-- [ ] Model competing orders/yield/stochastic lead times only if the chosen demo requires them.
+- [x] Scope decision: keep deterministic reserved-capacity/elapsed-day planning for this demo; explicitly disclose unmodeled competing orders, yield and stochastic lead times.
 
 ### Actions and agent loop
 
@@ -145,7 +145,7 @@ Implemented opt-in [native overlays](native-overlays.md), with [creation/edit/re
 - [x] Make algorithms consume a correctly scoped effective graph; measure temporary projection for overlay branches.
 - [x] Benchmark revision/overlay versus native copies at 1k/5k objects. Keep copy as default because creation/edit improve but whole-graph algorithm projection regresses.
 - [x] Retain selected promotion and document property-level three-way merge versus read-set/first-committer-wins semantics.
-- [ ] If using first-committer-wins, test overlapping writes and decide whether independent properties of one record conflict.
+- [x] Concurrency decision: use guarded property-level three-way merges, not first-committer-wins transactions; tested independent-property merges, conflicting values and deliberate unguarded write skew remain explicit.
 - [x] Explicitly document possible cross-record write skew; generic business-invariant/read-set validation remains unsupported.
 - [x] Add an as-of UI scrubber with exact revision/time and read-only historical views.
 - [x] Show branch base, divergence and merge conflicts next to the agent alternatives.
@@ -207,7 +207,7 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 - [x] Separate temporary native projection, algorithm-query round trip, guards, cleanup and residual HTTP/input costs for 1k/5k live/copy/overlay contexts; [90 measured requests](algorithm-phases.md), with lifecycle/I/O limits explicit.
 - [x] Preserve aggregate output equivalence and existing conflict tests for the first optimization; require equivalent checks for subsequent changes.
 - [x] Record the aggregate before/after results, CPU costs, trial variation and remaining branch-copy tradeoffs; do not infer a speedup from GraphBLAS.
-- [ ] Defer read replicas until replication consistency and pinned-snapshot semantics are understood and testable.
+- [x] Scope decision: defer read replicas and multi-writer deployment; no replication or distributed snapshot guarantee is claimed.
 
 ### Two articles
 
@@ -236,12 +236,12 @@ Implemented and verified in [the supplier identity lab](entity-resolution.md).
 - [x] Health, route metrics, diagnostics and logical backups with explicit restore confirmation.
 - [x] Smaller reviewable milestone commits, authored as Nicholas with no co-author trailer.
 - [x] Full CI on pull requests/manual dispatch/ci/verify milestones rather than every main commit.
-- [ ] Improve setup so missing credentials/model/permissions lead to clear UI guidance.
+- [x] Show missing/invalid credential versus insufficient-scope guidance, clear prior views on credential changes, retain source setup help, and explain deterministic versus configured-model mode; browser verified.
 - [x] Add tested [local backup retention](temporal-backups.md), native restore drills, graceful interruption recovery and version-migration rollback instructions. Abrupt power-loss recovery and off-host retention remain unverified.
-- [ ] Display source freshness, branch staleness and job recovery status in the UI.
+- [x] Display successful-sync age and attempts without a false provider-freshness guarantee, branch base/staleness and recovered/interrupted job state in their existing views; refresh/reopen retrieves new status.
 - [ ] Run the final scripted GPU story from a clean installation and record a demo.
-- [ ] Keep secrets, employer data and private operational records out of the synthetic demonstration and artifacts.
-- [ ] Keep SSO, enterprise policy, arbitrary code execution, multi-writer replication and full Foundry parity explicitly outside the required demo.
+- [x] Use hand-built synthetic fixtures and no live provider credentials in recorded studies/demo; tracked-source credential-pattern scan returned no matches. This bounded check is not a general DLP/security audit.
+- [x] Scope decision: SSO, enterprise policy, arbitrary untrusted code, multi-writer replication and full Foundry parity remain explicitly outside the required demo.
 
 ## Completion rule
 

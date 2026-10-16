@@ -1,3 +1,4 @@
+import { requestErrorMessage } from "./request-error.js";
 import Operations from "./Operations.js";
 import { workspaceExtensions } from "../../../examples/workspaces.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -89,6 +90,7 @@ function App() {
     "graph" | "schema" | "application" | "operations"
   >("graph");
   const requestId = useRef(0);
+  const ontologyRequestId = useRef(0);
   const upload = useRef<HTMLInputElement>(null);
   const schemaUpload = useRef<HTMLInputElement>(null);
   const extension = workspaceExtensions.find((e) => e.ontology === ontologyId);
@@ -97,9 +99,14 @@ function App() {
   const object = graph.objects.find((o) => o.id === selected);
   const current = view ?? graph;
   async function loadOntologies(preferred?: string) {
-    const all = (await client.ontologies()).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
+    const current = ++ontologyRequestId.current;
+    const all = (
+      await client.ontologies().catch((e) => {
+        if (current !== ontologyRequestId.current) return [];
+        throw e;
+      })
+    ).sort((a, b) => a.name.localeCompare(b.name));
+    if (current !== ontologyRequestId.current) return;
     setOntologies(all);
     setOntologyId(
       (previous) =>
@@ -119,13 +126,13 @@ function App() {
         setSelected(null);
       }
     } catch (e) {
-      if (token === requestId.current) setError((e as Error).message);
+      if (token === requestId.current) setError(requestErrorMessage(e));
     } finally {
       if (token === requestId.current) setBusy(false);
     }
   }
   useEffect(() => {
-    loadOntologies().catch((e) => setError(e.message));
+    loadOntologies().catch((e) => setError(requestErrorMessage(e)));
   }, []);
   useEffect(() => {
     setGraph({ objects: [], relationships: [] });
@@ -199,7 +206,7 @@ function App() {
       );
       if (token === requestId.current) setView(result);
     } catch (e) {
-      if (token === requestId.current) setError((e as Error).message);
+      if (token === requestId.current) setError(requestErrorMessage(e));
     } finally {
       if (token === requestId.current) setBusy(false);
     }
@@ -218,7 +225,7 @@ function App() {
         await loadGraph(ontologyId);
       }
     } catch (e) {
-      setError((e as Error).message);
+      setError(requestErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -321,12 +328,27 @@ function App() {
                 onChange={(e) => setApiToken(e.target.value)}
               />
             </label>
+            <p>
+              Use a credential issued by your workspace operator. Read, write,
+              approve and execute are separate permissions; access may be
+              limited to specific ontologies.
+            </p>
             <button
               onClick={() => {
                 if (apiToken)
                   sessionStorage.setItem("graph-api-token", apiToken);
                 else sessionStorage.removeItem("graph-api-token");
-                void loadOntologies().catch((e) => setError(e.message));
+                requestId.current++;
+                setMode("graph");
+                setError("");
+                setOntologyId("");
+                setOntologies([]);
+                setGraph({ objects: [], relationships: [] });
+                setView(null);
+                setSelected(null);
+                void loadOntologies().catch((e) =>
+                  setError(requestErrorMessage(e)),
+                );
               }}
             >
               Apply credential

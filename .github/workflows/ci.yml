@@ -33,6 +33,12 @@ jobs:
       - run: CRASH_SIZE=1000 CRASH_REPEATS=2 node --import tsx scripts/branch-crash-study.ts
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:browser
+      - run: GRAPH_RECORD_DEMO=1 pnpm test:browser tests/browser/demo.spec.ts --output artifacts/demos
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gpu-platform-demo
+          path: artifacts/demos
+          retention-days: 14
   compose:
     runs-on: ubuntu-latest
     steps:

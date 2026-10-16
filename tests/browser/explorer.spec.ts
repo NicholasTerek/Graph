@@ -727,3 +727,68 @@ test("links model assumptions and blocked alternatives to captured GPU evidence"
   ).toBe(true);
   await page.getByRole("button", { name: "Reset to live" }).click();
 });
+
+test("explains missing permissions and clears prior workspace data when credentials change", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator(".source-item")).toHaveCount(3);
+  let status = 401;
+  await page.route("**/api/ontologies", (route) =>
+    route.fulfill({
+      status,
+      contentType: "application/json",
+      body: JSON.stringify({
+        code: "CREDENTIAL_ERROR",
+        message:
+          status === 401
+            ? "Invalid API credential"
+            : "Credential requires read scope",
+      }),
+    }),
+  );
+  await page.locator(".api-credential summary").click();
+  await page
+    .locator(".api-credential input")
+    .fill("synthetic-invalid-credential");
+  await page
+    .getByRole("button", { name: "Apply credential", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText("Open API access");
+  await expect(page.locator(".source-item")).toHaveCount(0);
+  status = 403;
+  await page
+    .getByRole("button", { name: "Apply credential", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText(
+    "scopes and ontology access",
+  );
+  await expect(page.getByRole("alert")).not.toContainText(
+    "synthetic-invalid-credential",
+  );
+});
+
+test("shows model setup and applied-source age without implying provider freshness", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Launch operations" }).click();
+  await page.locator(".model-setup summary").click();
+  await expect(page.locator(".model-setup")).toContainText(
+    "Configuration alone does not establish model quality",
+  );
+  await page.getByRole("button", { name: "Operations console" }).click();
+  await expect(
+    page.getByText("Last successful sync", { exact: true }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No applied source snapshot", { exact: true }).first(),
+  ).toBeVisible();
+  await page
+    .getByText("Connection and sync guidance", { exact: true })
+    .first()
+    .click();
+  await expect(
+    page.getByText(/Sync age is not a provider freshness guarantee/).first(),
+  ).toBeVisible();
+});

@@ -1,3 +1,4 @@
+import { requestErrorMessage } from "./request-error.js";
 import JobsPanel from "./JobsPanel.js";
 import GraphRetention from "./GraphRetention.js";
 import { useEffect, useState, useRef } from "react";
@@ -21,6 +22,11 @@ export default function Operations({
   ontology: string;
 }) {
   const [tab, setTab] = useState("sources");
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [sources, setSources] = useState<Source[]>([]);
   const [sourceStatuses, setSourceStatuses] = useState<SourceStatus[]>([]);
   const [actions, setActions] = useState<ActionRecord[]>([]);
@@ -63,7 +69,7 @@ export default function Operations({
       });
       setInvestigations(i);
     } catch (e) {
-      setError((e as Error).message);
+      setError(requestErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -78,7 +84,7 @@ export default function Operations({
     try {
       await operation();
     } catch (e) {
-      setError((e as Error).message);
+      setError(requestErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -238,11 +244,17 @@ export default function Operations({
                     "Uploaded snapshots"}
                 </p>
                 <dl>
-                  <dt>Last sync</dt>
+                  <dt>Last successful sync</dt>
                   <dd>
                     {source.lastSyncedAt
                       ? new Date(source.lastSyncedAt).toLocaleString()
                       : "Not synced"}
+                  </dd>
+                  <dt>Sync age</dt>
+                  <dd>
+                    {source.lastSyncedAt
+                      ? `${Math.max(0, Math.floor((now - Date.parse(source.lastSyncedAt)) / 60000))} minutes since applied sync`
+                      : "No applied source snapshot"}
                   </dd>
                   <dt>Checkpoint</dt>
                   <dd>{source.checkpoint?.slice(0, 16) ?? "None"}</dd>
@@ -283,8 +295,9 @@ export default function Operations({
                         </ul>
                         <p>
                           Provider access is checked only when you preview or
-                          sync. Successful previews do not update the last
-                          applied sync time.
+                          sync. Sync age is not a provider freshness guarantee;
+                          no automatic stale threshold is assumed. Successful
+                          previews do not update the last applied sync time.
                         </p>
                       </details>
                     </div>

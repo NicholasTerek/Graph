@@ -1,3 +1,4 @@
+import { requestErrorMessage } from "../../../apps/web/src/request-error.js";
 import { useEffect, useState } from "react";
 import type {
   FunctionRun,
@@ -26,7 +27,8 @@ export default function RecoveryWorkflow({
   const [question, setQuestion] = useState(
     "Can Aquila X900 still launch on schedule? Explain the lowest-risk feasible recovery and its graph evidence.",
   );
-  const [mode, setMode] = useState("deterministic-tools");
+  const [mode, setMode] = useState("checking");
+  const [capabilityError, setCapabilityError] = useState("");
   const [investigation, setInvestigation] = useState<Investigation | null>(
     null,
   );
@@ -41,7 +43,7 @@ export default function RecoveryWorkflow({
     client
       .agentCapabilities()
       .then((c) => setMode(c.mode))
-      .catch(() => {});
+      .catch((e) => setCapabilityError(requestErrorMessage(e)));
   }, []);
   useEffect(() => {
     setAction(null);
@@ -55,7 +57,7 @@ export default function RecoveryWorkflow({
     try {
       await work();
     } catch (e) {
-      setError((e as Error).message);
+      setError(requestErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -165,6 +167,27 @@ export default function RecoveryWorkflow({
               : "Deterministic tool orchestration is active. Configure a model endpoint for open-ended conversation."}{" "}
             Approval and execution are unavailable to the agent.
           </p>
+          {capabilityError && (
+            <p role="alert">
+              Model setup status could not be loaded: {capabilityError}
+            </p>
+          )}
+          {mode !== "model-tools" && (
+            <details className="model-setup">
+              <summary>Model setup guidance</summary>
+              <p>
+                This demo can run deterministically. For model-driven
+                investigation, ask the workspace operator to configure a
+                compatible model endpoint and model name on the server, then
+                verify provider access. Configuration alone does not establish
+                model quality.
+              </p>
+              <p>
+                Credentials stay on the server. Check source setup in Operations
+                before relying on connected data.
+              </p>
+            </details>
+          )}
           <textarea
             aria-label="Investigation question"
             value={question}

@@ -1,3 +1,4 @@
+import { requestErrorMessage } from "../../../apps/web/src/request-error.js";
 import { launchAssumptionRules } from "../model-rules.js";
 import RecoveryWorkflow from "./RecoveryWorkflow.js";
 import HistoryTimeline from "../../../apps/web/src/HistoryTimeline.js";
@@ -121,7 +122,7 @@ export default function LaunchPlanner({
       setDiff(null);
       assumptions(graph);
     } catch (e) {
-      if (current === token.current) setError((e as Error).message);
+      if (current === token.current) setError(requestErrorMessage(e));
     } finally {
       if (pin) await client.releaseReadSnapshot(ontology, pin).catch(() => {});
       if (current === token.current) setBusy(false);
@@ -169,7 +170,7 @@ export default function LaunchPlanner({
       setRun(analysis);
       assumptions(graph);
     } catch (e) {
-      if (current === token.current) setError((e as Error).message);
+      if (current === token.current) setError(requestErrorMessage(e));
     } finally {
       if (current === token.current) setBusy(false);
     }
@@ -203,7 +204,7 @@ export default function LaunchPlanner({
       setDiff(null);
       assumptions(graph);
     } catch (cause) {
-      if (current === token.current) setError((cause as Error).message);
+      if (current === token.current) setError(requestErrorMessage(cause));
     } finally {
       if (pin) await client.releaseReadSnapshot(ontology, pin).catch(() => {});
       if (current === token.current) setBusy(false);
@@ -291,7 +292,7 @@ export default function LaunchPlanner({
       setRun(analysis);
       setScenarios(branches);
     } catch (e) {
-      setError((e as Error).message);
+      setError(requestErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -303,7 +304,7 @@ export default function LaunchPlanner({
       await client.discardScenario(ontology, scenario.id);
       await refreshLive();
     } catch (e) {
-      setError((e as Error).message);
+      setError(requestErrorMessage(e));
       setBusy(false);
     }
   }

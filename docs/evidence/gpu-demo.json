@@ -1,0 +1,15 @@
+{
+  "fixture": "Synthetic 14-object/17-edge GPU graph, fresh namespace",
+  "agent": "deterministic-tools",
+  "liveUnchanged": true,
+  "capturedEvidenceInspected": true,
+  "scenarioChangesDecision": true,
+  "proposalOnly": true,
+  "externalWrites": 0,
+  "promotionRequiresReview": true,
+  "localRecording": {
+    "name": "gpu-platform-demo.mp4",
+    "sha256": "de17f21ff13b6435afac9f4eedfda771342a16951621f4784b9760c19b7e975d",
+    "bytes": 719783
+  }
+}
