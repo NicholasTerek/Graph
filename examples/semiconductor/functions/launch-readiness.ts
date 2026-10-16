@@ -417,7 +417,7 @@ export function calculateLaunch(
       observedAt: o.provenance.observedAt,
     })),
     assumptions: [
-      "All data, incremental USD costs and ordinal risk penalties are synthetic. Risk points are not failure probabilities.",
+      "Planning bindings, incremental USD costs and ordinal risk penalties are synthetic. Captured public issue metadata is not an upstream repair estimate. Risk points are not failure probabilities.",
       "Required units = launch demand × units per product. Available inventory is consumed first; missing units require ceil(shortage / supplier daily capacity) production days.",
       "Supplier lead/setup, production, and assembly are sequential. Driver repairs run in parallel with hardware, followed by software pre-validation.",
       "Hardware-dependent validation gates wait for assembly and software pre-validation. Final integration waits for every required gate. Previously validated compatible fallback releases skip repeat validation in this simplified model.",

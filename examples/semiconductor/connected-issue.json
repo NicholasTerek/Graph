@@ -1,0 +1,10 @@
+[
+  {
+    "number": 201139,
+    "title": "Triton 3.8.0 and 3.9.0 (2.14, 2.15 pins) appear to regress decode performance",
+    "state": "open",
+    "url": "https://github.com/pytorch/pytorch/issues/201139",
+    "updatedAt": "2026-10-16T01:39:06Z",
+    "objectId": "gpu-142"
+  }
+]

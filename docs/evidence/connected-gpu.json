@@ -1,0 +1,26 @@
+{
+  "sourceUrl": "https://github.com/pytorch/pytorch/issues/201139",
+  "upstreamUpdatedAt": "2026-10-16T01:39:06Z",
+  "captureSha256": "f6c11094cb4abe05be12c4b2f738b3effab62b2e55287f50ffdb484262c1a1b1",
+  "transport": "Public GitHub connector capture uploaded through existing JSON source API; not a runtime GitHub reader validation",
+  "realFields": [
+    "title",
+    "state",
+    "url",
+    "updatedAt"
+  ],
+  "scenarioAssumptions": {
+    "fixDays": 10,
+    "hypotheticalFixDays": 20,
+    "productBinding": "gpu-142 in a fictional launch"
+  },
+  "revision": 2,
+  "runId": "run-e2572c12-bdea-4d2e-abf7-40befbb9f4f2",
+  "recommendation": "Meridian Packaging · repair Driver 26.10",
+  "scenarioRecommendation": "Meridian Packaging · use validated Driver 26.09",
+  "sourceContributorCaptured": true,
+  "nativePathCaptured": true,
+  "replayNoOp": true,
+  "liveUnchanged": true,
+  "externalWrites": 0
+}

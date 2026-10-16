@@ -41,7 +41,7 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [x] Add redacted non-probing source-connection status, setup guidance and actionable permission/rate-limit errors in the UI; live-account validation remains separate.
 - [x] Register source relationship mappings so imported scalar references become native graph edges, with preview, ownership and temporal history.
 - [x] Add scheduled explicit refresh with durable jobs, leases, bounded retries and cancellation; see [job semantics](jobs.md).
-- [ ] Add progress/checkpoints for resumable larger imports if measured workloads need them.
+- [x] Scope decision: retain bounded complete-snapshot imports and existing checkpoints/jobs for measured demo workloads; resumable imports beyond those budgets remain a future capability, not an implemented feature.
 - [x] Scope decision: OAuth, CDC, arbitrary REST adapters and more SaaS connectors remain outside this demonstration; existing bounded readers are the supported path.
 
 ### GPU operational model
@@ -52,7 +52,7 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [x] DAG scheduling, cycle rejection, hardware/software dependencies and critical paths.
 - [x] Alternative recovery plans, costs, explicit ordinal risk and source evidence.
 - [x] Interactive scenario assumptions, timeline and recommendation changes.
-- [ ] Replace one bundled input with connected operational/demo data through existing source APIs.
+- [x] Replace the bundled issue in an optional [connected GPU demo](connected-gpu.md) with captured public PyTorch metadata through JSON source preview/apply; keep repair forecasts fictional and distinguish snapshot upload from live polling.
 - [x] Link model assumptions to captured contributing inputs and named rules in the GPU planner and explanation view; label synthetic limits as declarations.
 - [x] Show exact failed qualification/capacity/driver constraints, rule IDs and captured record links per blocked alternative; distinguish eligible late plans by modeled delay.
 - [x] Scope decision: keep deterministic reserved-capacity/elapsed-day planning for this demo; explicitly disclose unmodeled competing orders, yield and stochastic lead times.
@@ -101,8 +101,8 @@ No promise of finishing every production gap in one session. Work proceeds auton
 - [x] Collect unreferenced graphs at startup/discard; clean acknowledged superseded candidates.
 - [x] Add a reproducible graceful API/database stop/start check to milestone CI.
 - [x] Observe the new Compose stop/start check passing for the exact native milestone SHA.
-- [ ] Measure copy creation/edit overhead, temporary I/O, memory and disk footprint.
-- [ ] Stress copy failure/restart during preparation; quantify orphan cleanup and recovery time.
+- [x] Measure copy create/edit overhead, graph/process memory and actual RDB archive footprint in [lifecycle trials](branch-lifecycle.md). Temporary I/O/peak-copy space remain explicitly tracked below.
+- [x] Kill the API writer during preparation/publication, check old/new branch visibility and quantify orphan collection/service initialization in [12 crash trials](branch-crash.md); separate worker startup and exclude mid-COPY database/power-loss claims.
 - [x] Add scoped admin native-graph inventory, reviewed digest and explicit-confirmation collection; test stale reviews and published/foreign graph protection.
 - [x] Show branch storage mode, base revision and current version in the planner.
 
@@ -193,7 +193,8 @@ Recorded now: [aggregate before/after study](performance-study.md), exact plans,
 - [x] Capture GRAPH.EXPLAIN and read-only GRAPH.PROFILE for the actual aggregate/reference-page queries and range index; broader dependency queries remain work.
 - [x] Record warmups and repeated fixed-duration function trials with p50/p95/p99, achieved completions, errors and CPU/memory; short-trial limits are explicit.
 - [x] Add guarded scalar writes with zero/eight closed-loop aggregate readers, alongside 1/8/32 function readers; report achieved load and remaining queue costs.
-- [ ] Record per-process CPU/RSS, database memory, serialized bytes and disk/temp copy costs.
+- [x] Record Node/Redis CPU and RSS, graph memory estimates, serialized state/document bytes and RDB archive bytes in measured studies.
+- [ ] Measure physical temporary-copy I/O and peak dump-file space on a host exposing suitable counters; this environment denied `/proc` I/O reads.
 - [x] Record hardware, versions, persistence, indexes, network placement and warm/cold state for the aggregate study.
 - [x] Commit raw samples, scripts and reproduction commands; build the aggregate chart directly from recorded trials.
 
@@ -239,7 +240,7 @@ Implemented and verified in [the supplier identity lab](entity-resolution.md).
 - [x] Show missing/invalid credential versus insufficient-scope guidance, clear prior views on credential changes, retain source setup help, and explain deterministic versus configured-model mode; browser verified.
 - [x] Add tested [local backup retention](temporal-backups.md), native restore drills, graceful interruption recovery and version-migration rollback instructions. Abrupt power-loss recovery and off-host retention remain unverified.
 - [x] Display successful-sync age and attempts without a false provider-freshness guarantee, branch base/staleness and recovered/interrupted job state in their existing views; refresh/reopen retrieves new status.
-- [ ] Run the final scripted GPU story from a clean installation and record a demo.
+- [x] Record the captioned synthetic GPU story locally and from the passing clean-install CI run [38837584653](https://github.com/NicholasTerek/Graph/actions/runs/38837584653), with verification/video artifacts; live model/accounts remain separate.
 - [x] Use hand-built synthetic fixtures and no live provider credentials in recorded studies/demo; tracked-source credential-pattern scan returned no matches. This bounded check is not a general DLP/security audit.
 - [x] Scope decision: SSO, enterprise policy, arbitrary untrusted code, multi-writer replication and full Foundry parity remain explicitly outside the required demo.
 

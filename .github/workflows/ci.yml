@@ -30,6 +30,7 @@ jobs:
       - run: pnpm build
       - run: node scripts/verify-packages.mjs
       - run: GRAPH_INTEGRATION=1 pnpm test
+      - run: node --import tsx scripts/connected-gpu-demo.ts verify
       - run: CRASH_SIZE=1000 CRASH_REPEATS=2 node --import tsx scripts/branch-crash-study.ts
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:browser
